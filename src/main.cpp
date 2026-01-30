@@ -10,49 +10,104 @@
 #include <vector>
 #include <algorithm>
 
+void print_usage(const char* prog_name) {
+    std::cerr << "Usage: " << prog_name << " <script_file> [options]" << std::endl;
+    std::cerr << "Options:" << std::endl;
+    std::cerr << "  -o, --out <file>      Specify output filename (extension ignored)" << std::endl;
+    std::cerr << "  -f, --format <fmt>    Specify output format: wav, mp3, ogg (default: wav)" << std::endl;
+    std::cerr << "  -q, --quality <rate>  Specify sample rate in Hz (default: 44100)" << std::endl;
+}
+
 int main(int argc, char* argv[]) {
     if (argc < 2) {
-        std::cerr << "Usage: " << argv[0] << " <script_file> [--format <wav|mp3|ogg>]" << std::endl;
+        print_usage(argv[0]);
         return 1;
     }
 
-    std::string script_file_path = argv[1];
+    std::string script_file_path;
+    std::string output_base_name = "song";
     std::string format = "wav";
+    int sample_rate = 44100;
 
-    std::vector<std::string> args(argv + 1, argv + argc);
-    auto format_it = std::find(args.begin(), args.end(), "--format");
-    if (format_it != args.end() && ++format_it != args.end()) {
-        format = *format_it;
-    } else {
-        format_it = std::find(args.begin(), args.end(), "-f");
-        if (format_it != args.end() && ++format_it != args.end()) {
-            format = *format_it;
+    for (int i = 1; i < argc; ++i) {
+        std::string arg = argv[i];
+        if (arg == "-o" || arg == "--out") {
+            if (i + 1 < argc) {
+                output_base_name = argv[++i];
+                // Strip extension if present
+                size_t last_dot = output_base_name.find_last_of(".");
+                if (last_dot != std::string::npos && last_dot > output_base_name.find_last_of("/\\")) {
+                    output_base_name = output_base_name.substr(0, last_dot);
+                }
+            } else {
+                std::cerr << "Error: Missing argument for output file." << std::endl;
+                return 1;
+            }
+        } else if (arg == "-f" || arg == "--format") {
+            if (i + 1 < argc) {
+                format = argv[++i];
+            } else {
+                std::cerr << "Error: Missing argument for format." << std::endl;
+                return 1;
+            }
+        } else if (arg == "-q" || arg == "--quality") {
+            if (i + 1 < argc) {
+                try {
+                    sample_rate = std::stoi(argv[++i]);
+                    if (sample_rate <= 0) throw std::invalid_argument("Invalid rate");
+                } catch (...) {
+                    std::cerr << "Error: Invalid sample rate." << std::endl;
+                    return 1;
+                }
+            } else {
+                std::cerr << "Error: Missing argument for sample rate." << std::endl;
+                return 1;
+            }
+        } else if (arg[0] == '-') {
+            std::cerr << "Unknown option: " << arg << std::endl;
+            print_usage(argv[0]);
+            return 1;
+        } else {
+            if (script_file_path.empty()) {
+                script_file_path = arg;
+            } else {
+                std::cerr << "Error: Multiple input files specified." << std::endl;
+                return 1;
+            }
         }
     }
 
+    if (script_file_path.empty()) {
+        std::cerr << "Error: No script file specified." << std::endl;
+        print_usage(argv[0]);
+        return 1;
+    }
 
     Song song = ScriptParser::parse(script_file_path);
     std::cout << "Parsed script from " << script_file_path << std::endl;
 
     // Save the song
-    JsonSerializer::save(song, "song.json");
-    std::cout << "Saved song to song.json" << std::endl;
+    std::string json_path = output_base_name + ".json";
+    JsonSerializer::save(song, json_path);
+    std::cout << "Saved song to " << json_path << std::endl;
 
     AudioRenderer renderer;
+
+    std::string output_file_path = output_base_name + "." + format;
 
     // Write the song to a file
     if (format == "wav") {
         WavWriter writer;
-        writer.write(renderer, song, "song.wav");
-        std::cout << "Rendered song to song.wav" << std::endl;
+        writer.write(renderer, song, output_file_path, sample_rate);
+        std::cout << "Rendered song to " << output_file_path << " at " << sample_rate << "Hz" << std::endl;
     } else if (format == "mp3") {
         Mp3Writer writer;
-        writer.write(renderer, song, "song.mp3");
-        std::cout << "Rendered song to song.mp3" << std::endl;
+        writer.write(renderer, song, output_file_path, sample_rate);
+        std::cout << "Rendered song to " << output_file_path << " at " << sample_rate << "Hz" << std::endl;
     } else if (format == "ogg") {
         OggWriter writer;
-        writer.write(renderer, song, "song.ogg");
-        std::cout << "Rendered song to song.ogg" << std::endl;
+        writer.write(renderer, song, output_file_path, sample_rate);
+        std::cout << "Rendered song to " << output_file_path << " at " << sample_rate << "Hz" << std::endl;
     } else {
         std::cerr << "Unsupported format: " << format << std::endl;
         return 1;
