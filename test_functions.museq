@@ -1,0 +1,30 @@
+function melody(n1, n2) {
+    instrument Lead {
+        waveform sawtooth
+        envelope 0.05 0.1 0.7 0.2
+        sequence {
+            note $n1 250 100
+            note $n2 250 100
+        }
+    }
+}
+
+call melody(C4, E4)
+call melody(G4, C5)
+
+parallel {
+    instrument Bass {
+        waveform sine
+        sequence {
+            note C2 1000 80
+        }
+    }
+    
+    instrument Pad {
+        waveform triangle
+        envelope 0.5 0.5 0.5 0.5
+        sequence {
+            note C3 1000 60
+        }
+    }
+}

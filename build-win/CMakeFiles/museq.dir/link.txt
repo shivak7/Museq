@@ -1,0 +1,3 @@
+/usr/bin/cmake -E rm -f CMakeFiles/museq.dir/objects.a
+/usr/bin/x86_64-w64-mingw32-ar qc CMakeFiles/museq.dir/objects.a @CMakeFiles/museq.dir/objects1.rsp
+/usr/bin/x86_64-w64-mingw32-g++ -static -static-libgcc -static-libstdc++ -Wl,--whole-archive CMakeFiles/museq.dir/objects.a -Wl,--no-whole-archive -o museq.exe -Wl,--out-implib,libmuseq.dll.a -Wl,--major-image-version,0,--minor-image-version,0 @CMakeFiles/museq.dir/linkLibs.rsp

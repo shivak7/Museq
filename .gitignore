@@ -1,0 +1,25 @@
+# Build directories
+build/
+build-win/
+
+# Dependencies
+vcpkg/
+third_party/
+
+# Output files
+*.wav
+*.mp3
+*.ogg
+*.json
+
+# Executables
+museq
+museq.exe
+gensine
+
+# Backup directory
+backup/
+
+# IDE files
+.vscode/
+.idea/

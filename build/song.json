@@ -1,0 +1,96 @@
+{
+    "children": [
+        {
+            "children": [
+                {
+                    "data": {
+                        "name": "Drums",
+                        "pan": 0.0,
+                        "portamento": 0.0,
+                        "sequence": {
+                            "notes": [
+                                {
+                                    "duration": 250,
+                                    "pan": 0.0,
+                                    "pitch": 36,
+                                    "velocity": 100
+                                },
+                                {
+                                    "duration": 250,
+                                    "pan": 0.0,
+                                    "pitch": 38,
+                                    "velocity": 100
+                                },
+                                {
+                                    "duration": 250,
+                                    "pan": 0.0,
+                                    "pitch": 36,
+                                    "velocity": 100
+                                },
+                                {
+                                    "duration": 250,
+                                    "pan": 0.0,
+                                    "pitch": 38,
+                                    "velocity": 100
+                                }
+                            ]
+                        },
+                        "soundfont": {
+                            "bank": 128,
+                            "path": "/home/shiva/Museq/sounds/GeneralUser GS v1.471.sf2",
+                            "preset": 0
+                        },
+                        "type": 2
+                    },
+                    "type": "instrument"
+                },
+                {
+                    "data": {
+                        "name": "Piano",
+                        "pan": 0.0,
+                        "portamento": 0.0,
+                        "sequence": {
+                            "notes": [
+                                {
+                                    "duration": 250,
+                                    "pan": 0.0,
+                                    "pitch": 60,
+                                    "velocity": 80
+                                },
+                                {
+                                    "duration": 250,
+                                    "pan": 0.0,
+                                    "pitch": 64,
+                                    "velocity": 80
+                                },
+                                {
+                                    "duration": 250,
+                                    "pan": 0.0,
+                                    "pitch": 67,
+                                    "velocity": 80
+                                },
+                                {
+                                    "duration": 250,
+                                    "pan": 0.0,
+                                    "pitch": 72,
+                                    "velocity": 80
+                                }
+                            ]
+                        },
+                        "soundfont": {
+                            "bank": 0,
+                            "path": "/home/shiva/Museq/sounds/GeneralUser GS v1.471.sf2",
+                            "preset": 0
+                        },
+                        "type": 2
+                    },
+                    "type": "instrument"
+                }
+            ],
+            "composite_type": 1,
+            "type": "composite"
+        }
+    ],
+    "composite_type": 0,
+    "type": "composite"
+}

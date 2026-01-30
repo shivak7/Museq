@@ -1,0 +1,30 @@
+instrument Piano {
+    soundfont "/home/shiva/Museq/sounds/GeneralUser GS v1.471.sf2"
+    preset 0
+}
+
+instrument LeftPiano {
+    soundfont "/home/shiva/Museq/sounds/GeneralUser GS v1.471.sf2"
+    preset 0
+    pan -1.0
+}
+
+instrument RightPiano {
+    soundfont "/home/shiva/Museq/sounds/GeneralUser GS v1.471.sf2"
+    preset 0
+    pan 1.0
+}
+
+sequential {
+    // 1. Test instrument panning
+    parallel {
+        LeftPiano { notes C4(1000) }
+        RightPiano { notes G4(1000) }
+    }
+    
+    // 2. Test individual note panning
+    Piano {
+        tempo 120
+        notes C4(500, 100, -1.0), E4(500, 100, -0.5), G4(500, 100, 0.5), C5(500, 100, 1.0)
+    }
+}
