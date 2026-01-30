@@ -9,6 +9,17 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <cstdlib>
+#include <cstdio>
+
+#ifdef _WIN32
+    #include <windows.h>
+    #define SYSTEM_PLAY_CMD "powershell -c (New-Object Media.SoundPlayer 'temp_playback.wav').PlaySync()"
+    #define REMOVE_CMD "del temp_playback.wav"
+#else
+    #define SYSTEM_PLAY_CMD "aplay temp_playback.wav"
+    #define REMOVE_CMD "rm temp_playback.wav"
+#endif
 
 void print_usage(const char* prog_name) {
     std::cerr << "Usage: " << prog_name << " <script_file> [options]" << std::endl;
@@ -16,6 +27,7 @@ void print_usage(const char* prog_name) {
     std::cerr << "  -o, --out <file>      Specify output filename (extension ignored)" << std::endl;
     std::cerr << "  -f, --format <fmt>    Specify output format: wav, mp3, ogg (default: wav)" << std::endl;
     std::cerr << "  -q, --quality <rate>  Specify sample rate in Hz (default: 44100)" << std::endl;
+    std::cerr << "  -p, --playback        Play directly to default speaker (ignores -o and -f)" << std::endl;
 }
 
 int main(int argc, char* argv[]) {
@@ -28,13 +40,13 @@ int main(int argc, char* argv[]) {
     std::string output_base_name = "song";
     std::string format = "wav";
     int sample_rate = 44100;
+    bool playback_mode = false;
 
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
         if (arg == "-o" || arg == "--out") {
             if (i + 1 < argc) {
                 output_base_name = argv[++i];
-                // Strip extension if present
                 size_t last_dot = output_base_name.find_last_of(".");
                 if (last_dot != std::string::npos && last_dot > output_base_name.find_last_of("/\\")) {
                     output_base_name = output_base_name.substr(0, last_dot);
@@ -63,6 +75,8 @@ int main(int argc, char* argv[]) {
                 std::cerr << "Error: Missing argument for sample rate." << std::endl;
                 return 1;
             }
+        } else if (arg == "-p" || arg == "--playback") {
+            playback_mode = true;
         } else if (arg[0] == '-') {
             std::cerr << "Unknown option: " << arg << std::endl;
             print_usage(argv[0]);
@@ -86,31 +100,46 @@ int main(int argc, char* argv[]) {
     Song song = ScriptParser::parse(script_file_path);
     std::cout << "Parsed script from " << script_file_path << std::endl;
 
-    // Save the song
-    std::string json_path = output_base_name + ".json";
-    JsonSerializer::save(song, json_path);
-    std::cout << "Saved song to " << json_path << std::endl;
+    if (!playback_mode) {
+        std::string json_path = output_base_name + ".json";
+        JsonSerializer::save(song, json_path);
+        std::cout << "Saved song to " << json_path << std::endl;
+    }
 
     AudioRenderer renderer;
 
-    std::string output_file_path = output_base_name + "." + format;
-
-    // Write the song to a file
-    if (format == "wav") {
+    if (playback_mode) {
+        std::cout << "Rendering to default sound output device..." << std::endl;
         WavWriter writer;
-        writer.write(renderer, song, output_file_path, sample_rate);
-        std::cout << "Rendered song to " << output_file_path << " at " << sample_rate << "Hz" << std::endl;
-    } else if (format == "mp3") {
-        Mp3Writer writer;
-        writer.write(renderer, song, output_file_path, sample_rate);
-        std::cout << "Rendered song to " << output_file_path << " at " << sample_rate << "Hz" << std::endl;
-    } else if (format == "ogg") {
-        OggWriter writer;
-        writer.write(renderer, song, output_file_path, sample_rate);
-        std::cout << "Rendered song to " << output_file_path << " at " << sample_rate << "Hz" << std::endl;
+        // Render to temp file
+        writer.write(renderer, song, "temp_playback.wav", sample_rate);
+        
+        // Play
+        int ret = std::system(SYSTEM_PLAY_CMD);
+        if (ret != 0) {
+            std::cerr << "Error playing audio." << std::endl;
+        }
+        
+        // Cleanup
+        std::remove("temp_playback.wav");
     } else {
-        std::cerr << "Unsupported format: " << format << std::endl;
-        return 1;
+        std::string output_file_path = output_base_name + "." + format;
+        if (format == "wav") {
+            WavWriter writer;
+            writer.write(renderer, song, output_file_path, sample_rate);
+            std::cout << "Rendered song to " << output_file_path << " at " << sample_rate << "Hz" << std::endl;
+        } else if (format == "mp3") {
+            Mp3Writer writer;
+            writer.write(renderer, song, output_file_path, sample_rate);
+            std::cout << "Rendered song to " << output_file_path << " at " << sample_rate << "Hz" << std::endl;
+        } else if (format == "ogg") {
+            OggWriter writer;
+            writer.write(renderer, song, output_file_path, sample_rate);
+            std::cout << "Rendered song to " << output_file_path << " at " << sample_rate << "Hz" << std::endl;
+        } else {
+            std::cerr << "Unsupported format: " << format << std::endl;
+            return 1;
+        }
     }
 
     return 0;
