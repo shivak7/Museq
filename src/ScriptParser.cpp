@@ -86,8 +86,8 @@ void ScriptParser::collect_definitions(std::istream& input_stream) {
             
             Instrument template_inst;
             template_inst.name = instrument_name;
-            template_inst.synth.filter = Filter(); // Ensure default
-            template_inst.synth.lfo = LFO();       // Ensure default
+            template_inst.synth.filter = Filter(); 
+            template_inst.synth.lfo = LFO();       
             
             std::string sub_line;
             int brace_count = 0;
@@ -146,14 +146,14 @@ void ScriptParser::collect_definitions(std::istream& input_stream) {
                 } else if (sub_kw == "sample") {
                     template_inst.type = InstrumentType::SAMPLER;
                     std::string path; std::getline(sub_ss, path);
-                    const std::string trim = " \t\r\n\"";
+                    const std::string trim = {' ', '\t', '\r', '\n', '"'};
                     size_t first = path.find_first_not_of(trim);
                     size_t last = path.find_last_not_of(trim);
                     if (first != std::string::npos) template_inst.sampler = new Sampler(path.substr(first, last - first + 1));
                 } else if (sub_kw == "soundfont") {
                     template_inst.type = InstrumentType::SOUNDFONT;
                     std::string path; std::getline(sub_ss, path);
-                    const std::string trim = " \t\r\n\"";
+                    const std::string trim = {' ', '\t', '\r', '\n', '"'};
                     size_t first = path.find_first_not_of(trim);
                     size_t last = path.find_last_not_of(trim);
                     if (first != std::string::npos) template_inst.soundfont_path = path.substr(first, last - first + 1);
@@ -244,7 +244,10 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
     bool in_instrument_block = false;
     bool in_sequence_block = false;
 
-    const std::string trim_chars = " \t\r\n\"";
+    // Stack for loop context
+    std::vector<std::shared_ptr<CompositeElement>> parent_stack;
+
+    const std::string trim_chars = {' ', '\t', '\r', '\n', '"'};
 
     while (std::getline(input_stream, line)) {
         line = remove_comments(line);
@@ -372,6 +375,48 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
                 for (const auto& bl : body) body_stream << bl << "\n";
                 process_script_stream(body_stream, current_param_map, current_parent, depth + 1);
             }
+        } else if (keyword == "loop") {
+            std::string sub; ss >> sub;
+            if (sub == "start") {
+                std::string rest_of_line;
+                std::getline(ss, rest_of_line);
+                
+                auto auto_loop = std::make_shared<CompositeElement>(CompositeType::AUTO_LOOP);
+                
+                // Add followers (functions)
+                std::stringstream rss(rest_of_line);
+                std::string func_name;
+                while (std::getline(rss, func_name, ',')) {
+                    func_name.erase(std::remove_if(func_name.begin(), func_name.end(), ::isspace), func_name.end());
+                    if (func_name.empty()) continue;
+                    
+                    if (m_functions.count(func_name)) {
+                        const auto& func = m_functions[func_name];
+                        auto follower = std::make_shared<CompositeElement>(CompositeType::SEQUENTIAL);
+                        std::stringstream body;
+                        for (const auto& l : func.body_lines) body << l << "\n";
+                        std::map<std::string, std::string> empty_next_map; // No params supported for loop args yet
+                        process_script_stream(body, empty_next_map, follower, depth + 1);
+                        auto_loop->children.push_back(follower);
+                    }
+                }
+                
+                // Create Leader
+                auto leader = std::make_shared<CompositeElement>(CompositeType::SEQUENTIAL);
+                auto_loop->children.insert(auto_loop->children.begin(), leader); // Leader is Child 0
+                
+                current_parent->children.push_back(auto_loop);
+                
+                // Push stack
+                parent_stack.push_back(current_parent);
+                current_parent = leader;
+                
+            } else if (sub == "stop") {
+                if (!parent_stack.empty()) {
+                    current_parent = parent_stack.back();
+                    parent_stack.pop_back();
+                }
+            }
         } else if (keyword == "tempo") {
             float bpm; ss >> bpm;
             if (bpm > 0) m_default_duration = 60000 / bpm;
@@ -455,7 +500,7 @@ void ScriptParser::parse_compact_notes(const std::string& list, Sequence& seq) {
         else if (clean[i] == ')') paren_level--;
         else if (clean[i] == ',' && paren_level == 0) clean[i] = ' ';
     }
-    const std::string trim_chars = " \t\r\n\"";
+    const std::string trim_chars = {' ', '\t', '\r', '\n', '"'};
     
     std::stringstream ss(clean);
     std::string token;

@@ -234,10 +234,41 @@ std::vector<float> render_instrument_stereo(const Instrument& instrument, float 
     return buffer;
 }
 
+// Forward declaration
+std::vector<float> render_recursive_stereo(std::shared_ptr<SongElement> element, float sample_rate, std::map<std::string, tsf*>& soundfonts);
+
+std::vector<float> render_auto_loop(std::shared_ptr<CompositeElement> loop_elem, float sample_rate, std::map<std::string, tsf*>& soundfonts) {
+    if (loop_elem->children.empty()) return {};
+
+    // 1. Render Leader (Child 0)
+    auto leader_buffer = render_recursive_stereo(loop_elem->children[0], sample_rate, soundfonts);
+    size_t target_samples = leader_buffer.size() / 2; // Stereo frames
+
+    if (target_samples == 0) return {};
+
+    // 2. Render Followers
+    for (size_t i = 1; i < loop_elem->children.size(); ++i) {
+        auto follower_buffer = render_recursive_stereo(loop_elem->children[i], sample_rate, soundfonts);
+        size_t follower_frames = follower_buffer.size() / 2;
+        if (follower_frames == 0) continue;
+
+        for (size_t f = 0; f < target_samples; ++f) {
+            size_t src_f = f % follower_frames;
+            leader_buffer[f * 2] += follower_buffer[src_f * 2];
+            leader_buffer[f * 2 + 1] += follower_buffer[src_f * 2 + 1];
+        }
+    }
+    return leader_buffer;
+}
+
 std::vector<float> render_recursive_stereo(std::shared_ptr<SongElement> element, float sample_rate, std::map<std::string, tsf*>& soundfonts) {
     if (auto inst_elem = std::dynamic_pointer_cast<InstrumentElement>(element)) {
         return render_instrument_stereo(inst_elem->instrument, sample_rate, soundfonts);
     } else if (auto comp_elem = std::dynamic_pointer_cast<CompositeElement>(element)) {
+        if (comp_elem->type == CompositeType::AUTO_LOOP) {
+            return render_auto_loop(comp_elem, sample_rate, soundfonts);
+        }
+        
         std::vector<float> buffer;
         if (comp_elem->type == CompositeType::SEQUENTIAL) {
             for (auto child : comp_elem->children) {

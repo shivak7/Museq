@@ -8,7 +8,8 @@
 
 enum class CompositeType {
     SEQUENTIAL,
-    PARALLEL
+    PARALLEL,
+    AUTO_LOOP
 };
 
 class SongElement {
