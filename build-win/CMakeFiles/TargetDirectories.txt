@@ -1,3 +1,0 @@
-/home/shiva/Museq/build-win/CMakeFiles/museq.dir
-/home/shiva/Museq/build-win/CMakeFiles/edit_cache.dir
-/home/shiva/Museq/build-win/CMakeFiles/rebuild_cache.dir

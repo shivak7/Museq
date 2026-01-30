@@ -7,6 +7,55 @@
 #define TSF_IMPLEMENTATION
 #include "tsf.h"
 
+// Biquad Filter Structure
+struct Biquad {
+    float z1 = 0.0f, z2 = 0.0f;
+    double a0, a1, a2, b1, b2;
+
+    void update(FilterType type, float cutoff, float q, float sample_rate) {
+        if (type == FilterType::NONE) return;
+        
+        // Clamp cutoff to be below Nyquist
+        if (cutoff > sample_rate * 0.49f) cutoff = sample_rate * 0.49f;
+        if (cutoff < 10.0f) cutoff = 10.0f;
+        if (q < 0.1f) q = 0.1f;
+
+        double w0 = 2.0 * M_PI * cutoff / sample_rate;
+        double alpha = sin(w0) / (2.0 * q);
+        double cosw0 = cos(w0);
+
+        if (type == FilterType::LOWPASS) {
+            double norm = 1.0 / (1.0 + alpha);
+            a0 = ((1.0 - cosw0) / 2.0) * norm;
+            a1 = (1.0 - cosw0) * norm;
+            a2 = ((1.0 - cosw0) / 2.0) * norm;
+            b1 = -2.0 * cosw0 * norm;
+            b2 = (1.0 - alpha) * norm;
+        } else if (type == FilterType::HIGHPASS) {
+            double norm = 1.0 / (1.0 + alpha);
+            a0 = ((1.0 + cosw0) / 2.0) * norm;
+            a1 = -(1.0 + cosw0) * norm;
+            a2 = ((1.0 + cosw0) / 2.0) * norm;
+            b1 = -2.0 * cosw0 * norm;
+            b2 = (1.0 - alpha) * norm;
+        } else if (type == FilterType::BANDPASS) {
+            double norm = 1.0 / (1.0 + alpha);
+            a0 = alpha * norm;
+            a1 = 0;
+            a2 = -alpha * norm;
+            b1 = -2.0 * cosw0 * norm;
+            b2 = (1.0 - alpha) * norm;
+        }
+    }
+
+    float process(float in) {
+        float out = in * a0 + z1;
+        z1 = in * a1 + z2 - b1 * out;
+        z2 = in * a2 - b2 * out;
+        return out;
+    }
+};
+
 float generate_sample_with_phase(Waveform waveform, float freq, float sample_rate, float& phase) {
     float sample = 0;
     switch (waveform) {
@@ -82,6 +131,8 @@ std::vector<float> render_instrument_stereo(const Instrument& instrument, float 
         float current_time = 0;
         float last_freq = -1.0f;
         float phase = 0.0f;
+        float lfo_phase = 0.0f; // LFO Phase
+        
         bool legato = instrument.portamento_time > 0;
 
         for (size_t n_idx = 0; n_idx < instrument.sequence.notes.size(); ++n_idx) {
@@ -100,14 +151,35 @@ std::vector<float> render_instrument_stereo(const Instrument& instrument, float 
             float left_gain, right_gain;
             get_pan_gains(note.pan, left_gain, right_gain);
 
+            // Initialize filter for this note (or instrument if we wanted continuity, but keeping simple)
+            Biquad filter;
+            if (instrument.synth.filter.type != FilterType::NONE) {
+                filter.update(instrument.synth.filter.type, instrument.synth.filter.cutoff, instrument.synth.filter.resonance, sample_rate);
+            }
+
             for (int i = 0; i < num_note_samples; ++i) {
                 float time_in_note = (float)i / sample_rate;
+                
+                // LFO Calculation
+                float lfo_val = 0.0f;
+                if (instrument.synth.lfo.target != LFOTarget::NONE) {
+                    lfo_val = generate_sample_with_phase(instrument.synth.lfo.waveform, instrument.synth.lfo.frequency, sample_rate, lfo_phase);
+                    lfo_val *= instrument.synth.lfo.amount;
+                }
+
+                // Portamento Frequency
                 float current_freq = target_freq;
                 if (legato && i < portamento_samples) {
                     float t = (float)i / portamento_samples;
                     current_freq = last_freq + (target_freq - last_freq) * t;
                 }
 
+                // Apply LFO to Pitch
+                if (instrument.synth.lfo.target == LFOTarget::PITCH) {
+                    current_freq *= pow(2.0f, lfo_val / 12.0f);
+                }
+
+                // Envelope
                 float envelope = 0.0f;
                 if (legato) {
                     if (is_first_note && time_in_note < env.attack) envelope = time_in_note / env.attack;
@@ -120,14 +192,35 @@ std::vector<float> render_instrument_stereo(const Instrument& instrument, float 
                     else if (time_in_note < (note.duration / 1000.0f) - env.release) envelope = env.sustain;
                     else envelope = env.sustain * (1.0f - ((time_in_note - ((note.duration / 1000.0f) - env.release)) / env.release));
                 }
-                
                 if (envelope < 0.0f) envelope = 0.0f;
                 
+                // Modulate Amplitude LFO
+                float amp_mod = 1.0f;
+                if (instrument.synth.lfo.target == LFOTarget::AMPLITUDE) {
+                    amp_mod += lfo_val;
+                    if(amp_mod < 0) amp_mod = 0;
+                }
+
+                // Generate Raw Sample
                 float mono_sample = 0.0f;
                 if(instrument.type == InstrumentType::SYNTH) 
-                    mono_sample = (note.velocity / 127.0f) * 0.5f * envelope * generate_sample_with_phase(instrument.synth.waveform, current_freq, sample_rate, phase);
+                    mono_sample = (note.velocity / 127.0f) * 0.5f * envelope * amp_mod * generate_sample_with_phase(instrument.synth.waveform, current_freq, sample_rate, phase);
                 else if (instrument.type == InstrumentType::SAMPLER && instrument.sampler)
-                    mono_sample = (note.velocity / 127.0f) * 0.5f * envelope * instrument.sampler->get_sample(time_in_note);
+                    mono_sample = (note.velocity / 127.0f) * 0.5f * envelope * amp_mod * instrument.sampler->get_sample(time_in_note);
+
+                // Apply Filter
+                if (instrument.synth.filter.type != FilterType::NONE) {
+                    float current_cutoff = instrument.synth.filter.cutoff;
+                    // Modulate Cutoff LFO
+                    if (instrument.synth.lfo.target == LFOTarget::FILTER_CUTOFF) {
+                        current_cutoff += lfo_val; 
+                    }
+                    // Update filter coefficients if cutoff changed (LFO)
+                    if (instrument.synth.lfo.target == LFOTarget::FILTER_CUTOFF) {
+                         filter.update(instrument.synth.filter.type, current_cutoff, instrument.synth.filter.resonance, sample_rate);
+                    }
+                    mono_sample = filter.process(mono_sample);
+                }
 
                 if ((start_sample + i) * 2 + 1 < buffer.size()) {
                     buffer[(start_sample + i) * 2] += mono_sample * left_gain;

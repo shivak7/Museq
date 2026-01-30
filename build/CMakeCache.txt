@@ -204,35 +204,11 @@ Museq_IS_TOP_LEVEL:STATIC=ON
 //Value Computed by CMake
 Museq_SOURCE_DIR:STATIC=/home/shiva/Museq
 
-//Path to a file.
-OGG_INC:PATH=/usr/include
-
-//Path to a library.
-OGG_LIB:FILEPATH=/usr/lib/x86_64-linux-gnu/libogg.so
-
 //Arguments to supply to pkg-config
 PKG_CONFIG_ARGN:STRING=
 
 //pkg-config executable
 PKG_CONFIG_EXECUTABLE:FILEPATH=/usr/bin/pkg-config
-
-//Path to a file.
-SNDFILE_INC:PATH=/usr/include
-
-//Path to a library.
-SNDFILE_LIB:FILEPATH=/usr/lib/x86_64-linux-gnu/libsndfile.so
-
-//Path to a file.
-VORBISENC_INC:PATH=/usr/include
-
-//Path to a library.
-VORBISENC_LIB:FILEPATH=/usr/lib/x86_64-linux-gnu/libvorbisenc.so
-
-//Path to a file.
-VORBIS_INC:PATH=/usr/include
-
-//Path to a library.
-VORBIS_LIB:FILEPATH=/usr/lib/x86_64-linux-gnu/libvorbis.so
 
 //Path to a library.
 pkgcfg_lib_OGG_ogg:FILEPATH=/usr/lib/x86_64-linux-gnu/libogg.so

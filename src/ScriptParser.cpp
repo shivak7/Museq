@@ -42,7 +42,7 @@ void ScriptParser::collect_definitions(std::istream& input_stream) {
 
     while (std::getline(input_stream, line)) {
         line = remove_comments(line);
-        if (line.find_first_not_of(" 	\r\n") == std::string::npos) continue;
+        if (line.find_first_not_of(" \t\r\n") == std::string::npos) continue;
 
         if (line.find('{') != std::string::npos && line.find("function") == std::string::npos && line.find("instrument") == std::string::npos) scope_brace_count++;
         if (line.find('}') != std::string::npos) scope_brace_count--;
@@ -86,6 +86,8 @@ void ScriptParser::collect_definitions(std::istream& input_stream) {
             
             Instrument template_inst;
             template_inst.name = instrument_name;
+            template_inst.synth.filter = Filter(); // Ensure default
+            template_inst.synth.lfo = LFO();       // Ensure default
             
             std::string sub_line;
             int brace_count = 0;
@@ -95,10 +97,15 @@ void ScriptParser::collect_definitions(std::istream& input_stream) {
                 brace_count = 1;
             }
 
+            bool in_sequence = false;
+
             while (brace_count > 0 && std::getline(input_stream, sub_line)) {
                 sub_line = remove_comments(sub_line);
                 if (sub_line.find('{') != std::string::npos) brace_count++;
-                if (sub_line.find('}') != std::string::npos) brace_count--;
+                if (sub_line.find('}') != std::string::npos) {
+                    brace_count--;
+                    if (in_sequence && brace_count < 2) in_sequence = false;
+                }
                 if (brace_count == 0) break;
 
                 std::stringstream sub_ss(sub_line);
@@ -114,6 +121,28 @@ void ScriptParser::collect_definitions(std::istream& input_stream) {
                 } else if (sub_kw == "envelope") {
                     float a, d, s, r; sub_ss >> a >> d >> s >> r;
                     template_inst.synth.envelope = AdsrEnvelope(a, d, s, r);
+                } else if (sub_kw == "filter") {
+                    std::string type_str; float cutoff, res;
+                    sub_ss >> type_str >> cutoff >> res;
+                    if (type_str == "lowpass") template_inst.synth.filter.type = FilterType::LOWPASS;
+                    else if (type_str == "highpass") template_inst.synth.filter.type = FilterType::HIGHPASS;
+                    else if (type_str == "bandpass") template_inst.synth.filter.type = FilterType::BANDPASS;
+                    template_inst.synth.filter.cutoff = cutoff;
+                    template_inst.synth.filter.resonance = res;
+                } else if (sub_kw == "lfo") {
+                    std::string target_str, type_str; float freq, amt;
+                    sub_ss >> target_str >> type_str >> freq >> amt;
+                    if (target_str == "pitch") template_inst.synth.lfo.target = LFOTarget::PITCH;
+                    else if (target_str == "amplitude") template_inst.synth.lfo.target = LFOTarget::AMPLITUDE;
+                    else if (target_str == "cutoff") template_inst.synth.lfo.target = LFOTarget::FILTER_CUTOFF;
+                    
+                    if (type_str == "sine") template_inst.synth.lfo.waveform = Waveform::SINE;
+                    else if (type_str == "square") template_inst.synth.lfo.waveform = Waveform::SQUARE;
+                    else if (type_str == "triangle") template_inst.synth.lfo.waveform = Waveform::TRIANGLE;
+                    else if (type_str == "sawtooth") template_inst.synth.lfo.waveform = Waveform::SAWTOOTH;
+                    
+                    template_inst.synth.lfo.frequency = freq;
+                    template_inst.synth.lfo.amount = amt;
                 } else if (sub_kw == "sample") {
                     template_inst.type = InstrumentType::SAMPLER;
                     std::string path; std::getline(sub_ss, path);
@@ -136,6 +165,14 @@ void ScriptParser::collect_definitions(std::istream& input_stream) {
                     sub_ss >> template_inst.portamento_time;
                 } else if (sub_kw == "pan") {
                     sub_ss >> template_inst.pan;
+                } else if (sub_kw == "sequence") {
+                    in_sequence = true;
+                } else if (sub_kw == "note" && in_sequence) {
+                    std::string n; int d, v; sub_ss >> n >> d >> v;
+                    template_inst.sequence.add_note(Note(NoteParser::parse(n), d, v));
+                } else if (sub_kw == "notes" && in_sequence) {
+                    std::string note_list; std::getline(sub_ss, note_list);
+                    parse_compact_notes(note_list, template_inst.sequence);
                 }
             }
             m_templates[instrument_name] = template_inst;
@@ -197,6 +234,8 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
     InstrumentType instrument_type = InstrumentType::SYNTH;
     Waveform waveform = Waveform::SINE;
     AdsrEnvelope envelope;
+    Filter filter;
+    LFO lfo;
     std::string sample_path;
     std::string soundfont_path;
     int bank_index = 0;
@@ -223,6 +262,8 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
             instrument_type = InstrumentType::SYNTH;
             waveform = Waveform::SINE;
             envelope = AdsrEnvelope();
+            filter = Filter();
+            lfo = LFO();
             sample_path = "";
             soundfont_path = "";
             bank_index = 0;
@@ -238,6 +279,28 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
         } else if (keyword == "envelope" && in_instrument_block) {
             float a, d, s, r; ss >> a >> d >> s >> r;
             envelope = AdsrEnvelope(a, d, s, r);
+        } else if (keyword == "filter" && in_instrument_block) {
+            std::string type_str; float cutoff, res;
+            ss >> type_str >> cutoff >> res;
+            if (type_str == "lowpass") filter.type = FilterType::LOWPASS;
+            else if (type_str == "highpass") filter.type = FilterType::HIGHPASS;
+            else if (type_str == "bandpass") filter.type = FilterType::BANDPASS;
+            filter.cutoff = cutoff;
+            filter.resonance = res;
+        } else if (keyword == "lfo" && in_instrument_block) {
+            std::string target_str, type_str; float freq, amt;
+            ss >> target_str >> type_str >> freq >> amt;
+            if (target_str == "pitch") lfo.target = LFOTarget::PITCH;
+            else if (target_str == "amplitude") lfo.target = LFOTarget::AMPLITUDE;
+            else if (target_str == "cutoff") lfo.target = LFOTarget::FILTER_CUTOFF;
+            
+            if (type_str == "sine") lfo.waveform = Waveform::SINE;
+            else if (type_str == "square") lfo.waveform = Waveform::SQUARE;
+            else if (type_str == "triangle") lfo.waveform = Waveform::TRIANGLE;
+            else if (type_str == "sawtooth") lfo.waveform = Waveform::SAWTOOTH;
+            
+            lfo.frequency = freq;
+            lfo.amount = amt;
         } else if (keyword == "sample" && in_instrument_block) {
             instrument_type = InstrumentType::SAMPLER;
             std::getline(ss, sample_path);
@@ -360,6 +423,8 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
                 else if (instrument_type == InstrumentType::SAMPLER) i = Instrument(instrument_name, sample_path);
                 else if (instrument_type == InstrumentType::SOUNDFONT) i = Instrument(instrument_name, soundfont_path, bank_index, preset_index);
                 i.sequence = temp_sequence;
+                i.synth.filter = filter;
+                i.synth.lfo = lfo;
                 current_parent->children.push_back(std::make_shared<InstrumentElement>(i));
                 in_instrument_block = false;
             } else {
@@ -390,7 +455,7 @@ void ScriptParser::parse_compact_notes(const std::string& list, Sequence& seq) {
         else if (clean[i] == ')') paren_level--;
         else if (clean[i] == ',' && paren_level == 0) clean[i] = ' ';
     }
-    const std::string trim_chars = {' ', '\t', '\r', '\n', '"'};
+    const std::string trim_chars = " \t\r\n\"";
     
     std::stringstream ss(clean);
     std::string token;
@@ -412,6 +477,8 @@ void ScriptParser::parse_compact_notes(const std::string& list, Sequence& seq) {
         if (open_p != std::string::npos) {
             size_t close_p = token.find(')');
             std::string params = token.substr(open_p + 1, close_p - open_p - 1);
+            std::replace(params.begin(), params.end(), ',', ' ');
+            
             std::stringstream pss(params);
             int p1, p2; float p3;
             if (pss >> p1) {

@@ -5,6 +5,8 @@ Instrument::Instrument(std::string name, Waveform waveform, AdsrEnvelope envelop
     this->type = InstrumentType::SYNTH;
     this->synth.waveform = waveform;
     this->synth.envelope = envelope;
+    this->synth.filter = Filter();
+    this->synth.lfo = LFO();
     this->sampler = nullptr;
     this->portamento_time = 0.0f;
     this->pan = 0.0f;

@@ -4,7 +4,6 @@ build-win/
 
 # Dependencies
 vcpkg/
-third_party/
 
 # Output files
 *.wav
@@ -23,3 +22,7 @@ backup/
 # IDE files
 .vscode/
 .idea/
+
+# Sounds (Ignore all except the GeneralUser soundfont)
+sounds/*
+!sounds/GeneralUser GS v1.471.sf2

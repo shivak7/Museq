@@ -4,85 +4,118 @@
             "children": [
                 {
                     "data": {
-                        "name": "Drums",
+                        "name": "WahBass",
                         "pan": 0.0,
                         "portamento": 0.0,
                         "sequence": {
                             "notes": [
                                 {
-                                    "duration": 250,
+                                    "duration": 2000,
                                     "pan": 0.0,
                                     "pitch": 36,
-                                    "velocity": 100
-                                },
-                                {
-                                    "duration": 250,
-                                    "pan": 0.0,
-                                    "pitch": 38,
-                                    "velocity": 100
-                                },
-                                {
-                                    "duration": 250,
-                                    "pan": 0.0,
-                                    "pitch": 36,
-                                    "velocity": 100
-                                },
-                                {
-                                    "duration": 250,
-                                    "pan": 0.0,
-                                    "pitch": 38,
-                                    "velocity": 100
+                                    "velocity": 127
                                 }
                             ]
                         },
-                        "soundfont": {
-                            "bank": 128,
-                            "path": "/home/shiva/Museq/sounds/GeneralUser GS v1.471.sf2",
-                            "preset": 0
+                        "synth": {
+                            "envelope": {
+                                "attack": 0.009999999776482582,
+                                "decay": 0.10000000149011612,
+                                "release": 0.10000000149011612,
+                                "sustain": 0.800000011920929
+                            },
+                            "filter": {
+                                "cutoff": 1000.0,
+                                "resonance": 4.0,
+                                "type": 1
+                            },
+                            "lfo": {
+                                "amount": 800.0,
+                                "frequency": 4.0,
+                                "target": 3,
+                                "waveform": 0
+                            },
+                            "waveform": 3
                         },
-                        "type": 2
+                        "type": 0
                     },
                     "type": "instrument"
                 },
                 {
                     "data": {
-                        "name": "Piano",
+                        "name": "TremoloPad",
                         "pan": 0.0,
                         "portamento": 0.0,
                         "sequence": {
                             "notes": [
                                 {
-                                    "duration": 250,
-                                    "pan": 0.0,
-                                    "pitch": 60,
-                                    "velocity": 80
-                                },
-                                {
-                                    "duration": 250,
+                                    "duration": 2000,
                                     "pan": 0.0,
                                     "pitch": 64,
-                                    "velocity": 80
-                                },
-                                {
-                                    "duration": 250,
-                                    "pan": 0.0,
-                                    "pitch": 67,
-                                    "velocity": 80
-                                },
-                                {
-                                    "duration": 250,
-                                    "pan": 0.0,
-                                    "pitch": 72,
                                     "velocity": 80
                                 }
                             ]
                         },
-                        "soundfont": {
-                            "bank": 0,
-                            "path": "/home/shiva/Museq/sounds/GeneralUser GS v1.471.sf2",
-                            "preset": 0
+                        "synth": {
+                            "envelope": {
+                                "attack": 0.5,
+                                "decay": 0.5,
+                                "release": 0.5,
+                                "sustain": 0.800000011920929
+                            },
+                            "filter": {
+                                "cutoff": 20000.0,
+                                "resonance": 0.0,
+                                "type": 0
+                            },
+                            "lfo": {
+                                "amount": 0.5,
+                                "frequency": 6.0,
+                                "target": 2,
+                                "waveform": 0
+                            },
+                            "waveform": 2
                         },
-                        "type": 2
+                        "type": 0
+                    },
+                    "type": "instrument"
+                },
+                {
+                    "data": {
+                        "name": "VibratoLead",
+                        "pan": 0.0,
+                        "portamento": 0.0,
+                        "sequence": {
+                            "notes": [
+                                {
+                                    "duration": 2000,
+                                    "pan": 0.0,
+                                    "pitch": 67,
+                                    "velocity": 100
+                                }
+                            ]
+                        },
+                        "synth": {
+                            "envelope": {
+                                "attack": 0.10000000149011612,
+                                "decay": 0.10000000149011612,
+                                "release": 0.10000000149011612,
+                                "sustain": 0.800000011920929
+                            },
+                            "filter": {
+                                "cutoff": 20000.0,
+                                "resonance": 0.0,
+                                "type": 0
+                            },
+                            "lfo": {
+                                "amount": 0.5,
+                                "frequency": 5.0,
+                                "target": 1,
+                                "waveform": 0
+                            },
+                            "waveform": 1
+                        },
+                        "type": 0
                     },
                     "type": "instrument"
                 }

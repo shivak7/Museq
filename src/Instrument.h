@@ -13,9 +13,38 @@ enum class InstrumentType {
     SOUNDFONT
 };
 
+enum class FilterType {
+    NONE,
+    LOWPASS,
+    HIGHPASS,
+    BANDPASS
+};
+
+struct Filter {
+    FilterType type = FilterType::NONE;
+    float cutoff = 20000.0f; // Hz
+    float resonance = 0.0f;  // 0.0 to 1.0ish
+};
+
+enum class LFOTarget {
+    NONE,
+    PITCH,
+    AMPLITUDE,
+    FILTER_CUTOFF
+};
+
+struct LFO {
+    LFOTarget target = LFOTarget::NONE;
+    Waveform waveform = Waveform::SINE;
+    float frequency = 0.0f; // Hz
+    float amount = 0.0f;    // Context dependent
+};
+
 struct Synth {
     Waveform waveform;
     AdsrEnvelope envelope;
+    Filter filter;
+    LFO lfo;
 };
 
 class Instrument {
