@@ -28,6 +28,7 @@ void print_usage(const char* prog_name) {
     std::cerr << "  -f, --format <fmt>    Specify output format: wav, mp3, ogg (default: wav)" << std::endl;
     std::cerr << "  -q, --quality <rate>  Specify sample rate in Hz (default: 44100)" << std::endl;
     std::cerr << "  -p, --playback        Play directly to default speaker (ignores -o and -f)" << std::endl;
+    std::cerr << "  -d, --dump-json       Dump the song structure to a JSON file" << std::endl;
 }
 
 int main(int argc, char* argv[]) {
@@ -41,6 +42,7 @@ int main(int argc, char* argv[]) {
     std::string format = "wav";
     int sample_rate = 44100;
     bool playback_mode = false;
+    bool dump_json = false;
 
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
@@ -77,6 +79,8 @@ int main(int argc, char* argv[]) {
             }
         } else if (arg == "-p" || arg == "--playback") {
             playback_mode = true;
+        } else if (arg == "-d" || arg == "--dump-json") {
+            dump_json = true;
         } else if (arg[0] == '-') {
             std::cerr << "Unknown option: " << arg << std::endl;
             print_usage(argv[0]);
@@ -100,7 +104,7 @@ int main(int argc, char* argv[]) {
     Song song = ScriptParser::parse(script_file_path);
     std::cout << "Parsed script from " << script_file_path << std::endl;
 
-    if (!playback_mode) {
+    if (dump_json) {
         std::string json_path = output_base_name + ".json";
         JsonSerializer::save(song, json_path);
         std::cout << "Saved song to " << json_path << std::endl;
@@ -111,16 +115,13 @@ int main(int argc, char* argv[]) {
     if (playback_mode) {
         std::cout << "Rendering to default sound output device..." << std::endl;
         WavWriter writer;
-        // Render to temp file
         writer.write(renderer, song, "temp_playback.wav", sample_rate);
         
-        // Play
         int ret = std::system(SYSTEM_PLAY_CMD);
         if (ret != 0) {
             std::cerr << "Error playing audio." << std::endl;
         }
         
-        // Cleanup
         std::remove("temp_playback.wav");
     } else {
         std::string output_file_path = output_base_name + "." + format;
