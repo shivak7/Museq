@@ -15,7 +15,11 @@ static std::string remove_comments(const std::string& line) {
     return line;
 }
 
-ScriptParser::ScriptParser() {}
+ScriptParser::ScriptParser() {
+    // Add built-in Rest instrument (produces silence)
+    Instrument rest("Rest", Waveform::SINE, AdsrEnvelope(0, 0, 0, 0));
+    m_templates["Rest"] = rest;
+}
 
 Song ScriptParser::parse(const std::string& file_path) {
     std::ifstream file(file_path);
@@ -410,11 +414,13 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
                 // Push stack
                 parent_stack.push_back(current_parent);
                 current_parent = leader;
+                depth++;
                 
             } else if (sub == "stop") {
                 if (!parent_stack.empty()) {
                     current_parent = parent_stack.back();
                     parent_stack.pop_back();
+                    depth--;
                 }
             }
         } else if (keyword == "tempo") {
@@ -535,7 +541,7 @@ void ScriptParser::parse_compact_notes(const std::string& list, Sequence& seq) {
             }
         }
         int pitch = NoteParser::parse(note_name);
-        if (pitch > 0 || note_name == "0") {
+        if (pitch > 0 || note_name == "0" || pitch == -1) {
             seq.add_note(Note(pitch, dur, vel, p_val));
         }
     }

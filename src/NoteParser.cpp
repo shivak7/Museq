@@ -11,6 +11,13 @@ static std::map<char, int> note_values = {
 int NoteParser::parse(const std::string& note_name) {
     if (note_name.empty()) return 0;
 
+    std::string upper_name = note_name;
+    std::transform(upper_name.begin(), upper_name.end(), upper_name.begin(), ::toupper);
+
+    if (upper_name == "R" || upper_name == "REST") {
+        return -1;
+    }
+
     // Check if it's already a MIDI number
     if (std::all_of(note_name.begin(), note_name.end(), ::isdigit)) {
         try {

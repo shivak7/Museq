@@ -109,7 +109,7 @@ std::vector<float> render_instrument_stereo(const Instrument& instrument, float 
             for (const auto& note : instrument.sequence.notes) {
                 int start_sample = static_cast<int>(current_time * sample_rate);
                 int note_samples = static_cast<int>((note.duration / 1000.0f) * sample_rate);
-                if (note_samples > 0) {
+                if (note_samples > 0 && !note.is_rest) {
                     float tsf_pan = (note.pan + 1.0f) / 2.0f;
                     tsf_channel_set_pan(inst_tsf, 0, tsf_pan);
 
@@ -140,6 +140,12 @@ std::vector<float> render_instrument_stereo(const Instrument& instrument, float 
             bool is_first_note = (n_idx == 0);
             bool is_last_note = (n_idx == instrument.sequence.notes.size() - 1);
             
+            if (note.is_rest) {
+                current_time += note.duration / 1000.0f;
+                last_freq = -1.0f;
+                continue;
+            }
+
             int start_sample = static_cast<int>(current_time * sample_rate);
             int num_note_samples = static_cast<int>((note.duration / 1000.0f) * sample_rate);
             float target_freq = 440.0 * pow(2.0, (note.pitch - 69.0) / 12.0);
