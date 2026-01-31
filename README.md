@@ -41,12 +41,12 @@ Dependencies are handled via **vcpkg**.
     
     *Option A: Visual Studio (MSVC) - Recommended*
     ```powershell
-    .\vcpkg\vcpkg install libsndfile libvorbis libogg libmp3lame libflac libopus libmpg123 --triplet x64-windows
+    .\vcpkg\vcpkg install libsndfile libvorbis libogg mp3lame libflac opus mpg123 --triplet x64-windows
     ```
 
     *Option B: MinGW / MSYS2*
     ```powershell
-    .\vcpkg\vcpkg install libsndfile libvorbis libogg libmp3lame libflac libopus libmpg123 --triplet x64-mingw-static
+    .\vcpkg\vcpkg install libsndfile libvorbis libogg mp3lame libflac opus mpg123 --triplet x64-mingw-static
     ```
 
 3.  **Build with CMake:**
