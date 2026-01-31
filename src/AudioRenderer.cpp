@@ -1,3 +1,4 @@
+#define _USE_MATH_DEFINES
 #include "AudioRenderer.h"
 #include <cmath>
 #include <iostream>
