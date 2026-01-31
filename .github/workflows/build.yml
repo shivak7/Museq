@@ -74,11 +74,11 @@ jobs:
 
     - name: Install vcpkg dependencies
       run: |
-        vcpkg install libsndfile libvorbis libogg mp3lame libflac opus mpg123 --triplet x64-windows
+        vcpkg install libsndfile libvorbis libogg mp3lame libflac opus mpg123 --triplet x64-windows-static
       shell: cmd
 
     - name: Configure CMake
-      run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows
+      run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static
 
     - name: Build
       run: cmake --build build --config Release
