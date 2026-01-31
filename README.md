@@ -1,4 +1,4 @@
-# Museq - Music Sequencer & Synthesizer
+# <img src="Museq_logo.png" width="100" align="left" /> Museq - Music Sequencer & Synthesizer
 
 Museq is a cross-platform, text-based music sequencer and synthesizer written in C++17. It allows you to compose music using a simple, human-readable scripting language, supporting both synthesized sounds (subtractive synthesis) and sample-based instruments (SoundFonts, WAV samples).
 

@@ -8,6 +8,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Define source files
 file(GLOB_RECURSE SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 
+# Windows Resource File (Icon)
+if(WIN32)
+    list(APPEND SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/museq.rc")
+endif()
+
 # Add include directories
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/src")
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/third_party")
