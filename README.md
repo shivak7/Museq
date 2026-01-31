@@ -7,7 +7,13 @@ It features a powerful hierarchical composition model (parallel/sequential track
 ## Getting Started
 
 ### Download Binaries
-You can download the latest pre-built binaries for Windows, macOS, and Linux (Ubuntu) from the **[GitHub Actions](../../actions)** page. Click on the latest workflow run and check the **Artifacts** section at the bottom.
+You can download the latest pre-built binaries automatically:
+
+*   **[Download for Windows (x64)](https://nightly.link/shivak7/Museq/workflows/build.yml/master/museq-windows-x64.zip)**
+*   **[Download for macOS (Universal)](https://nightly.link/shivak7/Museq/workflows/build.yml/master/museq-macos-x64.zip)**
+*   **[Download for Linux (Ubuntu x64)](https://nightly.link/shivak7/Museq/workflows/build.yml/master/museq-ubuntu-x64.zip)**
+
+*(Powered by [nightly.link](https://nightly.link))*
 
 ### Prerequisites
 *   **CMake** (3.10+)
