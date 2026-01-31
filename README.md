@@ -6,6 +6,9 @@ It features a powerful hierarchical composition model (parallel/sequential track
 
 ## Getting Started
 
+### Download Binaries
+You can download the latest pre-built binaries for Windows, macOS, and Linux (Ubuntu) from the **[GitHub Actions](../../actions)** page. Click on the latest workflow run and check the **Artifacts** section at the bottom.
+
 ### Prerequisites
 *   **CMake** (3.10+)
 *   **C++ Compiler** (GCC, Clang, MSVC) supporting C++17
