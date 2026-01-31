@@ -9,16 +9,66 @@ It features a powerful hierarchical composition model (parallel/sequential track
 ### Prerequisites
 *   **CMake** (3.10+)
 *   **C++ Compiler** (GCC, Clang, MSVC) supporting C++17
-*   **Linux:** `libsndfile1-dev`, `libvorbis-dev`, `libogg-dev`, `libmp3lame-dev`
-*   **Windows:** Dependencies are handled automatically via `vcpkg`.
+*   **Git**
 
-### Build
+### Build Instructions
+
+#### Linux
+Install system dependencies:
+```bash
+sudo apt update
+sudo apt install build-essential cmake libsndfile1-dev libvorbis-dev libogg-dev libmp3lame-dev libflac-dev libopus-dev libmpg123-dev
+```
+
+Build the project:
 ```bash
 mkdir build
 cd build
 cmake ..
 make
 ```
+
+#### Windows
+Dependencies are handled via **vcpkg**.
+
+1.  **Install vcpkg:**
+    ```powershell
+    git clone https://github.com/microsoft/vcpkg
+    .\vcpkg\bootstrap-vcpkg.bat
+    ```
+
+2.  **Install Libraries:**
+    
+    *Option A: Visual Studio (MSVC) - Recommended*
+    ```powershell
+    .\vcpkg\vcpkg install libsndfile libvorbis libogg libmp3lame libflac libopus libmpg123 --triplet x64-windows
+    ```
+
+    *Option B: MinGW / MSYS2*
+    ```powershell
+    .\vcpkg\vcpkg install libsndfile libvorbis libogg libmp3lame libflac libopus libmpg123 --triplet x64-mingw-static
+    ```
+
+3.  **Build with CMake:**
+
+    **If using Visual Studio:**
+    Open the "Developer Command Prompt for VS 2022" and run:
+    ```cmd
+    mkdir build
+    cd build
+    cmake .. -DCMAKE_TOOLCHAIN_FILE=[path/to/vcpkg]/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows
+    cmake --build . --config Release
+    ```
+
+    **If using MSYS2 / MinGW:**
+    If you see an error like `'nmake' ... failed`, you need to explicitly specify the generator:
+    ```bash
+    mkdir build
+    cd build
+    cmake .. -G "MinGW Makefiles" -DCMAKE_TOOLCHAIN_FILE=[path/to/vcpkg]/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-mingw-static
+    cmake --build .
+    ```
+    *(Replace `[path/to/vcpkg]` with the actual path to your vcpkg installation).*
 
 ### Run
 ```bash
