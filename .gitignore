@@ -28,3 +28,4 @@ backup/
 # Sounds (Ignore all except the GeneralUser soundfont)
 sounds/*
 !sounds/GeneralUser GS v1.471.sf2
+dist/
