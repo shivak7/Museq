@@ -125,45 +125,52 @@ std::vector<float> render_instrument_stereo(const Instrument& instrument, float 
 
                     tsf_channel_note_on(inst_tsf, 0, note.pitch, note.velocity / 127.0f);
                     
-                    const int BLOCK_SIZE = 64;
-                    int samples_processed = 0;
-                    
-                    while (samples_processed < note_samples) {
-                        int chunk = std::min(BLOCK_SIZE, note_samples - samples_processed);
+                    if (legato) {
+                        const int BLOCK_SIZE = 64;
+                        int samples_processed = 0;
                         
-                        // Calculate glide for this chunk
-                        float current_freq = target_freq;
-                        if (legato && samples_processed < portamento_samples) {
-                            float t = (float)samples_processed / portamento_samples;
-                            current_freq = last_freq + (target_freq - last_freq) * t;
-                        }
-                        
-                        // Pitch bend
-                        // Ratio = current_freq / target_freq
-                        // cents = 1200 * log2(Ratio)
-                        // range = 2400 cents (if range=24) -> 16384 units
-                        // val = 8192 + (cents / (range * 100)) * 8192
-                        if (legato && std::abs(current_freq - target_freq) > 0.1f) {
-                             float ratio = current_freq / target_freq;
-                             float cents = 1200.0f * log2(ratio);
-                             // Range is 24 semitones = 2400 cents
-                             float normalized = cents / 2400.0f; 
-                             int wheel = 8192 + static_cast<int>(normalized * 8192.0f);
-                             if (wheel < 0) wheel = 0;
-                             if (wheel > 16383) wheel = 16383;
-                             tsf_channel_set_pitchwheel(inst_tsf, 0, wheel);
-                        } else {
-                             tsf_channel_set_pitchwheel(inst_tsf, 0, 8192);
-                        }
+                        while (samples_processed < note_samples) {
+                            int chunk = std::min(BLOCK_SIZE, note_samples - samples_processed);
+                            
+                            // Calculate glide for this chunk
+                            float current_freq = target_freq;
+                            if (samples_processed < portamento_samples) {
+                                float t = (float)samples_processed / portamento_samples;
+                                current_freq = last_freq + (target_freq - last_freq) * t;
+                            }
+                            
+                            // Pitch bend
+                            if (std::abs(current_freq - target_freq) > 0.1f) {
+                                 float ratio = current_freq / target_freq;
+                                 float cents = 1200.0f * log2(ratio);
+                                 float normalized = cents / 2400.0f; 
+                                 int wheel = 8192 + static_cast<int>(normalized * 8192.0f);
+                                 if (wheel < 0) wheel = 0;
+                                 if (wheel > 16383) wheel = 16383;
+                                 tsf_channel_set_pitchwheel(inst_tsf, 0, wheel);
+                            } else {
+                                 tsf_channel_set_pitchwheel(inst_tsf, 0, 8192);
+                            }
 
-                        std::vector<float> chunk_buffer(chunk * 2);
-                        tsf_render_float(inst_tsf, chunk_buffer.data(), chunk);
-                        
-                        for(int k = 0; k < chunk * 2; ++k) {
-                            if ((start_sample * 2) + (samples_processed * 2) + k < buffer.size()) 
-                                buffer[(start_sample * 2) + (samples_processed * 2) + k] += chunk_buffer[k];
+                            std::vector<float> chunk_buffer(chunk * 2);
+                            tsf_render_float(inst_tsf, chunk_buffer.data(), chunk);
+                            
+                            for(int k = 0; k < chunk * 2; ++k) {
+                                if ((start_sample * 2) + (samples_processed * 2) + k < buffer.size()) 
+                                    buffer[(start_sample * 2) + (samples_processed * 2) + k] += chunk_buffer[k];
+                            }
+                            samples_processed += chunk;
                         }
-                        samples_processed += chunk;
+                    } else {
+                        // Render full note at once to avoid artifacts
+                        tsf_channel_set_pitchwheel(inst_tsf, 0, 8192);
+                        std::vector<float> note_buffer(note_samples * 2);
+                        tsf_render_float(inst_tsf, note_buffer.data(), note_samples);
+                        
+                        for(int i = 0; i < note_samples * 2; ++i) {
+                            if ((start_sample * 2) + i < buffer.size()) 
+                                buffer[(start_sample * 2) + i] += note_buffer[i];
+                        }
                     }
                     
                     tsf_channel_note_off(inst_tsf, 0, note.pitch);
