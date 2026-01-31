@@ -28,6 +28,20 @@ cmake ..
 make
 ```
 
+#### macOS
+Install dependencies via Homebrew:
+```bash
+brew install cmake libsndfile libvorbis libogg lame flac opus mpg123
+```
+
+Build the project:
+```bash
+mkdir build
+cd build
+cmake ..
+make
+```
+
 #### Windows
 Dependencies are handled via **vcpkg**.
 

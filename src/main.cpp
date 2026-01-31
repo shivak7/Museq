@@ -16,6 +16,9 @@
     #include <windows.h>
     #define SYSTEM_PLAY_CMD "powershell -c (New-Object Media.SoundPlayer 'temp_playback.wav').PlaySync()"
     #define REMOVE_CMD "del temp_playback.wav"
+#elif defined(__APPLE__)
+    #define SYSTEM_PLAY_CMD "afplay temp_playback.wav"
+    #define REMOVE_CMD "rm temp_playback.wav"
 #else
     #define SYSTEM_PLAY_CMD "aplay temp_playback.wav"
     #define REMOVE_CMD "rm temp_playback.wav"
