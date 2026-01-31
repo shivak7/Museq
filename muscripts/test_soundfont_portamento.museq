@@ -1,0 +1,10 @@
+instrument Violin {
+    soundfont "sounds/GeneralUser GS v1.471.sf2"
+    preset 40
+    portamento 200
+}
+
+Violin {
+    tempo 60
+    notes C4, G4, F4, E4
+}

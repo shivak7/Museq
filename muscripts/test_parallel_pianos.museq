@@ -1,0 +1,16 @@
+instrument Piano {
+    soundfont "sounds/GeneralUser GS v1.471.sf2"
+    preset 0
+}
+
+parallel {
+    Piano {
+        tempo 120
+        notes C4, E4, G4, C5
+    }
+    
+    Piano {
+        tempo 120
+        notes C3, G3, C4, G4
+    }
+}

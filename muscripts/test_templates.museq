@@ -1,0 +1,32 @@
+instrument Piano {
+    soundfont "sounds/GeneralUser GS v1.471.sf2"
+    preset 0
+}
+
+instrument Drums {
+    soundfont "sounds/GeneralUser GS v1.471.sf2"
+    bank 128
+    preset 0
+}
+
+parallel {
+    Piano {
+        sequence {
+            note C4 500 100
+            note E4 500 100
+            note G4 1000 100
+        }
+    }
+    Drums {
+        sequence {
+            note 36 250 120
+            note 38 250 120
+            note 36 250 120
+            note 38 250 120
+            note 36 250 120
+            note 38 250 120
+            note 36 250 120
+            note 38 250 120
+        }
+    }
+}

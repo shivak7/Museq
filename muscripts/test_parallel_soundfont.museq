@@ -1,0 +1,27 @@
+function drums() {
+    instrument Drums {
+        soundfont "sounds/GeneralUser GS v1.471.sf2"
+        bank 128
+        preset 0
+        sequence {
+            note 36 250 100
+            note 38 250 100
+            note 36 250 100
+            note 38 250 100
+        }
+    }
+}
+
+parallel {
+    call drums()
+    instrument Piano {
+        soundfont "sounds/GeneralUser GS v1.471.sf2"
+        preset 0
+        sequence {
+            note C4 250 80
+            note E4 250 80
+            note G4 250 80
+            note C5 250 80
+        }
+    }
+}
