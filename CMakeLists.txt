@@ -44,8 +44,10 @@ else()
 endif()
 
 # 2. Vorbis/Ogg
-find_package(Vorbis CONFIG QUIET)
-find_package(Ogg CONFIG QUIET)
+if(WIN32)
+    find_package(Vorbis CONFIG QUIET)
+    find_package(Ogg CONFIG QUIET)
+endif()
 
 if(TARGET Vorbis::vorbis AND TARGET Ogg::ogg)
     message(STATUS "Found Vorbis/Ogg via Config")

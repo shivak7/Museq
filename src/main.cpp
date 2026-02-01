@@ -6,6 +6,7 @@
 #include "OggWriter.h"
 #include "ScriptParser.h"
 #include "AudioRenderer.h"
+#include "tsf.h" // For querying soundfonts
 #include <string>
 #include <vector>
 #include <algorithm>
@@ -32,6 +33,7 @@ void print_usage(const char* prog_name) {
     std::cerr << "  -q, --quality <rate>  Specify sample rate in Hz (default: 44100)" << std::endl;
     std::cerr << "  -p, --playback        Play directly to default speaker (ignores -o and -f)" << std::endl;
     std::cerr << "  -d, --dump-json       Dump the song structure to a JSON file" << std::endl;
+    std::cerr << "  -Q, --query <sf2>     List instruments in a SoundFont file" << std::endl;
 }
 
 int main(int argc, char* argv[]) {
@@ -46,6 +48,8 @@ int main(int argc, char* argv[]) {
     int sample_rate = 44100;
     bool playback_mode = false;
     bool dump_json = false;
+    bool query_mode = false;
+    std::string query_path;
 
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
@@ -84,6 +88,14 @@ int main(int argc, char* argv[]) {
             playback_mode = true;
         } else if (arg == "-d" || arg == "--dump-json") {
             dump_json = true;
+        } else if (arg == "-Q" || arg == "--query") {
+            query_mode = true;
+            if (i + 1 < argc) {
+                query_path = argv[++i];
+            } else {
+                std::cerr << "Error: Missing argument for query." << std::endl;
+                return 1;
+            }
         } else if (arg[0] == '-') {
             std::cerr << "Unknown option: " << arg << std::endl;
             print_usage(argv[0]);
@@ -96,6 +108,21 @@ int main(int argc, char* argv[]) {
                 return 1;
             }
         }
+    }
+
+    if (query_mode) {
+        tsf* f = tsf_load_filename(query_path.c_str());
+        if (!f) {
+            std::cerr << "Error: Could not load SoundFont file: " << query_path << std::endl;
+            return 1;
+        }
+        int count = tsf_get_presetcount(f);
+        std::cout << "Found " << count << " instruments in " << query_path << ":" << std::endl;
+        for (int i = 0; i < count; ++i) {
+            std::cout << i << ": " << tsf_get_presetname(f, i) << std::endl;
+        }
+        tsf_close(f);
+        return 0;
     }
 
     if (script_file_path.empty()) {

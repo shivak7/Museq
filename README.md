@@ -122,6 +122,7 @@ museq <script_file> [options]
 | `-q <hz>` | `--quality <hz>` | Sample rate in Hz (default: 44100). |
 | `-p` | `--playback` | Render to a temporary file and play immediately via system audio (ignores `-o`). |
 | `-d` | `--dump-json` | Dump the internal song structure to `<output_base>.json` for debugging. |
+| `-Q <sf2>` | `--query <sf2>` | List available instruments (presets) in a SoundFont file. |
 
 **Example:**
 ```bash
