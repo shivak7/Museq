@@ -1,0 +1,23 @@
+instrument Clean {
+    waveform sine
+    envelope 0.1 0.1 0.8 0.1
+}
+
+instrument Dirty {
+    waveform sine
+    envelope 0.1 0.1 0.8 0.1
+    effect distortion 10.0
+    effect bitcrush 4.0
+}
+
+instrument Echo {
+    waveform square
+    envelope 0.01 0.1 0.0 0.0 // Pluck
+    effect delay 300 0.6
+}
+
+sequential {
+    Clean { notes C4(500) }
+    Dirty { notes C4(500) }
+    Echo  { notes C4(500) } // Should hear echoes after note ends
+}

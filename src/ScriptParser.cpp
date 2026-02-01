@@ -46,7 +46,7 @@ void ScriptParser::collect_definitions(std::istream& input_stream) {
 
     while (std::getline(input_stream, line)) {
         line = remove_comments(line);
-        if (line.find_first_not_of(" \t\r\n") == std::string::npos) continue;
+        if (line.find_first_not_of(" 	\r\n") == std::string::npos) continue;
 
         if (line.find('{') != std::string::npos && line.find("function") == std::string::npos && line.find("instrument") == std::string::npos) scope_brace_count++;
         if (line.find('}') != std::string::npos) scope_brace_count--;
@@ -169,6 +169,16 @@ void ScriptParser::collect_definitions(std::istream& input_stream) {
                     sub_ss >> template_inst.portamento_time;
                 } else if (sub_kw == "pan") {
                     sub_ss >> template_inst.pan;
+                } else if (sub_kw == "effect") {
+                    std::string type_str; sub_ss >> type_str;
+                    Effect fx;
+                    if (type_str == "delay") { fx.type = EffectType::DELAY; sub_ss >> fx.param1 >> fx.param2; }
+                    else if (type_str == "distortion") { fx.type = EffectType::DISTORTION; sub_ss >> fx.param1; }
+                    else if (type_str == "bitcrush") { fx.type = EffectType::BITCRUSH; sub_ss >> fx.param1; }
+                    else if (type_str == "fadein") { fx.type = EffectType::FADE_IN; sub_ss >> fx.param1; }
+                    else if (type_str == "fadeout") { fx.type = EffectType::FADE_OUT; sub_ss >> fx.param1; }
+                    else if (type_str == "tremolo") { fx.type = EffectType::TREMOLO; sub_ss >> fx.param1 >> fx.param2; }
+                    template_inst.effects.push_back(fx);
                 } else if (sub_kw == "sequence") {
                     in_sequence = true;
                 } else if (sub_kw == "note" && in_sequence) {
@@ -247,6 +257,7 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
     Sequence temp_sequence;
     bool in_instrument_block = false;
     bool in_sequence_block = false;
+    std::vector<Effect> temp_effects;
 
     // Stack for loop context
     std::vector<std::shared_ptr<CompositeElement>> parent_stack;
@@ -255,7 +266,7 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
 
     while (std::getline(input_stream, line)) {
         line = remove_comments(line);
-        if (line.find_first_not_of(" \t\r\n") == std::string::npos) continue;
+        if (line.find_first_not_of(" 	\r\n") == std::string::npos) continue;
 
         if (skipping_definition(line, in_function_definition, in_instrument_definition, def_brace_count, input_stream, depth)) continue;
 
@@ -276,6 +287,7 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
             bank_index = 0;
             preset_index = 0;
             temp_sequence = Sequence();
+            temp_effects.clear();
             in_instrument_block = true;
         } else if (keyword == "waveform" && in_instrument_block) {
             std::string w; ss >> w;
@@ -329,6 +341,16 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
         } else if (keyword == "note" && in_sequence_block) {
             std::string n; int d, v; ss >> n >> d >> v;
             temp_sequence.add_note(Note(NoteParser::parse(n), d, v));
+        } else if (keyword == "effect" && in_instrument_block) {
+            std::string type_str; ss >> type_str;
+            Effect fx;
+            if (type_str == "delay") { fx.type = EffectType::DELAY; ss >> fx.param1 >> fx.param2; }
+            else if (type_str == "distortion") { fx.type = EffectType::DISTORTION; ss >> fx.param1; }
+            else if (type_str == "bitcrush") { fx.type = EffectType::BITCRUSH; ss >> fx.param1; }
+            else if (type_str == "fadein") { fx.type = EffectType::FADE_IN; ss >> fx.param1; }
+            else if (type_str == "fadeout") { fx.type = EffectType::FADE_OUT; ss >> fx.param1; }
+            else if (type_str == "tremolo") { fx.type = EffectType::TREMOLO; ss >> fx.param1 >> fx.param2; }
+            temp_effects.push_back(fx);
         } else if (keyword == "call") {
             std::string call_rest; std::getline(ss, call_rest);
             size_t open_p = call_rest.find('(');
@@ -440,18 +462,27 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
                 std::string lkw;
                 while (lss >> lkw) {
                     if (lkw == "{" || lkw == "}") continue;
-                    if (lkw == "tempo") { float bpm; lss >> bpm; if (bpm > 0) m_default_duration = 60000 / bpm; }
-                    else if (lkw == "velocity") { lss >> m_default_velocity; }
-                    else if (lkw == "portamento") { lss >> inst.portamento_time; }
-                    else if (lkw == "pan") { lss >> inst.pan; }
+                    // ...
                     else if (lkw == "note") {
                         std::string n; int d, v; float p;
                         if (lss >> n >> d >> v >> p) inst.sequence.add_note(Note(NoteParser::parse(n), d, v, p));
-                        else if (lss >> n >> d >> v) inst.sequence.add_note(Note(NoteParser::parse(n), d, v, inst.pan));
+                        else if (lss >> n >> d >> v) {
+                             inst.sequence.add_note(Note(NoteParser::parse(n), d, v, inst.pan));
+                        }
                         else inst.sequence.add_note(Note(NoteParser::parse(n), m_default_duration, m_default_velocity, inst.pan));
                     } else if (lkw == "notes") {
                         std::string note_list; std::getline(lss, note_list);
                         parse_compact_notes(note_list, inst.sequence);
+                    } else if (lkw == "effect") {
+                        std::string type_str; lss >> type_str;
+                        Effect fx;
+                        if (type_str == "delay") { fx.type = EffectType::DELAY; lss >> fx.param1 >> fx.param2; }
+                        else if (type_str == "distortion") { fx.type = EffectType::DISTORTION; lss >> fx.param1; }
+                        else if (type_str == "bitcrush") { fx.type = EffectType::BITCRUSH; lss >> fx.param1; }
+                        else if (type_str == "fadein") { fx.type = EffectType::FADE_IN; lss >> fx.param1; }
+                        else if (type_str == "fadeout") { fx.type = EffectType::FADE_OUT; lss >> fx.param1; }
+                        else if (type_str == "tremolo") { fx.type = EffectType::TREMOLO; lss >> fx.param1 >> fx.param2; }
+                        inst.effects.push_back(fx);
                     }
                 }
             };
@@ -476,6 +507,7 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
                 i.sequence = temp_sequence;
                 i.synth.filter = filter;
                 i.synth.lfo = lfo;
+                i.effects = temp_effects; // Copy effects
                 current_parent->children.push_back(std::make_shared<InstrumentElement>(i));
                 in_instrument_block = false;
             } else {

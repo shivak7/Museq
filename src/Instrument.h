@@ -2,10 +2,12 @@
 #define INSTRUMENT_H
 
 #include <string>
+#include <vector>
 #include "Sequence.h"
 #include "Waveform.h"
 #include "AdsrEnvelope.h"
 #include "Sampler.h"
+#include "Effect.h"
 
 enum class InstrumentType {
     SYNTH,
@@ -66,6 +68,9 @@ public:
 
     float portamento_time = 0.0f; // In milliseconds
     float pan = 0.0f; // -1.0 to 1.0
+    
+    // Effects Chain
+    std::vector<Effect> effects;
 
     Instrument() = default;
     Instrument(std::string name, Waveform waveform = Waveform::SINE, AdsrEnvelope envelope = AdsrEnvelope());
