@@ -6,7 +6,6 @@
 #include "OggWriter.h"
 #include "ScriptParser.h"
 #include "AudioRenderer.h"
-#include "tsf.h" // For querying soundfonts
 #include <string>
 #include <vector>
 #include <algorithm>
@@ -111,17 +110,7 @@ int main(int argc, char* argv[]) {
     }
 
     if (query_mode) {
-        tsf* f = tsf_load_filename(query_path.c_str());
-        if (!f) {
-            std::cerr << "Error: Could not load SoundFont file: " << query_path << std::endl;
-            return 1;
-        }
-        int count = tsf_get_presetcount(f);
-        std::cout << "Found " << count << " instruments in " << query_path << ":" << std::endl;
-        for (int i = 0; i < count; ++i) {
-            std::cout << i << ": " << tsf_get_presetname(f, i) << std::endl;
-        }
-        tsf_close(f);
+        AudioRenderer::print_soundfont_presets(query_path);
         return 0;
     }
 

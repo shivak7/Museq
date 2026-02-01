@@ -374,3 +374,22 @@ std::vector<float> AudioRenderer::render(const Song& song, float sample_rate) {
 
     return buffer;
 }
+
+void AudioRenderer::print_soundfont_presets(const std::string& path) {
+    tsf* f = tsf_load_filename(path.c_str());
+    if (!f) {
+        std::cerr << "Error: Could not load SoundFont file: " << path << std::endl;
+        return;
+    }
+    int count = tsf_get_presetcount(f);
+    std::cout << "Found " << count << " instruments in " << path << ":" << std::endl;
+    std::cout << "Index\tBank\tPreset\tName" << std::endl;
+    std::cout << "-----\t----\t------\t----" << std::endl;
+    for (int i = 0; i < count; ++i) {
+        std::cout << i << "\t" 
+                  << f->presets[i].bank << "\t" 
+                  << f->presets[i].preset << "\t" 
+                  << f->presets[i].presetName << std::endl;
+    }
+    tsf_close(f);
+}

@@ -4,9 +4,12 @@
 #include "Song.h"
 #include <vector>
 #include <map>
+#include <string>
 
 // Forward declaration for TinySoundFont
-struct tsf;
+extern "C" {
+    struct tsf;
+}
 
 class AudioRenderer {
 public:
@@ -15,6 +18,9 @@ public:
     
     // Returns interleaved stereo samples (L, R, L, R...)
     std::vector<float> render(const Song& song, float sample_rate = 44100.0f);
+
+    // Helper to query soundfont
+    static void print_soundfont_presets(const std::string& path);
 
 private:
     std::map<std::string, tsf*> m_soundfonts;
