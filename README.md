@@ -275,6 +275,20 @@ repeat 4 {
 }
 ```
 
+#### Time Offset
+Use `offset` to delay the start of a block by a specified duration (milliseconds).
+
+```museq
+parallel {
+    Piano { notes C4 }
+    
+    // Starts 500ms later
+    offset 500 {
+        Piano { notes G4 }
+    }
+}
+```
+
 ### 5. Advanced Workflow: Auto-Looping
 A powerful feature for backing tracks. You define a "Loop Leader" (foreground) and "Loop Followers" (background). The followers automatically repeat to match the duration of the leader.
 

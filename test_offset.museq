@@ -1,0 +1,18 @@
+instrument Piano {
+    waveform sine
+    envelope 0.01 0.1 0.5 0.1
+}
+
+parallel {
+    Piano { notes C4(250) }
+    offset 500 {
+        Piano { notes G4(250) }
+    }
+}
+
+sequential {
+    Piano { notes C4(250) }
+    offset 500 {
+        Piano { notes G4(250) }
+    }
+}

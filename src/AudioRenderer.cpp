@@ -76,9 +76,12 @@ AudioRenderer::~AudioRenderer() {
     }
 }
 
-void mix_buffers_stereo(std::vector<float>& target, const std::vector<float>& source) {
-    if (source.size() > target.size()) target.resize(source.size(), 0.0f);
-    for (size_t i = 0; i < source.size(); ++i) target[i] += source[i];
+void mix_buffers_stereo(std::vector<float>& target, const std::vector<float>& source, int offset) {
+    size_t required_size = offset + source.size();
+    if (required_size > target.size()) target.resize(required_size, 0.0f);
+    for (size_t i = 0; i < source.size(); ++i) {
+        target[offset + i] += source[i];
+    }
 }
 
 void get_pan_gains(float pan, float& left, float& right) {
@@ -358,13 +361,18 @@ std::vector<float> render_recursive_stereo(std::shared_ptr<SongElement> element,
         std::vector<float> buffer;
         if (comp_elem->type == CompositeType::SEQUENTIAL) {
             for (auto child : comp_elem->children) {
+                int offset_samples = static_cast<int>((child->start_offset_ms / 1000.0f) * sample_rate);
+                if (offset_samples > 0) {
+                    buffer.insert(buffer.end(), offset_samples * 2, 0.0f);
+                }
                 auto child_buffer = render_recursive_stereo(child, sample_rate, soundfonts);
                 buffer.insert(buffer.end(), child_buffer.begin(), child_buffer.end());
             }
         } else {
             for (auto child : comp_elem->children) {
                 auto child_buffer = render_recursive_stereo(child, sample_rate, soundfonts);
-                mix_buffers_stereo(buffer, child_buffer);
+                int offset_samples = static_cast<int>((child->start_offset_ms / 1000.0f) * sample_rate);
+                mix_buffers_stereo(buffer, child_buffer, offset_samples * 2);
             }
         }
         return buffer;

@@ -26,4 +26,6 @@ private:
     std::map<std::string, tsf*> m_soundfonts;
 };
 
+void mix_buffers_stereo(std::vector<float>& target, const std::vector<float>& source, int offset = 0);
+
 #endif // AUDIO_RENDERER_H

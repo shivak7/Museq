@@ -14,6 +14,7 @@ enum class CompositeType {
 
 class SongElement {
 public:
+    int start_offset_ms = 0;
     virtual ~SongElement() = default;
 };
 
