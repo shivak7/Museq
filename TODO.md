@@ -45,3 +45,17 @@ This document outlines planned features, experimental ideas, and architectural i
     *   Variables (e.g., `set $base_freq 440`).
     *   Arithmetic (e.g., `note $base_freq * 1.5`).
     *   Conditional logic (`if`).
+
+## 🎨 User Interface (GUI)
+*   **Live Script Editor:** A dedicated editor with syntax highlighting, auto-completion, and real-time playback.
+*   **Visual Mixer:** Drag-and-drop interface for adjusting `gain`, `pan`, and `effects` visually.
+*   **Waveform/Spectrum Visualizer:** Real-time visual feedback of the synthesized output.
+
+## 🤖 AI & Intelligent Interfaces
+*   **Natural Language to Script:**
+    *   Build a parallel layer to interface with LLMs (e.g., Gemini) to generate `.museq` scripts and `musynth` instruments from natural language prompts.
+    *   *Example:* "Create a dark ambient soundscape with a low pulsing bass."
+*   **Intelligent Patching:** Use AI to suggest instrument parameters (waveform, ADSR, filters) based on descriptive keywords.
+*   **Automated Arrangement & Mixing:** AI assistants to suggest harmonic counterpoints or balance levels across parallel tracks.
+*   *(Planned for after GUI implementation)*
+
