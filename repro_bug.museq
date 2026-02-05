@@ -1,0 +1,8 @@
+instrument Mandolin {
+    waveform sine
+}
+
+tempo 200
+sequential{
+    Mandolin {notes c,d}
+}

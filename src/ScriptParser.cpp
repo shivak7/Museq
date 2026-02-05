@@ -7,12 +7,25 @@
 #include "NoteParser.h"
 #include "SongElement.h"
 
-static std::string remove_comments(const std::string& line) {
+static std::string preprocess_line(const std::string& raw_line) {
+    std::string line = raw_line;
     size_t comment_pos = line.find("//");
     if (comment_pos != std::string::npos) {
-        return line.substr(0, comment_pos);
+        line = line.substr(0, comment_pos);
     }
-    return line;
+    
+    std::string res;
+    res.reserve(line.length() * 1.5);
+    for (char c : line) {
+        if (c == '{' || c == '}') {
+            res += ' ';
+            res += c;
+            res += ' ';
+        } else {
+            res += c;
+        }
+    }
+    return res;
 }
 
 ScriptParser::ScriptParser() {
@@ -45,7 +58,7 @@ void ScriptParser::collect_definitions(std::istream& input_stream) {
     int scope_brace_count = 0;
 
     while (std::getline(input_stream, line)) {
-        line = remove_comments(line);
+        line = preprocess_line(line);
         if (line.find_first_not_of(" 	\r\n") == std::string::npos) continue;
 
         if (line.find('{') != std::string::npos && line.find("function") == std::string::npos && line.find("instrument") == std::string::npos) scope_brace_count++;
@@ -104,7 +117,7 @@ void ScriptParser::collect_definitions(std::istream& input_stream) {
             bool in_sequence = false;
 
             while (brace_count > 0 && std::getline(input_stream, sub_line)) {
-                sub_line = remove_comments(sub_line);
+                sub_line = preprocess_line(sub_line);
                 if (sub_line.find('{') != std::string::npos) brace_count++;
                 if (sub_line.find('}') != std::string::npos) {
                     brace_count--;
@@ -218,7 +231,7 @@ bool ScriptParser::skipping_definition(const std::string& line, bool& in_functio
             else {
                 std::string next_line;
                 while (std::getline(stream, next_line)) {
-                    next_line = remove_comments(next_line);
+                    next_line = preprocess_line(next_line);
                     if (next_line.find('{') != std::string::npos) {
                         brace_count = 1;
                         break;
@@ -265,8 +278,8 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
     const std::string trim_chars = {' ', '\t', '\r', '\n', '"'};
 
     while (std::getline(input_stream, line)) {
-        line = remove_comments(line);
-        if (line.find_first_not_of(" 	\r\n") == std::string::npos) continue;
+        line = preprocess_line(line);
+        if (line.find_first_not_of(" \t\r\n") == std::string::npos) continue;
 
         if (skipping_definition(line, in_function_definition, in_instrument_definition, def_brace_count, input_stream, depth)) continue;
 
@@ -493,6 +506,7 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
 
             std::string sub_line;
             while (inst_brace_count > 0 && std::getline(input_stream, sub_line)) {
+                sub_line = preprocess_line(sub_line);
                 process_inst_line(sub_line);
             }
             current_parent->children.push_back(std::make_shared<InstrumentElement>(inst));

@@ -11,13 +11,13 @@ instrument Dirty {
 }
 
 instrument Echo {
-    waveform square
-    envelope 0.01 0.1 0.0 0.0 // Pluck
+    waveform sawtooth
+    envelope 0.05 0.2 0.5 0.5
     effect delay 300 0.6
 }
 
 sequential {
     Clean { notes C4(500) }
     Dirty { notes C4(500) }
-    Echo  { notes C4(500) } // Should hear echoes after note ends
+    Echo  { notes C4(500) }
 }
