@@ -1,7 +1,10 @@
+instrument Drums {
+    soundfont "sounds/GeneralUser GS v1.471.sf2"
+    bank 128
+}
+
 function Beat {
-    instrument Drums {
-        soundfont "sounds/GeneralUser GS v1.471.sf2"
-        bank 128
+    Drums {
         sequence {
             note 36 250 100 // Kick
             note 42 250 100 // Hat
@@ -11,14 +14,17 @@ function Beat {
     }
 }
 
+instrument Piano {
+    soundfont "sounds/GeneralUser GS v1.471.sf2"
+    bank 0
+    preset 0
+}
+
 loop start Beat
     Rest {
         note R 2000 0
     }
-    instrument Piano {
-        soundfont "sounds/GeneralUser GS v1.471.sf2"
-        bank 0
-        preset 0
+    Piano {
         sequence {
             note C4 1000 100
         }

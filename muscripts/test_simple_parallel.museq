@@ -1,12 +1,18 @@
+instrument Inst1 {
+    waveform sine
+}
+
+instrument Inst2 {
+    waveform square
+}
+
 parallel {
-    instrument Inst1 {
-        waveform sine
+    Inst1 {
         sequence {
             note C4 1000 100
         }
     }
-    instrument Inst2 {
-        waveform square
+    Inst2 {
         sequence {
             note G4 1000 100
         }

@@ -1,26 +1,34 @@
+instrument Kick {
+    sample kick.wav
+}
+
+instrument Piano {
+    soundfont "sounds/GeneralUser GS v1.471.sf2"
+    preset 0
+}
+
+instrument Bass {
+    waveform sine
+    envelope 0.1 0.2 0.8 0.4
+}
+
 parallel {
-    instrument Kick {
-        sample kick.wav
+    Kick {
         sequence {
             note C3 500 127
             note C3 500 127
         }
     }
-    instrument Piano {
-        soundfont "sounds/GeneralUser GS v1.471.sf2"
-        preset 0
+    Piano {
         sequence {
             note C4 250 127
             note E4 250 127
             note G4 500 127
         }
     }
-}
-
-instrument Bass {
-    waveform sine
-    envelope 0.1 0.2 0.8 0.4
-    sequence {
-        note C2 1000 127
+    Bass {
+        sequence {
+            note C2 1000 127
+        }
     }
 }
