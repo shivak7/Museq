@@ -292,8 +292,8 @@ repeat 4 {
 }
 ```
 
-#### Time Offset
-Use `offset` to delay the start of a block by a specified duration (milliseconds).
+#### Time Offset & Phase
+Use `offset` to delay by milliseconds, or `phase` to delay by a fraction of a beat (relative to current tempo).
 
 ```museq
 parallel {
@@ -302,6 +302,11 @@ parallel {
     // Starts 500ms later
     offset 500 {
         Piano { notes G4 }
+    }
+    
+    // Starts 0.5 beats later
+    phase 0.5 {
+        Piano { notes E4 }
     }
 }
 ```

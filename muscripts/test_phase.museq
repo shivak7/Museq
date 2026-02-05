@@ -1,0 +1,12 @@
+instrument Piano {
+    waveform sine
+}
+
+tempo 120
+
+parallel {
+    Piano { notes C4 }
+    phase 0.5 {
+        Piano { notes G4 }
+    }
+}

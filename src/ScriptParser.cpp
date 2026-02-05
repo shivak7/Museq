@@ -325,6 +325,33 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
                 child->start_offset_ms += offset_ms;
                 current_parent->children.push_back(child);
             }
+        } else if (keyword == "phase") {
+            float p; ss >> p;
+            int offset_ms = static_cast<int>(p * m_default_duration);
+            std::vector<std::string> body;
+            std::string sub_line;
+            int brace_count = 0;
+            if (line.find('{') != std::string::npos) brace_count = 1;
+            else {
+                while(std::getline(input_stream, sub_line) && sub_line.find('{') == std::string::npos);
+                brace_count = 1;
+            }
+            while (brace_count > 0 && std::getline(input_stream, sub_line)) {
+                sub_line = preprocess_line(sub_line);
+                if (sub_line.find('{') != std::string::npos) brace_count++;
+                if (sub_line.find('}') != std::string::npos) brace_count--;
+                if (brace_count > 0) body.push_back(sub_line);
+            }
+            
+            auto temp_container = std::make_shared<CompositeElement>(CompositeType::SEQUENTIAL);
+            std::stringstream body_stream;
+            for (const auto& bl : body) body_stream << bl << "\n";
+            process_script_stream(body_stream, current_param_map, temp_container, depth + 1);
+            
+            for (auto child : temp_container->children) {
+                child->start_offset_ms += offset_ms;
+                current_parent->children.push_back(child);
+            }
         } else if (keyword == "call") {
             std::string call_rest; std::getline(ss, call_rest);
             size_t open_p = call_rest.find('(');
