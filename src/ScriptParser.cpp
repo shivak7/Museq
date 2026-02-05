@@ -42,7 +42,7 @@ Song ScriptParser::parse(const std::string& file_path) {
     }
 
     ScriptParser parser;
-    parser.collect_definitions(file);
+    parser.collect_definitions(file, false, file_path);
     file.close();
     file.open(file_path);
     if (!file.is_open()) return Song();
@@ -53,7 +53,7 @@ Song ScriptParser::parse(const std::string& file_path) {
     return parser.m_song;
 }
 
-void ScriptParser::collect_definitions(std::istream& input_stream, bool instruments_only) {
+void ScriptParser::collect_definitions(std::istream& input_stream, bool instruments_only, const std::string& filename) {
     std::string line;
     int scope_brace_count = 0;
 
@@ -81,7 +81,7 @@ void ScriptParser::collect_definitions(std::istream& input_stream, bool instrume
                          m_imported_files.insert(path);
                          std::ifstream imported_file(path);
                          if (imported_file.is_open()) {
-                             collect_definitions(imported_file, true);
+                             collect_definitions(imported_file, true, path);
                          } else {
                              std::cerr << "Warning: Could not open imported file " << path << std::endl;
                          }
@@ -134,8 +134,20 @@ void ScriptParser::collect_definitions(std::istream& input_stream, bool instrume
             std::string instrument_name;
             ss >> instrument_name;
             
+            std::string final_name = instrument_name;
+            if (m_templates.count(final_name) > 0) {
+                int suffix = 1;
+                while (m_templates.count(instrument_name + "_" + std::to_string(suffix)) > 0) {
+                    suffix++;
+                }
+                final_name = instrument_name + "_" + std::to_string(suffix);
+                std::cerr << "Warning: Instrument conflict. Renaming '" << instrument_name 
+                          << "' from '" << filename << "' to '" << final_name 
+                          << "' to avoid overwriting existing definition." << std::endl;
+            }
+
             Instrument template_inst;
-            template_inst.name = instrument_name;
+            template_inst.name = final_name;
             template_inst.synth.filter = Filter(); 
             template_inst.synth.lfo = LFO();       
             
@@ -237,7 +249,7 @@ void ScriptParser::collect_definitions(std::istream& input_stream, bool instrume
                     parse_compact_notes(note_list, template_inst.sequence);
                 }
             }
-            m_templates[instrument_name] = template_inst;
+            m_templates[final_name] = template_inst;
         }
     }
 }

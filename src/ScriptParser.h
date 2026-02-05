@@ -30,7 +30,7 @@ private:
 
     ScriptParser();
 
-    void collect_definitions(std::istream& input_stream, bool instruments_only = false);
+    void collect_definitions(std::istream& input_stream, bool instruments_only = false, const std::string& filename = "unknown");
     void process_script_stream(std::istream& input_stream, const std::map<std::string, std::string>& current_param_map, std::shared_ptr<CompositeElement> current_parent, int depth = 0);
     bool skipping_definition(const std::string& line, bool& in_function, bool& in_instrument, int& brace_count, std::istream& stream, int depth);
     std::string substitute_params(const std::string& line, const std::map<std::string, std::string>& param_map);

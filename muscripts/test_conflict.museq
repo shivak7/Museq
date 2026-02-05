@@ -1,0 +1,10 @@
+instrument Piano {
+    waveform sine
+}
+
+import "muscripts/lib_conflict.museq"
+
+sequential {
+    Piano { notes C4(250) }
+    Piano_1 { notes E4(250) }
+}
