@@ -109,6 +109,9 @@ To ensure your scripts run correctly:
 
 Ensure that the path specified in your `.museq` script (e.g., `soundfont "sounds/myfont.sf2"`) actually exists relative to where you are running the command.
 
+**Additional Resources:**
+*   **[Free SoundFonts & Samples (Internet Archive)](https://archive.org/details/free-soundfonts-sf2-2019-04)** - A collection of public domain and free-to-use SoundFonts and samples compatible with Museq.
+
 ## Command Line Usage
 
 ```bash
