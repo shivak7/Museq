@@ -22,6 +22,7 @@ private:
     // Default context for notes
     int m_default_duration = 500; // 120 BPM
     int m_default_velocity = 100;
+    int m_default_octave = 4;
 
     ScriptParser();
 

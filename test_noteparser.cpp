@@ -9,7 +9,7 @@ static std::map<char, int> note_values = {
     {'C', 0}, {'D', 2}, {'E', 4}, {'F', 5}, {'G', 7}, {'A', 9}, {'B', 11}
 };
 
-int parse(const std::string& note_name) {
+int parse(const std::string& note_name, int default_octave = 4) {
     if (note_name.empty()) return 0;
 
     std::string upper_name = note_name;
@@ -37,12 +37,12 @@ int parse(const std::string& note_name) {
         i++;
     }
 
-    int octave = 4;
+    int octave = default_octave;
     if (i < note_name.length()) {
         try {
             octave = std::stoi(note_name.substr(i));
         } catch (...) {
-            // Default to 4
+            // Use default
         }
     }
 

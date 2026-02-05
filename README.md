@@ -136,6 +136,7 @@ museq <script_file> [options]
 Museq scripts are whitespace-insensitive but line-oriented. Comments start with `//`.
 
 ### 1. Defining Instruments
+All instruments must be declared at the top level of the script, before any execution blocks.
 
 #### Synthesizers
 Define a subtractive synth with an envelope, filter, and LFO.
@@ -177,12 +178,12 @@ instrument Kick {
 ```
 
 ### 2. Defining Functions (Templates)
-Functions allow you to reuse instrument definitions or musical patterns.
+Functions allow you to reuse musical patterns.
 
 ```museq
 function DrumKit {
-    instrument Kick { ... }
-    instrument Snare { ... }
+    Kick { ... }
+    Snare { ... }
 }
 ```
 
@@ -206,13 +207,23 @@ Define multiple notes on one line.
 Format: `Pitch(Duration, Velocity, [Pan])`.
 Defaults: Duration and Velocity use global defaults if omitted.
 
+**Repetition:** Use `*N` to repeat a note N times (e.g., `C4*4`).
+
 ```museq
 tempo 120
 velocity 100
 
 instrument Synth {
-    notes C4, E4(250), G4(500, 120), C5(1000, 127, 0.5)
+    notes C4*2, E4(250), G4(500, 120), C5(1000, 127, 0.5)
 }
+```
+
+#### Octave Context
+Use `octave` to set a default octave for subsequent notes.
+
+```museq
+octave 5
+notes C, D, E  // Played as C5, D5, E5
 ```
 
 #### Rests

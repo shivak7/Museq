@@ -288,82 +288,8 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
         std::string keyword;
         if (!(ss >> keyword)) continue;
 
-        if (keyword == "instrument") {
-            ss >> instrument_name;
-            instrument_type = InstrumentType::SYNTH;
-            waveform = Waveform::SINE;
-            envelope = AdsrEnvelope();
-            filter = Filter();
-            lfo = LFO();
-            sample_path = "";
-            soundfont_path = "";
-            bank_index = 0;
-            preset_index = 0;
-            temp_sequence = Sequence();
-            temp_effects.clear();
-            in_instrument_block = true;
-        } else if (keyword == "waveform" && in_instrument_block) {
-            std::string w; ss >> w;
-            if (w == "sine") waveform = Waveform::SINE;
-            else if (w == "square") waveform = Waveform::SQUARE;
-            else if (w == "triangle") waveform = Waveform::TRIANGLE;
-            else if (w == "sawtooth") waveform = Waveform::SAWTOOTH;
-        } else if (keyword == "envelope" && in_instrument_block) {
-            float a, d, s, r; ss >> a >> d >> s >> r;
-            envelope = AdsrEnvelope(a, d, s, r);
-        } else if (keyword == "filter" && in_instrument_block) {
-            std::string type_str; float cutoff, res;
-            ss >> type_str >> cutoff >> res;
-            if (type_str == "lowpass") filter.type = FilterType::LOWPASS;
-            else if (type_str == "highpass") filter.type = FilterType::HIGHPASS;
-            else if (type_str == "bandpass") filter.type = FilterType::BANDPASS;
-            filter.cutoff = cutoff;
-            filter.resonance = res;
-        } else if (keyword == "lfo" && in_instrument_block) {
-            std::string target_str, type_str; float freq, amt;
-            ss >> target_str >> type_str >> freq >> amt;
-            if (target_str == "pitch") lfo.target = LFOTarget::PITCH;
-            else if (target_str == "amplitude") lfo.target = LFOTarget::AMPLITUDE;
-            else if (target_str == "cutoff") lfo.target = LFOTarget::FILTER_CUTOFF;
-            
-            if (type_str == "sine") lfo.waveform = Waveform::SINE;
-            else if (type_str == "square") lfo.waveform = Waveform::SQUARE;
-            else if (type_str == "triangle") lfo.waveform = Waveform::TRIANGLE;
-            else if (type_str == "sawtooth") lfo.waveform = Waveform::SAWTOOTH;
-            
-            lfo.frequency = freq;
-            lfo.amount = amt;
-        } else if (keyword == "sample" && in_instrument_block) {
-            instrument_type = InstrumentType::SAMPLER;
-            std::getline(ss, sample_path);
-            size_t f = sample_path.find_first_not_of(trim_chars);
-            size_t l = sample_path.find_last_not_of(trim_chars);
-            if (f != std::string::npos) sample_path = sample_path.substr(f, (l - f + 1));
-        } else if (keyword == "soundfont" && in_instrument_block) {
-            instrument_type = InstrumentType::SOUNDFONT;
-            std::getline(ss, soundfont_path);
-            size_t f = soundfont_path.find_first_not_of(trim_chars);
-            size_t l = soundfont_path.find_last_not_of(trim_chars);
-            if (f != std::string::npos) soundfont_path = soundfont_path.substr(f, (l - f + 1));
-        } else if (keyword == "bank" && in_instrument_block) {
-            ss >> bank_index;
-        } else if (keyword == "preset" && in_instrument_block) {
-            ss >> preset_index;
-        } else if (keyword == "sequence" && in_instrument_block) {
-            in_sequence_block = true;
-        } else if (keyword == "note" && in_sequence_block) {
-            std::string n; int d, v; ss >> n >> d >> v;
-            temp_sequence.add_note(Note(NoteParser::parse(n), d, v));
-        } else if (keyword == "effect" && in_instrument_block) {
-            std::string type_str; ss >> type_str;
-            Effect fx;
-            if (type_str == "delay") { fx.type = EffectType::DELAY; ss >> fx.param1 >> fx.param2; }
-            else if (type_str == "distortion") { fx.type = EffectType::DISTORTION; ss >> fx.param1; }
-            else if (type_str == "bitcrush") { fx.type = EffectType::BITCRUSH; ss >> fx.param1; }
-            else if (type_str == "fadein") { fx.type = EffectType::FADE_IN; ss >> fx.param1; }
-            else if (type_str == "fadeout") { fx.type = EffectType::FADE_OUT; ss >> fx.param1; }
-            else if (type_str == "tremolo") { fx.type = EffectType::TREMOLO; ss >> fx.param1 >> fx.param2; }
-            temp_effects.push_back(fx);
+        if (keyword == "octave") {
+            ss >> m_default_octave;
         } else if (keyword == "call") {
             std::string call_rest; std::getline(ss, call_rest);
             size_t open_p = call_rest.find('(');
@@ -478,11 +404,11 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
                     // ...
                     else if (lkw == "note") {
                         std::string n; int d, v; float p;
-                        if (lss >> n >> d >> v >> p) inst.sequence.add_note(Note(NoteParser::parse(n), d, v, p));
+                        if (lss >> n >> d >> v >> p) inst.sequence.add_note(Note(NoteParser::parse(n, m_default_octave), d, v, p));
                         else if (lss >> n >> d >> v) {
-                             inst.sequence.add_note(Note(NoteParser::parse(n), d, v, inst.pan));
+                             inst.sequence.add_note(Note(NoteParser::parse(n, m_default_octave), d, v, inst.pan));
                         }
-                        else inst.sequence.add_note(Note(NoteParser::parse(n), m_default_duration, m_default_velocity, inst.pan));
+                        else inst.sequence.add_note(Note(NoteParser::parse(n, m_default_octave), m_default_duration, m_default_velocity, inst.pan));
                     } else if (lkw == "notes") {
                         std::string note_list; std::getline(lss, note_list);
                         parse_compact_notes(note_list, inst.sequence);
@@ -552,28 +478,51 @@ void ScriptParser::parse_compact_notes(const std::string& list, Sequence& seq) {
         else if (clean[i] == ')') paren_level--;
         else if (clean[i] == ',' && paren_level == 0) clean[i] = ' ';
     }
-    const std::string trim_chars = {' ', '\t', '\r', '\n', '"'};
     
     std::stringstream ss(clean);
-    std::string token;
-    while (ss >> token) {
-        if (token.empty()) continue;
-        if (token.find('(') != std::string::npos && token.find(')') == std::string::npos) {
+    std::string raw_token;
+    while (ss >> raw_token) {
+        if (raw_token.empty()) continue;
+        
+        // Handle parentheses grouping (e.g., C(500))
+        if (raw_token.find('(') != std::string::npos && raw_token.find(')') == std::string::npos) {
             std::string next;
             while (ss >> next) {
-                token += " " + next;
+                raw_token += " " + next;
                 if (next.find(')') != std::string::npos) break;
             }
         }
-        size_t open_p = token.find('(');
-        std::string note_name = token.substr(0, open_p);
+
+        // Handle Repetition (Feature 3)
+        std::string token_body = raw_token;
+        int repeat_count = 1;
+        
+        size_t star_pos = raw_token.find('*');
+        // Check if * is outside parentheses
+        if (star_pos != std::string::npos) {
+             size_t open_p = raw_token.find('(');
+             size_t close_p = raw_token.find(')');
+             if (open_p == std::string::npos || star_pos < open_p || star_pos > close_p) {
+                 // Check if it's really a multiplier (digits after *)
+                 std::string count_str = raw_token.substr(star_pos + 1);
+                 if (!count_str.empty() && std::all_of(count_str.begin(), count_str.end(), ::isdigit)) {
+                     try {
+                         repeat_count = std::stoi(count_str);
+                         token_body = raw_token.substr(0, star_pos);
+                     } catch(...) {}
+                 }
+             }
+        }
+
+        size_t open_p = token_body.find('(');
+        std::string note_name = token_body.substr(0, open_p);
         int dur = m_default_duration;
         int vel = m_default_velocity;
         float p_val = 0.0f; 
 
         if (open_p != std::string::npos) {
-            size_t close_p = token.find(')');
-            std::string params = token.substr(open_p + 1, close_p - open_p - 1);
+            size_t close_p = token_body.find(')');
+            std::string params = token_body.substr(open_p + 1, close_p - open_p - 1);
             std::replace(params.begin(), params.end(), ',', ' ');
             
             std::stringstream pss(params);
@@ -586,9 +535,14 @@ void ScriptParser::parse_compact_notes(const std::string& list, Sequence& seq) {
                 }
             }
         }
-        int pitch = NoteParser::parse(note_name);
+        
+        // Use m_default_octave (Feature 2)
+        int pitch = NoteParser::parse(note_name, m_default_octave);
+        
         if (pitch > 0 || note_name == "0" || pitch == -1) {
-            seq.add_note(Note(pitch, dur, vel, p_val));
+            for (int r = 0; r < repeat_count; ++r) {
+                 seq.add_note(Note(pitch, dur, vel, p_val));
+            }
         }
     }
 }
