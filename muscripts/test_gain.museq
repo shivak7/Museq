@@ -1,0 +1,14 @@
+instrument Loud {
+    waveform sine
+    gain 1.5
+}
+
+instrument Quiet {
+    waveform sine
+    gain 0.2
+}
+
+sequential {
+    Loud { notes C4 }
+    Quiet { notes C4 }
+}

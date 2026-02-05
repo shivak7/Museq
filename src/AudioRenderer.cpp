@@ -168,12 +168,17 @@ void apply_effects(std::vector<float>& buffer, const std::vector<Effect>& effect
 }
 
 std::vector<float> render_instrument_stereo(const Instrument& instrument, float sample_rate, std::map<std::string, tsf*>& soundfonts) {
-    float instrument_duration = 0;
+    float current_render_time = 0;
+    float max_render_time = 0;
     for (const auto& note : instrument.sequence.notes) {
-        instrument_duration += note.duration / 1000.0f;
+        float end_time = current_render_time + (note.duration / 1000.0f);
+        if (end_time > max_render_time) max_render_time = end_time;
+        if (note.advance_time) {
+            current_render_time += (note.duration / 1000.0f);
+        }
     }
     
-    int num_samples = static_cast<int>(instrument_duration * sample_rate);
+    int num_samples = static_cast<int>(max_render_time * sample_rate);
     std::vector<float> buffer(num_samples * 2, 0.0f);
 
     float current_time = 0;
@@ -245,7 +250,10 @@ std::vector<float> render_instrument_stereo(const Instrument& instrument, float 
                 } else if (note.is_rest) {
                     last_freq = -1.0f;
                 }
-                current_time += note.duration / 1000.0f;
+                
+                if (note.advance_time) {
+                    current_time += note.duration / 1000.0f;
+                }
                 last_freq = target_freq;
             }
             tsf_close(inst_tsf);
@@ -258,7 +266,9 @@ std::vector<float> render_instrument_stereo(const Instrument& instrument, float 
             bool is_first_note = (n_idx == 0);
             bool is_last_note = (n_idx == instrument.sequence.notes.size() - 1);
             if (note.is_rest) {
-                current_time += note.duration / 1000.0f;
+                if (note.advance_time) {
+                    current_time += note.duration / 1000.0f;
+                }
                 last_freq = -1.0f;
                 continue;
             }
@@ -274,6 +284,10 @@ std::vector<float> render_instrument_stereo(const Instrument& instrument, float 
             if (instrument.synth.filter.type != FilterType::NONE) {
                 filter.update(instrument.synth.filter.type, instrument.synth.filter.cutoff, instrument.synth.filter.resonance, sample_rate);
             }
+            
+            // For chords in synth, we should probably reset phase or use a separate phase?
+            // Reusing phase is okay for now, but let's see.
+            
             for (int i = 0; i < num_note_samples; ++i) {
                 float time_in_note = (float)i / sample_rate;
                 float lfo_val = 0.0f;
@@ -308,6 +322,12 @@ std::vector<float> render_instrument_stereo(const Instrument& instrument, float 
                     if(amp_mod < 0) amp_mod = 0;
                 }
                 float mono_sample = 0.0f;
+                
+                // Use a local phase for each note to avoid coherence issues in chords?
+                // Actually, if we use a local phase, we lose phase continuity between sequential notes.
+                // For now, let's keep the global phase. It works for sequential. 
+                // For chords, they will just start where the previous note left off.
+                
                 if(instrument.type == InstrumentType::SYNTH) 
                     mono_sample = (note.velocity / 127.0f) * 0.5f * envelope * amp_mod * generate_sample_with_phase(instrument.synth.waveform, current_freq, sample_rate, phase);
                 else if (instrument.type == InstrumentType::SAMPLER && instrument.sampler)
@@ -323,9 +343,15 @@ std::vector<float> render_instrument_stereo(const Instrument& instrument, float 
                     buffer[(start_sample + i) * 2 + 1] += mono_sample * right_gain;
                 }
             }
-            current_time += note.duration / 1000.0f;
+            if (note.advance_time) {
+                current_time += note.duration / 1000.0f;
+            }
             last_freq = target_freq;
         }
+    }
+    
+    if (instrument.gain != 1.0f) {
+        for (float& s : buffer) s *= instrument.gain;
     }
     
     apply_effects(buffer, instrument.effects, sample_rate);

@@ -1,0 +1,14 @@
+var BPM 140
+var ROOT C4
+
+tempo $BPM
+
+instrument Piano {
+    waveform sine
+}
+
+sequential {
+    Piano {
+        notes $ROOT, E4, G4
+    }
+}

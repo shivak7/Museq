@@ -10,6 +10,7 @@ Instrument::Instrument(std::string name, Waveform waveform, AdsrEnvelope envelop
     this->sampler = nullptr;
     this->portamento_time = 0.0f;
     this->pan = 0.0f;
+    this->gain = 1.0f;
 }
 
 Instrument::Instrument(std::string name, const std::string& sample_path) {
@@ -18,6 +19,7 @@ Instrument::Instrument(std::string name, const std::string& sample_path) {
     this->sampler = new Sampler(sample_path);
     this->portamento_time = 0.0f;
     this->pan = 0.0f;
+    this->gain = 1.0f;
 }
 
 Instrument::Instrument(std::string name, const std::string& soundfont_path, int bank_index, int preset_index) {
@@ -29,6 +31,7 @@ Instrument::Instrument(std::string name, const std::string& soundfont_path, int 
     this->sampler = nullptr;
     this->portamento_time = 0.0f;
     this->pan = 0.0f;
+    this->gain = 1.0f;
 }
 
 Instrument::~Instrument() {
@@ -48,7 +51,8 @@ Instrument::Instrument(const Instrument& other)
       bank_index(other.bank_index),
       preset_index(other.preset_index),
       portamento_time(other.portamento_time),
-      pan(other.pan) {
+      pan(other.pan),
+      gain(other.gain) {
     if (other.sampler) {
         sampler = new Sampler(*other.sampler);
     }
@@ -69,6 +73,7 @@ Instrument& Instrument::operator=(const Instrument& other) {
     preset_index = other.preset_index;
     portamento_time = other.portamento_time;
     pan = other.pan;
+    gain = other.gain;
 
     if (sampler) {
         delete sampler;
@@ -93,7 +98,8 @@ Instrument::Instrument(Instrument&& other) noexcept
       bank_index(other.bank_index),
       preset_index(other.preset_index),
       portamento_time(other.portamento_time),
-      pan(other.pan) {
+      pan(other.pan),
+      gain(other.gain) {
     other.sampler = nullptr;
 }
 
@@ -112,6 +118,7 @@ Instrument& Instrument::operator=(Instrument&& other) noexcept {
     preset_index = other.preset_index;
     portamento_time = other.portamento_time;
     pan = other.pan;
+    gain = other.gain;
 
     if (sampler) {
         delete sampler;

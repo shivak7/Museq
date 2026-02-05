@@ -154,6 +154,7 @@ instrument BassSyn {
                             // Amount: Hz for cutoff, Semitones for pitch, 0-1 for amplitude
     
     pan -0.5                // -1.0 (Left) to 1.0 (Right)
+    gain 0.8                // Master volume for this instrument (default: 1.0)
 }
 ```
 
@@ -187,7 +188,22 @@ function DrumKit {
 }
 ```
 
-### 3. Sequencing Notes
+### 3. Global Variables
+Define reusable constants for BPM, volumes, or notes.
+
+```museq
+var BPM 128
+var ROOT C4
+
+tempo $BPM
+instrument Synth { ... }
+
+Synth {
+    notes $ROOT, E4, G4
+}
+```
+
+### 4. Sequencing Notes
 
 #### Standard Syntax
 Explicitly define pitch, duration (ms), and velocity (0-127).
@@ -208,13 +224,14 @@ Format: `Pitch(Duration, Velocity, [Pan])`.
 Defaults: Duration and Velocity use global defaults if omitted.
 
 **Repetition:** Use `*N` to repeat a note N times (e.g., `C4*4`).
+**Chords:** Use `+` to play multiple notes simultaneously (e.g., `C4+E4+G4`).
 
 ```museq
 tempo 120
 velocity 100
 
 instrument Synth {
-    notes C4*2, E4(250), G4(500, 120), C5(1000, 127, 0.5)
+    notes C4+E4+G4, F4+A4+C5*2
 }
 ```
 
@@ -243,7 +260,7 @@ Use `R` or `Rest` to insert silence.
 note R 1000 0
 ```
 
-### 4. Composition Flow
+### 5. Composition Flow
 
 #### Sequential & Parallel
 Structure your song using blocks.
@@ -289,7 +306,7 @@ parallel {
 }
 ```
 
-### 5. Advanced Workflow: Auto-Looping
+### 6. Advanced Workflow: Auto-Looping
 A powerful feature for backing tracks. You define a "Loop Leader" (foreground) and "Loop Followers" (background). The followers automatically repeat to match the duration of the leader.
 
 ```museq

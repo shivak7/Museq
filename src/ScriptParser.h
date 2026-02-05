@@ -18,6 +18,7 @@ private:
     Song m_song;
     std::map<std::string, FunctionDefinition> m_functions;
     std::map<std::string, Instrument> m_templates;
+    std::map<std::string, std::string> m_globals;
     
     // Default context for notes
     int m_default_duration = 500; // 120 BPM

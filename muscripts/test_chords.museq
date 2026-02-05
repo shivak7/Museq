@@ -1,0 +1,16 @@
+instrument Piano {
+    waveform sine
+    envelope 0.05 0.1 0.5 0.2
+}
+
+sequential {
+    Piano {
+        tempo 120
+        // C-Major chord. 
+        // Note: each component can have its own duration, 
+        // but the last one defines the step to the next note.
+        notes C4(1000)+E4(1000)+G4(1000)
+        
+        notes D4+F4+A4
+    }
+}

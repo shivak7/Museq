@@ -68,6 +68,7 @@ public:
 
     float portamento_time = 0.0f; // In milliseconds
     float pan = 0.0f; // -1.0 to 1.0
+    float gain = 1.0f; // 0.0 to 1.0+
     
     // Effects Chain
     std::vector<Effect> effects;

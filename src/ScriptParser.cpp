@@ -97,6 +97,10 @@ void ScriptParser::collect_definitions(std::istream& input_stream) {
             }
             m_functions[func.name] = func;
         } 
+        else if (scope_brace_count == 0 && keyword == "var") {
+            std::string name, val;
+            if (ss >> name >> val) m_globals[name] = val;
+        }
         else if (scope_brace_count == 0 && keyword == "instrument") {
             std::string instrument_name;
             ss >> instrument_name;
@@ -182,6 +186,8 @@ void ScriptParser::collect_definitions(std::istream& input_stream) {
                     sub_ss >> template_inst.portamento_time;
                 } else if (sub_kw == "pan") {
                     sub_ss >> template_inst.pan;
+                } else if (sub_kw == "gain") {
+                    sub_ss >> template_inst.gain;
                 } else if (sub_kw == "effect") {
                     std::string type_str; sub_ss >> type_str;
                     Effect fx;
@@ -290,6 +296,9 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
 
         if (keyword == "octave") {
             ss >> m_default_octave;
+        } else if (keyword == "var") {
+            std::string name, val;
+            if (ss >> name >> val) m_globals[name] = val;
         } else if (keyword == "offset") {
             int offset_ms; ss >> offset_ms;
             std::vector<std::string> body;
@@ -441,6 +450,8 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
                         parse_compact_notes(note_list, inst.sequence, inst.pan, current_octave);
                     } else if (lkw == "pan") {
                         lss >> inst.pan;
+                    } else if (lkw == "gain") {
+                        lss >> inst.gain;
                     } else if (lkw == "octave") {
                         lss >> current_octave;
                     } else if (lkw == "effect") {
@@ -490,7 +501,17 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
 
 std::string ScriptParser::substitute_params(const std::string& line, const std::map<std::string, std::string>& param_map) {
     std::string res = line;
+    // Local parameters (highest priority)
     for (const auto& [p, v] : param_map) {
+        std::string target = "$" + p;
+        size_t pos = 0;
+        while ((pos = res.find(target, pos)) != std::string::npos) {
+            res.replace(pos, target.length(), v);
+            pos += v.length();
+        }
+    }
+    // Global variables
+    for (const auto& [p, v] : m_globals) {
         std::string target = "$" + p;
         size_t pos = 0;
         while ((pos = res.find(target, pos)) != std::string::npos) {
@@ -545,34 +566,45 @@ void ScriptParser::parse_compact_notes(const std::string& list, Sequence& seq, f
              }
         }
 
-        size_t open_p = token_body.find('(');
-        std::string note_name = token_body.substr(0, open_p);
-        int dur = m_default_duration;
-        int vel = m_default_velocity;
-        float p_val = default_pan; 
-
-        if (open_p != std::string::npos) {
-            size_t close_p = token_body.find(')');
-            std::string params = token_body.substr(open_p + 1, close_p - open_p - 1);
-            std::replace(params.begin(), params.end(), ',', ' ');
-            
-            std::stringstream pss(params);
-            int p1, p2; float p3;
-            if (pss >> p1) {
-                dur = p1;
-                if (pss >> p2) {
-                    vel = p2;
-                    if (pss >> p3) p_val = p3;
-                }
-            }
+        // Handle Chords (Feature: True Polyphony)
+        std::vector<std::string> chord_components;
+        std::stringstream css(token_body);
+        std::string component;
+        while (std::getline(css, component, '+')) {
+            chord_components.push_back(component);
         }
-        
-        // Use default_octave (Scoped)
-        int pitch = NoteParser::parse(note_name, default_octave);
-        
-        if (pitch > 0 || note_name == "0" || pitch == -1) {
-            for (int r = 0; r < repeat_count; ++r) {
-                 seq.add_note(Note(pitch, dur, vel, p_val));
+
+        for (int r = 0; r < repeat_count; ++r) {
+            for (size_t i = 0; i < chord_components.size(); ++i) {
+                const std::string& comp = chord_components[i];
+                bool is_last = (i == chord_components.size() - 1);
+
+                size_t open_p = comp.find('(');
+                std::string note_name = comp.substr(0, open_p);
+                int dur = m_default_duration;
+                int vel = m_default_velocity;
+                float p_val = default_pan; 
+
+                if (open_p != std::string::npos) {
+                    size_t close_p = comp.find(')');
+                    std::string params = comp.substr(open_p + 1, close_p - open_p - 1);
+                    std::replace(params.begin(), params.end(), ',', ' ');
+                    
+                    std::stringstream pss(params);
+                    int p1, p2; float p3;
+                    if (pss >> p1) {
+                        dur = p1;
+                        if (pss >> p2) {
+                            vel = p2;
+                            if (pss >> p3) p_val = p3;
+                        }
+                    }
+                }
+                
+                int pitch = NoteParser::parse(note_name, default_octave);
+                if (pitch > 0 || note_name == "0" || pitch == -1) {
+                    seq.add_note(Note(pitch, dur, vel, p_val, is_last));
+                }
             }
         }
     }
