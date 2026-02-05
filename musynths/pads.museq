@@ -1,0 +1,13 @@
+instrument WarmPad {
+    waveform triangle
+    envelope 1.5 1.0 0.6 1.5
+    filter lowpass 800 1.0
+}
+
+instrument CrystalPad {
+    waveform sine
+    envelope 2.0 0.5 0.4 2.0
+    lfo cutoff triangle 0.5 400
+    filter lowpass 1500 2.0
+    effect delay 500 0.5
+}

@@ -53,7 +53,7 @@ Song ScriptParser::parse(const std::string& file_path) {
     return parser.m_song;
 }
 
-void ScriptParser::collect_definitions(std::istream& input_stream) {
+void ScriptParser::collect_definitions(std::istream& input_stream, bool instruments_only) {
     std::string line;
     int scope_brace_count = 0;
 
@@ -69,7 +69,35 @@ void ScriptParser::collect_definitions(std::istream& input_stream) {
         std::string keyword;
         if (!(ss >> keyword)) continue;
 
-        if (scope_brace_count == 0 && keyword == "function") {
+        if (scope_brace_count == 0 && keyword == "import") {
+             std::string path; 
+             if (std::getline(ss, path)) {
+                 const std::string trim = {' ', '\t', '\r', '\n', '"'};
+                 size_t first = path.find_first_not_of(trim);
+                 size_t last = path.find_last_not_of(trim);
+                 if (first != std::string::npos) {
+                     path = path.substr(first, last - first + 1);
+                     if (m_imported_files.find(path) == m_imported_files.end()) {
+                         m_imported_files.insert(path);
+                         std::ifstream imported_file(path);
+                         if (imported_file.is_open()) {
+                             collect_definitions(imported_file, true);
+                         } else {
+                             std::cerr << "Warning: Could not open imported file " << path << std::endl;
+                         }
+                     }
+                 }
+             }
+        }
+        else if (scope_brace_count == 0 && keyword == "function") {
+            if (instruments_only) {
+                int brace_count = 1;
+                while (std::getline(input_stream, line) && brace_count > 0) {
+                    if (line.find('{') != std::string::npos) brace_count++;
+                    if (line.find('}') != std::string::npos) brace_count--;
+                }
+                continue;
+            }
             FunctionDefinition func;
             std::string name_and_params;
             std::getline(ss, name_and_params, '{');
@@ -98,6 +126,7 @@ void ScriptParser::collect_definitions(std::istream& input_stream) {
             m_functions[func.name] = func;
         } 
         else if (scope_brace_count == 0 && keyword == "var") {
+            if (instruments_only) continue;
             std::string name, val;
             if (ss >> name >> val) m_globals[name] = val;
         }

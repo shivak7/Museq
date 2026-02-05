@@ -1,0 +1,5 @@
+var BAD_VAR 123
+function BadFunc() {
+    GoodInst { notes C4 }
+}
+instrument GoodInst { waveform sine }

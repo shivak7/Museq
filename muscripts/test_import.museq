@@ -1,0 +1,7 @@
+import "muscripts/chain_b.museq"
+import "musynths/leads.museq"
+
+sequential {
+    GoodInst { notes C4(250) }
+    ClassicLead { notes E4(250) }
+}

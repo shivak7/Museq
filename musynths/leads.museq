@@ -1,0 +1,12 @@
+instrument ClassicLead {
+    waveform sawtooth
+    envelope 0.05 0.1 0.7 0.2
+    filter lowpass 2000 1.5
+    lfo pitch sine 5 0.2
+}
+
+instrument SoftLead {
+    waveform sine
+    envelope 0.1 0.2 0.5 0.3
+    effect delay 250 0.4
+}

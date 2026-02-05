@@ -135,7 +135,20 @@ museq <script_file> [options]
 
 Museq scripts are whitespace-insensitive but line-oriented. Comments start with `//`.
 
-### 1. Defining Instruments
+### 1. Importing Instruments
+You can import instrument definitions from other `.museq` files. This allows you to create reusable synthesizer libraries.
+
+```museq
+import "musynths/leads.museq"
+import "musynths/drums.museq"
+
+ClassicLead { notes C4 }
+SynthKick { notes C2 }
+```
+
+*Note: The `import` keyword currently only imports instrument templates. Functions and variables defined in the imported file are ignored.*
+
+### 2. Defining Instruments
 All instruments must be declared at the top level of the script, before any execution blocks.
 
 #### Synthesizers
@@ -178,7 +191,7 @@ instrument Kick {
 }
 ```
 
-### 2. Defining Functions (Templates)
+### 3. Defining Functions (Templates)
 Functions allow you to reuse musical patterns.
 
 ```museq
@@ -188,7 +201,7 @@ function DrumKit {
 }
 ```
 
-### 3. Global Variables
+### 4. Global Variables
 Define reusable constants for BPM, volumes, or notes.
 
 ```museq
@@ -203,7 +216,7 @@ Synth {
 }
 ```
 
-### 4. Sequencing Notes
+### 5. Sequencing Notes
 
 #### Standard Syntax
 Explicitly define pitch, duration (ms), and velocity (0-127).
@@ -260,7 +273,7 @@ Use `R` or `Rest` to insert silence.
 note R 1000 0
 ```
 
-### 5. Composition Flow
+### 6. Composition Flow
 
 #### Sequential & Parallel
 Structure your song using blocks.
@@ -311,7 +324,7 @@ parallel {
 }
 ```
 
-### 6. Advanced Workflow: Auto-Looping
+### 7. Advanced Workflow: Auto-Looping
 A powerful feature for backing tracks. You define a "Loop Leader" (foreground) and "Loop Followers" (background). The followers automatically repeat to match the duration of the leader.
 
 ```museq
