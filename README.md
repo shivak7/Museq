@@ -171,6 +171,27 @@ instrument BassSyn {
     
     pan -0.5                // -1.0 (Left) to 1.0 (Right)
     gain 0.8                // Master volume for this instrument (default: 1.0)
+    portamento 200          // Glide time in milliseconds between notes
+}
+```
+
+#### Effects
+Instruments can have multiple effects applied in a chain.
+
+| Effect | Parameters | Description |
+| :--- | :--- | :--- |
+| `delay` | `<time_ms> <feedback>` | Echo effect. Feedback: 0.0 to 1.0. |
+| `distortion` | `<drive>` | Hard clipping distortion. Drive: 1.0+. |
+| `bitcrush` | `<bits>` | Reduces resolution. Bits: 1 to 16. |
+| `fadein` | `<time_ms>` | Gradually increases volume at the start. |
+| `fadeout` | `<time_ms>` | Gradually decreases volume at the end. |
+| `tremolo` | `<rate_hz> <depth>` | Amplitude modulation. Depth: 0.0 to 1.0. |
+
+```museq
+instrument SpacePad {
+    waveform triangle
+    effect tremolo 5 0.5
+    effect delay 400 0.4
 }
 ```
 
@@ -269,11 +290,14 @@ Piano {
 }
 ```
 
-#### Rests
-Use `R` or `Rest` to insert silence.
+#### Rests & MIDI
+Use `R` or `Rest` to insert silence. You can also use MIDI numbers (0-127) instead of note names. 
+
+*Note: The pitch `0` is technically supported and often used as a very low-frequency pulse or silent marker depending on the instrument.*
 
 ```museq
 note R 1000 0
+notes 36, 38, 40 // C1, D1, E1
 ```
 
 ### 6. Composition Flow
