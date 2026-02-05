@@ -392,6 +392,7 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
         } else if (m_templates.count(keyword)) {
             Instrument inst = m_templates[keyword];
             int inst_brace_count = 0;
+            int current_octave = m_default_octave;
             
             auto process_inst_line = [&](std::string l) {
                 if (l.find('{') != std::string::npos) inst_brace_count++;
@@ -404,14 +405,18 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
                     // ...
                     else if (lkw == "note") {
                         std::string n; int d, v; float p;
-                        if (lss >> n >> d >> v >> p) inst.sequence.add_note(Note(NoteParser::parse(n, m_default_octave), d, v, p));
+                        if (lss >> n >> d >> v >> p) inst.sequence.add_note(Note(NoteParser::parse(n, current_octave), d, v, p));
                         else if (lss >> n >> d >> v) {
-                             inst.sequence.add_note(Note(NoteParser::parse(n, m_default_octave), d, v, inst.pan));
+                             inst.sequence.add_note(Note(NoteParser::parse(n, current_octave), d, v, inst.pan));
                         }
-                        else inst.sequence.add_note(Note(NoteParser::parse(n, m_default_octave), m_default_duration, m_default_velocity, inst.pan));
+                        else inst.sequence.add_note(Note(NoteParser::parse(n, current_octave), m_default_duration, m_default_velocity, inst.pan));
                     } else if (lkw == "notes") {
                         std::string note_list; std::getline(lss, note_list);
-                        parse_compact_notes(note_list, inst.sequence);
+                        parse_compact_notes(note_list, inst.sequence, inst.pan, current_octave);
+                    } else if (lkw == "pan") {
+                        lss >> inst.pan;
+                    } else if (lkw == "octave") {
+                        lss >> current_octave;
                     } else if (lkw == "effect") {
                         std::string type_str; lss >> type_str;
                         Effect fx;
@@ -470,7 +475,7 @@ std::string ScriptParser::substitute_params(const std::string& line, const std::
     return res;
 }
 
-void ScriptParser::parse_compact_notes(const std::string& list, Sequence& seq) {
+void ScriptParser::parse_compact_notes(const std::string& list, Sequence& seq, float default_pan, int default_octave) {
     std::string clean = list;
     int paren_level = 0;
     for (size_t i = 0; i < clean.length(); ++i) {
@@ -518,7 +523,7 @@ void ScriptParser::parse_compact_notes(const std::string& list, Sequence& seq) {
         std::string note_name = token_body.substr(0, open_p);
         int dur = m_default_duration;
         int vel = m_default_velocity;
-        float p_val = 0.0f; 
+        float p_val = default_pan; 
 
         if (open_p != std::string::npos) {
             size_t close_p = token_body.find(')');
@@ -536,8 +541,8 @@ void ScriptParser::parse_compact_notes(const std::string& list, Sequence& seq) {
             }
         }
         
-        // Use m_default_octave (Feature 2)
-        int pitch = NoteParser::parse(note_name, m_default_octave);
+        // Use default_octave (Scoped)
+        int pitch = NoteParser::parse(note_name, default_octave);
         
         if (pitch > 0 || note_name == "0" || pitch == -1) {
             for (int r = 0; r < repeat_count; ++r) {

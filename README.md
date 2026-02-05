@@ -226,6 +226,16 @@ octave 5
 notes C, D, E  // Played as C5, D5, E5
 ```
 
+#### Pan Context
+Inside an instrument block, you can override the panning for subsequent notes.
+
+```museq
+Piano {
+    pan -0.5
+    notes C, D, E // Played at -0.5 pan
+}
+```
+
 #### Rests
 Use `R` or `Rest` to insert silence.
 
