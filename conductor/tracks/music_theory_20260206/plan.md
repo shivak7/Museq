@@ -12,14 +12,14 @@
     - [x] Verify scale propagation through hierarchical blocks
 - [x] Task: Conductor - User Manual Verification 'Phase 1: Scale Support' (Protocol in workflow.md) 4029469
 
-## Phase 2: Chord Support and Integration
+## Phase 2: Chord Support and Integration [checkpoint: c8bfc13]
 - [x] Task: Implement Chord expansion logic ebdf5d0
-    - [ ] Define built-in chord formulas (maj, min, aug, dim, 7, etc.)
-    - [ ] Write unit tests for chord expansion
+    - [x] Define built-in chord formulas (maj, min, aug, dim, 7, etc.)
+    - [x] Write unit tests for chord expansion
 - [x] Task: Update ScriptParser for chord names dd374d6
-    - [ ] Implement chord name recognition in compact note syntax
-    - [ ] Ensure chords work within `parallel` and `sequential` blocks
+    - [x] Implement chord name recognition in compact note syntax
+    - [x] Ensure chords work within `parallel` and `sequential` blocks
 - [x] Task: Comprehensive Integration Testing d5df2d1
-    - [ ] Create test scripts using combined scales and chords
-    - [ ] Verify correct rendering to WAV/MP3/OGG
-- [ ] Task: Conductor - User Manual Verification 'Phase 2: Chord Support' (Protocol in workflow.md)
+    - [x] Create test scripts using combined scales and chords
+    - [x] Verify correct rendering to WAV/MP3/OGG
+- [x] Task: Conductor - User Manual Verification 'Phase 2: Chord Support' (Protocol in workflow.md) c8bfc13
