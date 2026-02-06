@@ -1,7 +1,7 @@
 # Implementation Plan - Music Theory Features
 
 ## Phase 1: Core Data Structures and Scale Support
-- [ ] Task: Define Scale and Chord data structures in the engine
+- [x] Task: Define Scale and Chord data structures in the engine 1751fe8
     - [ ] Create `Scale.h` and `Chord.h`
     - [ ] Implement scale degree to MIDI pitch conversion logic
 - [ ] Task: Update NoteParser for relative pitches
