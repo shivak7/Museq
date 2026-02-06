@@ -4,6 +4,30 @@ Museq is a cross-platform, text-based music sequencer and synthesizer written in
 
 It features a powerful hierarchical composition model (parallel/sequential tracks), automated looping workflows, and studio-quality stereo output (WAV, MP3, OGG).
 
+---
+
+## Contents
+- [Getting Started](#getting-started)
+    - [Download Binaries](#download-binaries)
+    - [Prerequisites](#prerequisites)
+    - [Build Instructions](#build-instructions)
+    - [Run](#run)
+- [Assets & Working Directory](#assets--working-directory)
+- [Command Line Usage](#command-line-usage)
+- [Scripting Language Guide](#scripting-language-guide)
+    - [1. Importing Instruments](#1-importing-instruments)
+    - [2. Defining Instruments](#2-defining-instruments)
+    - [3. Defining Functions (Templates)](#3-defining-functions-templates)
+    - [4. Global Variables](#4-global-variables)
+    - [5. Music Theory (Scales & Chords)](#5-music-theory-scales--chords)
+    - [6. Sequencing Notes](#6-sequencing-notes)
+    - [7. Composition Flow](#7-composition-flow)
+    - [8. Advanced Workflow: Auto-Looping](#8-advanced-workflow-auto-looping)
+- [Built-in Instruments](#built-in-instruments)
+- [License](#license)
+
+---
+
 ## Getting Started
 
 ### Download Binaries
@@ -244,7 +268,42 @@ Synth {
 }
 ```
 
-### 5. Sequencing Notes
+### 5. Music Theory (Scales & Chords)
+Museq supports high-level music theory concepts to simplify composition.
+
+#### Scale Definition
+You can define a global or local scale to use relative note names.
+**Syntax:** `scale <root> <mode>`
+**Supported Modes:** `major`, `minor`, `dorian`, `phrygian`, `lydian`, `mixolydian`, `locrian`.
+
+```museq
+scale D minor
+
+instrument Pad {
+    waveform sine
+    // Relative notes 1, 3, 5 resolve to D, F, A
+    notes 1, 3, 5
+}
+```
+
+#### Relative Note Notation
+When a scale is active, use numbers `1` through `7` to refer to the degrees of that scale. This allows you to change the key of your entire song by modifying a single `scale` line.
+
+#### Built-in Chords
+You can use common chord names directly in your `notes` lists.
+**Syntax:** `<Root><Quality>` (e.g., `Cmaj`, `Dm7`, `G7`, `Abmaj9`).
+
+**Supported Qualities:**
+- `maj`, `min`, `7`, `maj7`, `min7`, `dim`, `aug`
+- `sus4`, `sus2`, `add9`, `maj9`, `min9`
+
+```museq
+instrument Piano {
+    notes Cmaj, G7, Amin7, Fmaj
+}
+```
+
+### 6. Sequencing Notes
 
 #### Standard Syntax
 Explicitly define pitch, duration (ms), and velocity (0-127).
@@ -304,7 +363,7 @@ note R 1000 0
 notes 36, 38, 40 // C1, D1, E1
 ```
 
-### 6. Composition Flow
+### 7. Composition Flow
 
 #### Sequential & Parallel
 Structure your song using blocks.
@@ -355,7 +414,7 @@ parallel {
 }
 ```
 
-### 7. Advanced Workflow: Auto-Looping
+### 8. Advanced Workflow: Auto-Looping
 A powerful feature for backing tracks. You define a "Loop Leader" (foreground) and "Loop Followers" (background). The followers automatically repeat to match the duration of the leader.
 
 ```museq
