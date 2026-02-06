@@ -1,3 +1,6 @@
+#ifdef _WIN32
+    #define NOMINMAX
+#endif
 #define _USE_MATH_DEFINES
 #include "AudioUtils.h"
 #include <cmath>

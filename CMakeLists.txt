@@ -5,8 +5,25 @@ project(Museq CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Define source files
-file(GLOB_RECURSE SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
+# Define source files explicitly to avoid GLOB issues on Windows
+set(SOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/AdsrEnvelope.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/AudioPlayer.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/AudioRenderer.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/AudioUtils.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Instrument.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/JsonSerializer.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Mp3Writer.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Note.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/NoteParser.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/OggWriter.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Sampler.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/ScriptParser.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Sequence.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Voice.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/WavWriter.cpp"
+)
 
 # Windows Resource File (Icon)
 if(WIN32)
