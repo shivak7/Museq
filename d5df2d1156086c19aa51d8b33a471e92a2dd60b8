@@ -1,0 +1,9 @@
+Task: Comprehensive Integration Testing
+Summary: Refactored ScriptParser::parse_compact_notes to correctly handle chord name expansion (e.g., Cmaj, Dmin7). The logic now extracts the chord name before parameter parsing and applies duration/velocity parameters to all notes in the expanded chord. Created a comprehensive integration test script muscripts/test_theory_integration.museq which verifies:
+1. Scale-relative degree parsing (1, 3, 5).
+2. Explicit chord name parsing (Gmin7).
+3. Local scale overrides within hierarchical blocks.
+4. Polyphonic note handling via the advance_time flag.
+Pitches were verified via JSON dump.
+Files: src/ScriptParser.cpp, muscripts/test_theory_integration.museq.
+Why: To ensure all new music theory features work together harmoniously.
