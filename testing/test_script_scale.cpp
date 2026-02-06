@@ -34,7 +34,7 @@ int main() {
         instrument TestInst {
             waveform sine
             sequence {
-                notes 1, 3, 5
+                notes 1, 3, 5, Cmaj, Dmin7
             }
         }
         
@@ -47,18 +47,29 @@ int main() {
     Sequence seq = get_first_sequence(song);
 
     std::cout << "Sequence size: " << seq.notes.size() << std::endl;
-    for (const auto& n : seq.notes) {
-        std::cout << "Note: " << n.pitch << std::endl;
+    for (size_t i = 0; i < seq.notes.size(); ++i) {
+        std::cout << "Note [" << i << "]: " << seq.notes[i].pitch << " (Advance time: " << (seq.notes[i].advance_time ? "Yes" : "No") << ")" << std::endl;
     }
 
-    assert(seq.notes.size() == 3);
+    // 3 relative notes + 3 notes for Cmaj + 4 notes for Dmin7 = 10 notes
+    assert(seq.notes.size() == 10);
     
-    // C Major: 1=C, 3=E, 5=G. Default octave 4.
-    // C4=60, E4=64, G4=67.
+    // C Major: 1=60, 3=64, 5=67
     assert(seq.notes[0].pitch == 60);
     assert(seq.notes[1].pitch == 64);
     assert(seq.notes[2].pitch == 67);
 
-    std::cout << "Script Scale test passed!" << std::endl;
+    // Cmaj: 60, 64, 67
+    assert(seq.notes[3].pitch == 60);
+    assert(seq.notes[4].pitch == 64);
+    assert(seq.notes[5].pitch == 67);
+
+    // Dmin7: 62, 65, 69, 72
+    assert(seq.notes[6].pitch == 62);
+    assert(seq.notes[7].pitch == 65);
+    assert(seq.notes[8].pitch == 69);
+    assert(seq.notes[9].pitch == 72);
+
+    std::cout << "Script Scale & Chord test passed!" << std::endl;
     return 0;
 }

@@ -6,6 +6,7 @@
 #include <algorithm>
 #include "NoteParser.h"
 #include "SongElement.h"
+#include "Chord.h"
 
 static std::string preprocess_line(const std::string& raw_line) {
     std::string line = raw_line;
@@ -681,6 +682,28 @@ void ScriptParser::parse_compact_notes(const std::string& list, Sequence& seq, f
         }
 
         for (int r = 0; r < repeat_count; ++r) {
+            // NEW: Try to parse as a chord name first (e.g. Cmaj, Dmin7)
+            bool is_chord = false;
+            std::vector<std::string> qualities = {"maj", "min", "7", "maj7", "min7", "dim", "aug", "sus4", "sus2", "add9", "maj9", "min9"};
+            for (const auto& q : qualities) {
+                if (token_body.find(q) != std::string::npos) {
+                    is_chord = true;
+                    break;
+                }
+            }
+
+            if (is_chord) {
+                Chord chord(token_body);
+                std::vector<int> chord_pitches = chord.get_notes(default_octave);
+                if (!chord_pitches.empty()) {
+                    for (size_t i = 0; i < chord_pitches.size(); ++i) {
+                        bool is_last_chord_note = (i == chord_pitches.size() - 1);
+                        seq.add_note(Note(chord_pitches[i], m_default_duration, m_default_velocity, default_pan, is_last_chord_note));
+                    }
+                    continue; // Processed as chord name
+                }
+            }
+
             for (size_t i = 0; i < chord_components.size(); ++i) {
                 const std::string& comp = chord_components[i];
                 bool is_last = (i == chord_components.size() - 1);
