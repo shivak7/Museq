@@ -155,23 +155,27 @@ SynthKick { notes C2 }
 All instruments must be declared at the top level of the script, before any execution blocks.
 
 #### Synthesizers
-Define a subtractive synth with an envelope, filter, and LFO.
+Define a subtractive synth using the following properties:
+
+| Property | Parameters | Description |
+| :--- | :--- | :--- |
+| `waveform` | `<type>` | `sine`, `square`, `triangle`, `sawtooth`. |
+| `envelope` | `<a> <d> <s> <r>` | ADSR times in seconds (Attack, Decay, Release) and Sustain level (0.0-1.0). |
+| `filter` | `<type> <freq> <q>` | `lowpass`, `highpass`, `bandpass`. Freq in Hz, Q resonance (e.g., 1.0). |
+| `lfo` | `<target> <wave> <hz> <amt>` | Target: `pitch`, `amplitude`, `cutoff`. Wave: see `waveform`. |
+| `pan` | `<value>` | Stereo position: -1.0 (Left) to 1.0 (Right). |
+| `gain` | `<value>` | Master volume multiplier (e.g., 0.5 for half volume). |
+| `portamento` | `<ms>` | Glide time in milliseconds between consecutive notes. |
 
 ```museq
 instrument BassSyn {
-    waveform sawtooth       // sine, square, triangle, sawtooth
-    envelope 0.01 0.2 0.8 0.1 // Attack, Decay, Sustain, Release
-    
-    // Filters (Optional)
-    filter lowpass 1000 2.0 // Type (lowpass/highpass/bandpass), Cutoff (Hz), Resonance (Q)
-    
-    // LFO Modulation (Optional)
-    lfo cutoff sine 4 500   // Target (pitch/amplitude/cutoff), Waveform, Freq (Hz), Amount
-                            // Amount: Hz for cutoff, Semitones for pitch, 0-1 for amplitude
-    
-    pan -0.5                // -1.0 (Left) to 1.0 (Right)
-    gain 0.8                // Master volume for this instrument (default: 1.0)
-    portamento 200          // Glide time in milliseconds between notes
+    waveform sawtooth
+    envelope 0.01 0.2 0.8 0.1
+    filter lowpass 1000 2.0
+    lfo cutoff sine 4 500
+    pan -0.5
+    gain 0.8
+    portamento 200
 }
 ```
 
