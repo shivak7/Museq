@@ -12,14 +12,14 @@
     - [x] Implement filtering logic for the tree view
 - [x] Task: Conductor - User Manual Verification 'Phase 1: Folder Management' (Protocol in workflow.md) d769d40
 
-## Phase 2: Interaction and Previews
-- [ ] Task: Implement Audio Preview (Demo)
-    - [ ] Add 'Play' icon next to SoundFont presets and samples
-    - [ ] Interface with `AudioPlayer` to trigger immediate playback
-- [ ] Task: Drag and Drop Support
-    - [ ] Implement `ImGui::BeginDragDropSource` for asset items
-    - [ ] Update Editor to handle drops and insert code snippets
-- [ ] Task: Favorites and UI Polish
-    - [ ] Implement simple persistence for favorited assets
-    - [ ] Ensure resizable/collapsible consistency with the schematic
-- [ ] Task: Conductor - User Manual Verification 'Phase 2: Interaction' (Protocol in workflow.md)
+## Phase 2: Interaction and Previews [checkpoint: 1581b14]
+- [x] Task: Implement Audio Preview (Demo)
+    - [x] Add 'Play' icon next to SoundFont presets and samples
+    - [x] Interface with `AudioPlayer` to trigger immediate playback
+- [x] Task: Drag and Drop Support
+    - [x] Implement `ImGui::BeginDragDropSource` for asset items
+    - [x] Update Editor to handle drops and insert code snippets
+- [x] Task: Favorites and UI Polish
+    - [x] Implement simple persistence for favorited assets
+    - [x] Ensure resizable/collapsible consistency with the schematic
+- [x] Task: Conductor - User Manual Verification 'Phase 2: Interaction' (Protocol in workflow.md) 1581b14
