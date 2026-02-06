@@ -4,12 +4,12 @@
 - [x] Task: Implement Folder Loading logic 04e9dbe
     - [ ] Create UI button to 'Add Folder'
     - [ ] Store a list of 'Watched Folders' in Muqomposer state
-- [ ] Task: Enhance Tree-based Directory Scanning
-    - [ ] Implement recursive scanning of folders for .sf2 and audio files
-    - [ ] Optimize scanning to avoid UI freezes (potentially background thread)
-- [ ] Task: Real-time Asset Filtering
-    - [ ] Add Search input box to Left Panel
-    - [ ] Implement filtering logic for the tree view
+- [x] Task: Enhance Tree-based Directory Scanning f773a04
+    - [x] Implement recursive scanning of folders for .sf2 and audio files
+    - [x] Optimize scanning to avoid UI freezes (potentially background thread)
+- [x] Task: Real-time Asset Filtering f773a04
+    - [x] Add Search input box to Left Panel
+    - [x] Implement filtering logic for the tree view
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Folder Management' (Protocol in workflow.md)
 
 ## Phase 2: Interaction and Previews
