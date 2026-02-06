@@ -81,6 +81,39 @@ int main(int, char**) {
     // Museq State
     char script_buffer[16384] = "// Write your Museq script here\n\ninstrument Piano {\n    waveform sine\n}\n\nsequential {\n    Piano { notes C4, E4, G4 }\n}";
     
+    // Helper for Play logic
+    auto play_logic = [&]() {
+        if (player_initialized) {
+            Song song = ScriptParser::parse_string(script_buffer);
+            player.play(song);
+        }
+    };
+
+    // Helper for Audio Preview
+    auto play_preview = [&](const std::string& path, int bank = -1, int preset = -1) {
+        if (!player_initialized) return;
+        
+        Song preview_song;
+        Instrument preview_inst;
+        if (bank >= 0) {
+            preview_inst = Instrument("Preview", path, bank, preset);
+        } else {
+            // Check if it's a sample
+            std::string ext = fs::path(path).extension().string();
+            std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+            if (ext == ".sf2") {
+                preview_inst = Instrument("Preview", path, 0, 0);
+            } else {
+                preview_inst = Instrument("Preview", path);
+            }
+        }
+        
+        preview_inst.sequence.add_note(Note(60, 1000, 100)); // C4 for 1s
+        preview_song.root->children.push_back(std::make_shared<InstrumentElement>(preview_inst));
+        
+        player.play(preview_song);
+    };
+
     // File State
     bool show_save_popup = false;
     bool show_load_popup = false;
@@ -129,20 +162,55 @@ int main(int, char**) {
                 ImGui::TreePop();
             }
         } else {
+            // Favorite (Star) toggle
+            ImGui::PushID(("fav" + node.full_path).c_str());
+            bool fav = asset_manager.is_favorite(node.full_path);
+            if (ImGui::Button(fav ? "[*]" : "[ ]", ImVec2(35, 0))) {
+                asset_manager.toggle_favorite(node.full_path);
+            }
+            ImGui::PopID();
+            ImGui::SameLine();
+
+            // Audio Preview button for all leaf assets
+            ImGui::PushID(("prev" + node.full_path).c_str());
+            if (ImGui::Button("[>]", ImVec2(35, 0))) {
+                play_preview(node.full_path);
+            }
+            ImGui::PopID();
+            ImGui::SameLine();
+
             if (node.type == AssetType::SF2) {
                 // Find presets for this SF2
-                // Optimization: In real app, AssetNode could store pointer to SF2Info
                 const auto& sfs = asset_manager.get_soundfonts();
-                auto it = std::find_if(sfs.begin(), sfs.end(), [&](const SF2Info& i){ return i.path == node.full_path; });
+                auto it = std::find_if(sfs.begin(), sfs.end(), [&](const SF2Info& i){ 
+                    return fs::path(i.path) == fs::path(node.full_path); 
+                });
                 
                 if (it != sfs.end()) {
                     if (ImGui::TreeNode(node.name.c_str())) {
                         for (const auto& p : it->presets) {
+                            ImGui::PushID((node.full_path + p.name).c_str());
+                            if (ImGui::Button("[>]", ImVec2(35, 0))) {
+                                play_preview(it->path, p.bank, p.preset);
+                            }
+                            ImGui::PopID();
+                            ImGui::SameLine();
+
                             if (ImGui::Selectable(p.name.c_str())) {
                                 char buf[512];
                                 snprintf(buf, sizeof(buf), "\n\ninstrument %s {\n    soundfont \"%s\"\n    bank %d\n    preset %d\n}", 
                                     p.name.c_str(), it->path.c_str(), p.bank, p.preset);
                                 if (strlen(script_buffer) + strlen(buf) < IM_ARRAYSIZE(script_buffer)) strcat(script_buffer, buf);
+                            }
+                            
+                            // Drag and Drop Source
+                            if (ImGui::BeginDragDropSource()) {
+                                char buf[512];
+                                snprintf(buf, sizeof(buf), "\ninstrument %s {\n    soundfont \"%s\"\n    bank %d\n    preset %d\n}", 
+                                    p.name.c_str(), it->path.c_str(), p.bank, p.preset);
+                                ImGui::SetDragDropPayload("ASSET_CODE", buf, strlen(buf) + 1);
+                                ImGui::Text("Add %s", p.name.c_str());
+                                ImGui::EndDragDropSource();
                             }
                         }
                         ImGui::TreePop();
@@ -154,6 +222,16 @@ int main(int, char**) {
                     std::string clean_name = node.name.substr(0, node.name.find_last_of("."));
                     snprintf(buf, sizeof(buf), "\n\ninstrument %s {\n    sample \"%s\"\n}", clean_name.c_str(), node.full_path.c_str());
                     if (strlen(script_buffer) + strlen(buf) < IM_ARRAYSIZE(script_buffer)) strcat(script_buffer, buf);
+                }
+                
+                // Drag and Drop Source
+                if (ImGui::BeginDragDropSource()) {
+                    char buf[512];
+                    std::string clean_name = node.name.substr(0, node.name.find_last_of("."));
+                    snprintf(buf, sizeof(buf), "\ninstrument %s {\n    sample \"%s\"\n}", clean_name.c_str(), node.full_path.c_str());
+                    ImGui::SetDragDropPayload("ASSET_CODE", buf, strlen(buf) + 1);
+                    ImGui::Text("Add %s", node.name.c_str());
+                    ImGui::EndDragDropSource();
                 }
             }
         }
@@ -189,14 +267,6 @@ int main(int, char**) {
             ImGui::TextColored(ImVec4(1,0,0,1), "Error: %s", e.what());
         }
         ImGui::EndChild();
-    };
-
-    // Helper for Play logic
-    auto play_logic = [&]() {
-        if (player_initialized) {
-            Song song = ScriptParser::parse_string(script_buffer);
-            player.play(song);
-        }
     };
 
     // Folder Picker State
@@ -242,6 +312,43 @@ int main(int, char**) {
         ImGui::Begin("Assets", NULL, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar);
         
         ImGui::SeparatorText("ASSETS");
+        
+        ImGui::InputText("Search", asset_search_buffer, IM_ARRAYSIZE(asset_search_buffer));
+
+        // Favorites Category
+        if (ImGui::CollapsingHeader("Favorites", ImGuiTreeNodeFlags_DefaultOpen)) {
+            const auto& favs = asset_manager.get_favorites();
+            if (favs.empty()) ImGui::TextDisabled("No favorites yet. Click [*] to add.");
+            for (const auto& f_path : favs) {
+                std::string filename = fs::path(f_path).filename().string();
+                
+                ImGui::PushID(("fav_cat" + f_path).c_str());
+                if (ImGui::Button("[*]", ImVec2(30, 0))) {
+                    asset_manager.toggle_favorite(f_path);
+                }
+                ImGui::PopID();
+                ImGui::SameLine();
+
+                ImGui::PushID(("fav_cat_play" + f_path).c_str());
+                if (ImGui::Button(">", ImVec2(20, 0))) {
+                    play_preview(f_path);
+                }
+                ImGui::PopID();
+                ImGui::SameLine();
+
+                if (ImGui::Selectable(filename.c_str())) {
+                    char buf[512];
+                    std::string ext = fs::path(f_path).extension().string();
+                    std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+                    if (ext == ".sf2") {
+                        snprintf(buf, sizeof(buf), "\n\ninstrument %s {\n    soundfont \"%s\"\n    bank 0\n    preset 0\n}", filename.c_str(), f_path.c_str());
+                    } else {
+                        snprintf(buf, sizeof(buf), "\n\ninstrument %s {\n    sample \"%s\"\n}", filename.c_str(), f_path.c_str());
+                    }
+                    if (strlen(script_buffer) + strlen(buf) < IM_ARRAYSIZE(script_buffer)) strcat(script_buffer, buf);
+                }
+            }
+        }
 
         if (ImGui::Button("Add New Synth", ImVec2(-FLT_MIN, 0))) { 
             std::string new_synth = "\n\ninstrument NewSynth {\n    waveform sawtooth\n    envelope 0.01 0.1 0.8 0.2\n    filter lowpass 2000 1.0\n}";
@@ -259,7 +366,9 @@ int main(int, char**) {
         if (ImGui::CollapsingHeader("Active / Imported", ImGuiTreeNodeFlags_DefaultOpen)) {
             if (active_instrument_names.empty()) ImGui::TextDisabled("No instruments defined");
             for (const auto& inst : active_instrument_names) {
-                ImGui::BulletText("%s", inst.c_str());
+                if (strlen(asset_search_buffer) == 0 || inst.find(asset_search_buffer) != std::string::npos) {
+                    ImGui::BulletText("%s", inst.c_str());
+                }
             }
         }
 
@@ -339,6 +448,16 @@ int main(int, char**) {
         }
 
         ImGui::InputTextMultiline("##editor", script_buffer, IM_ARRAYSIZE(script_buffer), ImVec2(-FLT_MIN, -FLT_MIN), ImGuiInputTextFlags_AllowTabInput);
+        
+        if (ImGui::BeginDragDropTarget()) {
+            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ASSET_CODE")) {
+                const char* code = (const char*)payload->Data;
+                if (strlen(script_buffer) + strlen(code) < IM_ARRAYSIZE(script_buffer)) {
+                    strcat(script_buffer, code);
+                }
+            }
+            ImGui::EndDragDropTarget();
+        }
         ImGui::End();
 
         // --- 3. VISUALIZER (Bottom Right) ---
