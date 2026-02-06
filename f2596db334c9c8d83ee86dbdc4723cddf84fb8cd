@@ -1,0 +1,4 @@
+Task: Implement 'scale' keyword in ScriptParser
+Summary: Implemented the 'scale' keyword in ScriptParser to define global or local scales (e.g., 'scale C major'). Updated collect_definitions and process_script_stream to parse the scale command and update the m_current_scale state. Updated NoteParser calls within instrument processing and parse_compact_notes to use the active scale context, enabling scale-relative note entry (e.g., 'notes 1, 3, 5'). Verified with a new integration test testing/test_script_scale.cpp.
+Files: src/ScriptParser.h, src/ScriptParser.cpp, testing/test_script_scale.cpp, CMakeLists.txt.
+Why: To allow users to define scales in their scripts and use relative note notation.
