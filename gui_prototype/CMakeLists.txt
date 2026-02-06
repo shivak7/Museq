@@ -45,6 +45,11 @@ set(MUSEQ_ENGINE_SOURCES
     ../src/WavWriter.cpp
     ../src/AdsrEnvelope.cpp
     ../src/JsonSerializer.cpp
+    ../src/Voice.cpp
+    ../src/AudioUtils.cpp
+    ../src/Mp3Writer.cpp
+    ../src/OggWriter.cpp
+    ../src/Sampler.cpp
 )
 
 # --- Executable ---
