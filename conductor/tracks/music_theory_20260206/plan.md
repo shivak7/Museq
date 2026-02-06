@@ -4,7 +4,7 @@
 - [x] Task: Define Scale and Chord data structures in the engine 1751fe8
     - [ ] Create `Scale.h` and `Chord.h`
     - [ ] Implement scale degree to MIDI pitch conversion logic
-- [ ] Task: Update NoteParser for relative pitches
+- [x] Task: Update NoteParser for relative pitches 92dea1b
     - [ ] Write unit tests for relative pitch parsing
     - [ ] Implement scale-aware parsing in `NoteParser.cpp`
 - [ ] Task: Implement 'scale' keyword in ScriptParser
