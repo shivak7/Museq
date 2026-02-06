@@ -7,6 +7,10 @@
 #include <algorithm>
 #include <cstring>
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
 void mix_buffers_stereo(std::vector<float>& target, const std::vector<float>& source, int offset) {
     size_t required_size = offset + source.size();
     if (required_size > target.size()) target.resize(required_size, 0.0f);

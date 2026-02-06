@@ -1,11 +1,16 @@
 #ifdef _WIN32
     #define NOMINMAX
+    #define _USE_MATH_DEFINES
 #endif
 #include "Voice.h"
 #include "AudioUtils.h"
 #include <cmath>
 #include <algorithm>
 #include <cstring>
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
 #include "tsf.h"
 
@@ -50,8 +55,26 @@ float BiquadState::process(float in) {
     return out;
 }
 
-Voice::Voice(const Instrument& inst, double start_samples) 
+Voice::Voice(const Instrument& inst, double start_samples, float sample_rate) 
     : instrument(inst), start_time_samples(start_samples) {
+    
+    double total_ms = 0;
+    for (const auto& note : instrument.sequence.notes) {
+        total_ms += note.duration;
+    }
+    total_duration_samples = (total_ms / 1000.0) * sample_rate;
+
+    for (const auto& fx : instrument.effects) {
+        if (fx.type == EffectType::DELAY) {
+            // Max delay of 2 seconds
+            int size = static_cast<int>(sample_rate * 2);
+            delay_buffers.push_back(std::vector<float>(size * 2, 0.0f));
+            delay_indices.push_back(0);
+        } else {
+            delay_buffers.push_back({});
+            delay_indices.push_back(0);
+        }
+    }
 }
 
 Voice::~Voice() {
@@ -66,6 +89,9 @@ void Voice::render(float* buffer, int frame_count, float sample_rate, std::map<s
     bool legato = instrument.portamento_time > 0;
     const auto& notes = instrument.sequence.notes;
 
+    // Local buffer for this voice
+    std::vector<float> local_buffer(frame_count * 2, 0.0f);
+
     for (int f = 0; f < frame_count; ++f) {
         if (current_note_idx >= notes.size()) {
             is_finished = true;
@@ -77,6 +103,7 @@ void Voice::render(float* buffer, int frame_count, float sample_rate, std::map<s
         
         if (note.is_rest) {
             samples_into_note++;
+            total_samples_rendered++;
             if (samples_into_note >= note_duration_samples) {
                 samples_into_note = 0;
                 current_note_idx++;
@@ -163,10 +190,11 @@ void Voice::render(float* buffer, int frame_count, float sample_rate, std::map<s
             }
         }
 
-        buffer[f * 2] += mono_sample * left_gain;
-        buffer[f * 2 + 1] += mono_sample * right_gain;
+        local_buffer[f * 2] = mono_sample * left_gain;
+        local_buffer[f * 2 + 1] = mono_sample * right_gain;
 
         samples_into_note++;
+        total_samples_rendered++;
         if (samples_into_note >= note_duration_samples) {
             samples_into_note = 0;
             current_note_idx++;
@@ -176,5 +204,78 @@ void Voice::render(float* buffer, int frame_count, float sample_rate, std::map<s
                 tsf_channel_note_on(soundfont_instance, 0, notes[current_note_idx].pitch, notes[current_note_idx].velocity / 127.0f);
             }
         }
+    }
+
+    // Apply Gain
+    if (instrument.gain != 1.0f) {
+        for (float& s : local_buffer) s *= instrument.gain;
+    }
+
+    // Apply Effects
+    for (size_t fx_idx = 0; fx_idx < instrument.effects.size(); ++fx_idx) {
+        const auto& fx = instrument.effects[fx_idx];
+        if (fx.type == EffectType::DISTORTION) {
+            float drive = fx.param1;
+            for (float& s : local_buffer) s = std::tanh(s * drive);
+        }
+        else if (fx.type == EffectType::BITCRUSH) {
+            float steps = std::pow(2.0f, fx.param1);
+            for (float& s : local_buffer) s = std::round(s * steps) / steps;
+        }
+        else if (fx.type == EffectType::TREMOLO) {
+            float rate = fx.param1;
+            float depth = fx.param2;
+            for (int f = 0; f < frame_count; ++f) {
+                float mod = 1.0f - depth * (0.5f * (1.0f + std::sin(2.0f * M_PI * rate * (total_samples_rendered - frame_count + f) / sample_rate)));
+                local_buffer[f * 2] *= mod;
+                local_buffer[f * 2 + 1] *= mod;
+            }
+        }
+        else if (fx.type == EffectType::FADE_IN) {
+            float duration_samples = (fx.param1 / 1000.0f) * sample_rate;
+            for (int f = 0; f < frame_count; ++f) {
+                double absolute_sample = total_samples_rendered - frame_count + f;
+                if (absolute_sample < duration_samples) {
+                    float gain = static_cast<float>(absolute_sample / duration_samples);
+                    local_buffer[f * 2] *= gain;
+                    local_buffer[f * 2 + 1] *= gain;
+                }
+            }
+        }
+        else if (fx.type == EffectType::FADE_OUT) {
+            float duration_samples = (fx.param1 / 1000.0f) * sample_rate;
+            float start_fade_sample = static_cast<float>(total_duration_samples - duration_samples);
+            for (int f = 0; f < frame_count; ++f) {
+                double absolute_sample = total_samples_rendered - frame_count + f;
+                if (absolute_sample > start_fade_sample) {
+                    float gain = 1.0f - static_cast<float>((absolute_sample - start_fade_sample) / duration_samples);
+                    if (gain < 0) gain = 0;
+                    local_buffer[f * 2] *= gain;
+                    local_buffer[f * 2 + 1] *= gain;
+                }
+            }
+        }
+        else if (fx.type == EffectType::DELAY) {
+            float time_ms = fx.param1;
+            float feedback = fx.param2;
+            int delay_samples = static_cast<int>((time_ms / 1000.0f) * sample_rate);
+            auto& delay_buf = delay_buffers[fx_idx];
+            int& delay_idx = delay_indices[fx_idx];
+
+            for (int f = 0; f < frame_count; ++f) {
+                int read_idx = (delay_idx - delay_samples + (delay_buf.size() / 2)) % (delay_buf.size() / 2);
+                local_buffer[f * 2] += delay_buf[read_idx * 2] * feedback;
+                local_buffer[f * 2 + 1] += delay_buf[read_idx * 2 + 1] * feedback;
+
+                delay_buf[delay_idx * 2] = local_buffer[f * 2];
+                delay_buf[delay_idx * 2 + 1] = local_buffer[f * 2 + 1];
+                delay_idx = (delay_idx + 1) % (delay_buf.size() / 2);
+            }
+        }
+    }
+
+    // Mix into main buffer
+    for (size_t i = 0; i < local_buffer.size(); ++i) {
+        buffer[i] += local_buffer[i];
     }
 }

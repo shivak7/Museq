@@ -54,7 +54,7 @@ void AudioRenderer::flatten_song(std::shared_ptr<SongElement> element, double cu
 
     if (auto inst_elem = std::dynamic_pointer_cast<InstrumentElement>(element)) {
         double start_samples = (start_time / 1000.0) * m_sample_rate;
-        m_scheduled_voices.push_back(std::make_unique<Voice>(inst_elem->instrument, start_samples));
+        m_scheduled_voices.push_back(std::make_unique<Voice>(inst_elem->instrument, start_samples, m_sample_rate));
     } 
     else if (auto comp_elem = std::dynamic_pointer_cast<CompositeElement>(element)) {
         if (comp_elem->type == CompositeType::SEQUENTIAL) {

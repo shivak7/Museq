@@ -31,7 +31,13 @@ public:
     BiquadState filter_state;
     tsf* soundfont_instance = nullptr;
 
-    Voice(const Instrument& inst, double start_samples);
+    // Effect State
+    double total_samples_rendered = 0;
+    double total_duration_samples = 0;
+    std::vector<std::vector<float>> delay_buffers; // One per delay effect
+    std::vector<int> delay_indices;
+
+    Voice(const Instrument& inst, double start_samples, float sample_rate);
     ~Voice();
 
     // Render a block of stereo samples
