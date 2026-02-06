@@ -12,7 +12,7 @@ Museq is a cross-platform, text-based music sequencer and synthesizer designed f
 - **AI-Augmented Artists:** Users interested in exploring AI-guided music design where the logic remains visible and editable in script form.
 
 ## Core Features
-- **Hierarchical Composition:** A powerful model using `parallel`, `sequential`, and `auto-looping` blocks to organize complex musical arrangements.
+- **Hierarchical & Theoretical Composition:** A powerful model using `parallel`, `sequential`, and `auto-looping` blocks, now enhanced with first-class support for `scale` definitions and built-in `chord` name expansion.
 - **Hybrid Synthesis Engine:** Supports subtractive synthesis (oscillators, ADSR, filters, LFOs) alongside high-quality sampled instruments (SoundFonts and WAV/MP3/OGG samples).
 - **Studio-Quality Output:** Direct-to-disk rendering for WAV, MP3, and OGG formats with normalization and high-fidelity stereo processing.
 - **Dual-Interface Workflow:** A feature-compatible ecosystem where the `museq` CLI provides automation and speed, while the `muqomposer` Studio offers real-time visual feedback, asset management, and interactive playback.
