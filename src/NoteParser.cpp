@@ -1,4 +1,5 @@
 #include "NoteParser.h"
+#include "Scale.h"
 #include <map>
 #include <cctype>
 #include <string>
@@ -52,4 +53,27 @@ int NoteParser::parse(const std::string& note_name, int default_octave) {
     }
     
     return 0;
+}
+
+int NoteParser::parse(const std::string& note_name, const Scale& scale, int default_octave) {
+    // Try to parse as relative degree
+    if (!note_name.empty() && std::all_of(note_name.begin(), note_name.end(), ::isdigit)) {
+        try {
+            int degree = std::stoi(note_name);
+            // Heuristic: If it's a small number, treat as scale degree
+            // MIDI notes usually start at 0. 
+            // Scale degrees start at 1.
+            // If user types "60", do they mean MIDI 60 (C4) or 60th scale step?
+            // "60" as a scale step is unlikely.
+            // Let's assume anything up to 32 is a scale degree.
+            if (degree > 0 && degree < 32) {
+                return scale.get_pitch(degree, default_octave);
+            }
+        } catch (...) {
+            // Fallthrough
+        }
+    }
+    
+    // Fallback to absolute parsing
+    return parse(note_name, default_octave);
 }

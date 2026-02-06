@@ -3,9 +3,14 @@
 
 #include <string>
 
+class Scale;
+
 class NoteParser {
 public:
     static int parse(const std::string& note_name, int default_octave = 4);
+    
+    // Parse relative to a scale
+    static int parse(const std::string& note_name, const Scale& scale, int default_octave = 4);
 };
 
 #endif // NOTE_PARSER_H
