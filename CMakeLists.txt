@@ -146,3 +146,6 @@ target_link_libraries(test_music_theory PRIVATE museq_engine)
 
 add_executable(test_script_scale testing/test_script_scale.cpp)
 target_link_libraries(test_script_scale PRIVATE museq_engine)
+
+add_executable(test_asset_manager testing/test_asset_manager.cpp muqomposer/AssetManager.cpp)
+target_link_libraries(test_asset_manager PRIVATE museq_engine)

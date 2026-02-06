@@ -23,7 +23,7 @@ include_directories(${IMGUI_DIR})
 include_directories(${IMGUI_DIR}/backends)
 
 # --- Executable ---
-add_executable(muqomposer main.cpp ${IMGUI_SOURCES})
+add_executable(muqomposer main.cpp AssetManager.cpp ${IMGUI_SOURCES})
 
 # --- Graphics Dependencies ---
 find_package(OpenGL REQUIRED)

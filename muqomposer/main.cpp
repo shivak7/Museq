@@ -13,6 +13,7 @@
 #include "AudioRenderer.h"
 #include "AudioPlayer.h"
 #include "ScriptParser.h"
+#include "AssetManager.h"
 #include <fstream>
 #include <filesystem>
 
@@ -85,37 +86,10 @@ int main(int, char**) {
     fs::path current_dir = fs::current_path();
 
     // Asset Browser State
-    struct SF2Preset { int bank; int preset; std::string name; };
-    struct SF2Info { std::string path; std::string filename; std::vector<SF2Preset> presets; };
-    std::vector<SF2Info> available_sf2;
-    std::vector<std::string> available_samples;
+    AssetManager asset_manager;
+    asset_manager.refresh_assets();
+    
     std::vector<std::string> active_instrument_names;
-
-    auto refresh_assets = [&]() {
-        available_sf2.clear();
-        available_samples.clear();
-        if (fs::exists("../sounds")) {
-            for (const auto& entry : fs::directory_iterator("../sounds")) {
-                std::string ext = entry.path().extension().string();
-                if (ext == ".sf2") {
-                    SF2Info info;
-                    info.path = entry.path().string();
-                    info.filename = entry.path().filename().string();
-                    tsf* f = tsf_load_filename(info.path.c_str());
-                    if (f) {
-                        int count = tsf_get_presetcount(f);
-                        for (int i = 0; i < count; ++i) {
-                            info.presets.push_back({tsf_get_presetbank(f, i), tsf_get_presetnumber(f, i), tsf_get_presetname(f, i)});
-                        }
-                        tsf_close(f);
-                    }
-                    available_sf2.push_back(info);
-                } else if (ext == ".wav" || ext == ".mp3" || ext == ".ogg") {
-                    available_samples.push_back(entry.path().filename().string());
-                }
-            }
-        }
-    };
 
     auto update_active_instruments = [&]() {
         active_instrument_names.clear();
@@ -132,7 +106,6 @@ int main(int, char**) {
         }
     };
 
-    refresh_assets();
     update_active_instruments();
 
     // UI Layout Constants
@@ -182,6 +155,9 @@ int main(int, char**) {
         }
     };
 
+    // Folder Picker State
+    bool show_folder_picker = false;
+
     // Main loop
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
@@ -224,7 +200,13 @@ int main(int, char**) {
             std::string new_synth = "\n\ninstrument NewSynth {\n    waveform sawtooth\n    envelope 0.01 0.1 0.8 0.2\n    filter lowpass 2000 1.0\n}";
             if (strlen(script_buffer) + new_synth.length() < IM_ARRAYSIZE(script_buffer)) strcat(script_buffer, new_synth.c_str());
         }
-        if (ImGui::Button("Refresh Assets", ImVec2(-FLT_MIN, 0))) { refresh_assets(); }
+        
+        // Add Folder Button
+        if (ImGui::Button("Add Folder", ImVec2(-FLT_MIN, 0))) {
+            show_folder_picker = true;
+        }
+
+        if (ImGui::Button("Refresh Assets", ImVec2(-FLT_MIN, 0))) { asset_manager.refresh_assets(); }
         ImGui::Separator();
 
         if (ImGui::CollapsingHeader("Active / Imported", ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -235,13 +217,13 @@ int main(int, char**) {
         }
 
         if (ImGui::CollapsingHeader("SoundFonts")) {
-            for (const auto& sf : available_sf2) {
+            for (const auto& sf : asset_manager.get_soundfonts()) {
                 if (ImGui::TreeNode(sf.filename.c_str())) {
                     for (const auto& p : sf.presets) {
                         if (ImGui::Selectable(p.name.c_str())) {
                             char buf[512];
-                            snprintf(buf, sizeof(buf), "\n\ninstrument %s {\n    soundfont \"../sounds/%s\"\n    bank %d\n    preset %d\n}", 
-                                p.name.c_str(), sf.filename.c_str(), p.bank, p.preset);
+                            snprintf(buf, sizeof(buf), "\n\ninstrument %s {\n    soundfont \"%s\"\n    bank %d\n    preset %d\n}", 
+                                p.name.c_str(), sf.path.c_str(), p.bank, p.preset); // Use full path? Or relative? Using path stored.
                             if (strlen(script_buffer) + strlen(buf) < IM_ARRAYSIZE(script_buffer)) strcat(script_buffer, buf);
                         }
                     }
@@ -251,11 +233,13 @@ int main(int, char**) {
         }
 
         if (ImGui::CollapsingHeader("Samples")) {
-            for (const auto& smp : available_samples) {
-                if (ImGui::Selectable(smp.c_str())) {
+            for (const auto& smp : asset_manager.get_samples()) {
+                // Extract filename for display
+                std::string filename = fs::path(smp).filename().string();
+                if (ImGui::Selectable(filename.c_str())) {
                     char buf[512];
-                    std::string clean_name = smp.substr(0, smp.find_last_of("."));
-                    snprintf(buf, sizeof(buf), "\n\ninstrument %s {\n    sample \"../sounds/%s\"\n}", clean_name.c_str(), smp.c_str());
+                    std::string clean_name = filename.substr(0, filename.find_last_of("."));
+                    snprintf(buf, sizeof(buf), "\n\ninstrument %s {\n    sample \"%s\"\n}", clean_name.c_str(), smp.c_str());
                     if (strlen(script_buffer) + strlen(buf) < IM_ARRAYSIZE(script_buffer)) strcat(script_buffer, buf);
                 }
             }
@@ -271,6 +255,43 @@ int main(int, char**) {
             }
         }
         ImGui::End();
+
+        // --- Folder Picker Popup ---
+        if (show_folder_picker) {
+            ImGui::OpenPopup("Select Folder");
+        }
+
+        if (ImGui::BeginPopupModal("Select Folder", &show_folder_picker, ImGuiWindowFlags_AlwaysAutoResize)) {
+            ImGui::Text("Current: %s", current_dir.string().c_str());
+            
+            ImGui::BeginChild("DirBrowser", ImVec2(400, 200), true);
+            if (current_dir.has_parent_path()) {
+                if (ImGui::Selectable("[ .. ] Up")) current_dir = current_dir.parent_path();
+            }
+            try {
+                for (const auto& entry : fs::directory_iterator(current_dir)) {
+                    if (entry.is_directory()) {
+                        if (ImGui::Selectable(entry.path().filename().string().c_str())) {
+                            current_dir /= entry.path().filename();
+                            break;
+                        }
+                    }
+                }
+            } catch(...) {}
+            ImGui::EndChild();
+
+            if (ImGui::Button("Select This Folder", ImVec2(150, 0))) {
+                asset_manager.add_watched_folder(current_dir.string());
+                show_folder_picker = false;
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Cancel", ImVec2(100, 0))) {
+                show_folder_picker = false;
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::EndPopup();
+        }
 
         // --- 2. CODE EDITOR (Top Right) ---
         ImGui::SetNextWindowPos(ImVec2(SIDEBAR_WIDTH, 0));
