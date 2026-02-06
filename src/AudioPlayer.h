@@ -31,11 +31,8 @@ private:
     
     // Playback state
     bool m_playing = false;
+    AudioRenderer m_renderer;
     
-    // Buffer for the entire song (Temporary approach until streaming renderer is ready)
-    std::vector<float> m_playback_buffer;
-    size_t m_playback_cursor = 0;
-
     // Static callback for miniaudio
     static void data_callback(struct ma_device* pDevice, void* pOutput, const void* pInput, unsigned int frameCount);
 };
