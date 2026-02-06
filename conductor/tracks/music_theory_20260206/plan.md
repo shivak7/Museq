@@ -7,7 +7,7 @@
 - [x] Task: Update NoteParser for relative pitches 92dea1b
     - [ ] Write unit tests for relative pitch parsing
     - [ ] Implement scale-aware parsing in `NoteParser.cpp`
-- [ ] Task: Implement 'scale' keyword in ScriptParser
+- [x] Task: Implement 'scale' keyword in ScriptParser f2596db
     - [ ] Update `ScriptParser.cpp` to handle scale definitions
     - [ ] Verify scale propagation through hierarchical blocks
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Scale Support' (Protocol in workflow.md)
