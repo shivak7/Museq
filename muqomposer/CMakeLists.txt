@@ -33,34 +33,14 @@ include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../third_party")
 include_directories(${IMGUI_DIR})
 include_directories(${IMGUI_DIR}/backends)
 
-set(MUSEQ_ENGINE_SOURCES
-    ../src/AudioRenderer.cpp
-    ../src/AudioPlayer.cpp
-    ../src/Instrument.cpp
-    ../src/Note.cpp
-    ../src/NoteParser.cpp
-    ../src/ScriptParser.cpp
-    ../src/Sequence.cpp
-    ../src/WavWriter.cpp
-    ../src/AdsrEnvelope.cpp
-    ../src/JsonSerializer.cpp
-    ../src/Voice.cpp
-    ../src/AudioUtils.cpp
-    ../src/Mp3Writer.cpp
-    ../src/OggWriter.cpp
-    ../src/Sampler.cpp
-)
-
 # --- Executable ---
-add_executable(muqomposer 
-    main.cpp
-    ${IMGUI_SOURCES}
-    ${MUSEQ_ENGINE_SOURCES}
-)
+add_executable(muqomposer main.cpp ${IMGUI_SOURCES})
 
 find_package(OpenGL REQUIRED)
 
 target_link_libraries(muqomposer 
+    PRIVATE
+    museq_engine
     glfw
     OpenGL::GL
     ${CMAKE_DL_LIBS} # for Linux
