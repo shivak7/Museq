@@ -14,6 +14,9 @@
 #include "AudioPlayer.h"
 #include "ScriptParser.h"
 #include <fstream>
+#include <filesystem>
+
+namespace fs = std::filesystem;
 
 static void glfw_error_callback(int error, const char* description) {
     fprintf(stderr, "Glfw Error %d: %s\n", error, description);
@@ -244,7 +247,21 @@ int main(int, char**) {
         }
 
         if (ImGui::BeginPopupModal("Save Script", &show_save_popup, ImGuiWindowFlags_AlwaysAutoResize)) {
-            ImGui::Text("Enter filename:");
+            ImGui::Text("Current Directory Files:");
+            ImGui::BeginChild("FileBrowser", ImVec2(300, 150), true);
+            try {
+                for (const auto& entry : fs::directory_iterator(".")) {
+                    if (entry.is_regular_file() && entry.path().extension() == ".museq") {
+                        std::string filename = entry.path().filename().string();
+                        if (ImGui::Selectable(filename.c_str())) {
+                            strncpy(file_path_buffer, filename.c_str(), sizeof(file_path_buffer));
+                        }
+                    }
+                }
+            } catch (...) {}
+            ImGui::EndChild();
+
+            ImGui::Text("Save as:");
             ImGui::InputText("##filename", file_path_buffer, IM_ARRAYSIZE(file_path_buffer));
             
             if (ImGui::Button("Save", ImVec2(120, 0))) {
@@ -266,7 +283,21 @@ int main(int, char**) {
         }
 
         if (ImGui::BeginPopupModal("Load Script", &show_load_popup, ImGuiWindowFlags_AlwaysAutoResize)) {
-            ImGui::Text("Enter filename:");
+            ImGui::Text("Select file to load:");
+            ImGui::BeginChild("FileBrowser", ImVec2(300, 150), true);
+            try {
+                for (const auto& entry : fs::directory_iterator(".")) {
+                    if (entry.is_regular_file() && entry.path().extension() == ".museq") {
+                        std::string filename = entry.path().filename().string();
+                        if (ImGui::Selectable(filename.c_str())) {
+                            strncpy(file_path_buffer, filename.c_str(), sizeof(file_path_buffer));
+                        }
+                    }
+                }
+            } catch (...) {}
+            ImGui::EndChild();
+
+            ImGui::Text("Selected:");
             ImGui::InputText("##filename", file_path_buffer, IM_ARRAYSIZE(file_path_buffer));
             
             if (ImGui::Button("Load", ImVec2(120, 0))) {
