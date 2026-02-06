@@ -16,7 +16,7 @@
 - [x] Task: Implement Chord expansion logic ebdf5d0
     - [ ] Define built-in chord formulas (maj, min, aug, dim, 7, etc.)
     - [ ] Write unit tests for chord expansion
-- [ ] Task: Update ScriptParser for chord names
+- [x] Task: Update ScriptParser for chord names dd374d6
     - [ ] Implement chord name recognition in compact note syntax
     - [ ] Ensure chords work within `parallel` and `sequential` blocks
 - [ ] Task: Comprehensive Integration Testing
