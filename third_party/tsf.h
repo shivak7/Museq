@@ -110,6 +110,12 @@ TSFDEF int tsf_get_presetcount(const tsf* f);
 // Returns the name of a preset index >= 0 and < tsf_get_presetcount()
 TSFDEF const char* tsf_get_presetname(const tsf* f, int preset_index);
 
+// Returns the bank number of a preset index >= 0 and < tsf_get_presetcount()
+TSFDEF int tsf_get_presetbank(const tsf* f, int preset_index);
+
+// Returns the preset number of a preset index >= 0 and < tsf_get_presetcount()
+TSFDEF int tsf_get_presetnumber(const tsf* f, int preset_index);
+
 // Returns the name of a preset by bank and preset number
 TSFDEF const char* tsf_bank_get_presetname(const tsf* f, int bank, int preset_number);
 
@@ -1518,6 +1524,16 @@ TSFDEF int tsf_get_presetcount(const tsf* f)
 TSFDEF const char* tsf_get_presetname(const tsf* f, int preset)
 {
 	return (preset < 0 || preset >= f->presetNum ? TSF_NULL : f->presets[preset].presetName);
+}
+
+TSFDEF int tsf_get_presetbank(const tsf* f, int preset)
+{
+	return (preset < 0 || preset >= f->presetNum ? -1 : f->presets[preset].bank);
+}
+
+TSFDEF int tsf_get_presetnumber(const tsf* f, int preset)
+{
+	return (preset < 0 || preset >= f->presetNum ? -1 : f->presets[preset].preset);
 }
 
 TSFDEF const char* tsf_bank_get_presetname(const tsf* f, int bank, int preset_number)

@@ -84,15 +84,63 @@ int main(int, char**) {
     char file_path_buffer[256] = "song.museq";
     fs::path current_dir = fs::current_path();
 
+    // Asset Browser State
+    struct SF2Preset { int bank; int preset; std::string name; };
+    struct SF2Info { std::string path; std::string filename; std::vector<SF2Preset> presets; };
+    std::vector<SF2Info> available_sf2;
+    std::vector<std::string> available_samples;
+    std::vector<std::string> active_instrument_names;
+
+    auto refresh_assets = [&]() {
+        available_sf2.clear();
+        available_samples.clear();
+        if (fs::exists("../sounds")) {
+            for (const auto& entry : fs::directory_iterator("../sounds")) {
+                std::string ext = entry.path().extension().string();
+                if (ext == ".sf2") {
+                    SF2Info info;
+                    info.path = entry.path().string();
+                    info.filename = entry.path().filename().string();
+                    tsf* f = tsf_load_filename(info.path.c_str());
+                    if (f) {
+                        int count = tsf_get_presetcount(f);
+                        for (int i = 0; i < count; ++i) {
+                            info.presets.push_back({tsf_get_presetbank(f, i), tsf_get_presetnumber(f, i), tsf_get_presetname(f, i)});
+                        }
+                        tsf_close(f);
+                    }
+                    available_sf2.push_back(info);
+                } else if (ext == ".wav" || ext == ".mp3" || ext == ".ogg") {
+                    available_samples.push_back(entry.path().filename().string());
+                }
+            }
+        }
+    };
+
+    auto update_active_instruments = [&]() {
+        active_instrument_names.clear();
+        std::stringstream ss(script_buffer);
+        std::string line;
+        while (std::getline(ss, line)) {
+            if (line.find("instrument ") != std::string::npos) {
+                size_t pos = line.find("instrument ") + 11;
+                size_t end = line.find_first_of(" {", pos);
+                if (end != std::string::npos) {
+                    active_instrument_names.push_back(line.substr(pos, end - pos));
+                }
+            }
+        }
+    };
+
+    refresh_assets();
+    update_active_instruments();
+
     // UI Layout Constants
     const float SIDEBAR_WIDTH = 250.0f;
     const float FOOTER_HEIGHT = 40.0f;
     
-    // Mock Data
-    std::vector<std::string> active_instruments = {"Piano", "Drums"};
-    std::vector<std::string> soundfonts = {"GeneralUser.sf2", "Arachno.sf2"};
-    std::vector<std::string> samples = {"kick.wav", "snare.wav", "hat.wav"};
-    std::vector<std::string> synths = {"SawLead", "Pad", "Bass"};
+    // Mock Synths
+    std::vector<std::string> synth_templates = {"SawLead", "SoftPad", "AcidBass", "Pluck"};
 
     // Helper for File Browser Logic
     auto render_file_browser = [&](const char* label) {
@@ -138,6 +186,13 @@ int main(int, char**) {
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
 
+        // Slow updates
+        static double last_parse_time = 0;
+        if (ImGui::GetTime() - last_parse_time > 2.0) {
+            update_active_instruments();
+            last_parse_time = ImGui::GetTime();
+        }
+
         // Update Status
         if (!player_initialized) {
             snprintf(status_text, sizeof(status_text), "Status: Audio Init Failed");
@@ -167,36 +222,52 @@ int main(int, char**) {
 
         if (ImGui::Button("Add New Synth", ImVec2(-FLT_MIN, 0))) { 
             std::string new_synth = "\n\ninstrument NewSynth {\n    waveform sawtooth\n    envelope 0.01 0.1 0.8 0.2\n    filter lowpass 2000 1.0\n}";
-            if (strlen(script_buffer) + new_synth.length() < IM_ARRAYSIZE(script_buffer)) {
-                strcat(script_buffer, new_synth.c_str());
-            }
+            if (strlen(script_buffer) + new_synth.length() < IM_ARRAYSIZE(script_buffer)) strcat(script_buffer, new_synth.c_str());
         }
+        if (ImGui::Button("Refresh Assets", ImVec2(-FLT_MIN, 0))) { refresh_assets(); }
         ImGui::Separator();
 
         if (ImGui::CollapsingHeader("Active / Imported", ImGuiTreeNodeFlags_DefaultOpen)) {
-            for (const auto& inst : active_instruments) {
+            if (active_instrument_names.empty()) ImGui::TextDisabled("No instruments defined");
+            for (const auto& inst : active_instrument_names) {
                 ImGui::BulletText("%s", inst.c_str());
             }
         }
 
         if (ImGui::CollapsingHeader("SoundFonts")) {
-            for (const auto& sf : soundfonts) {
-                if (ImGui::TreeNode(sf.c_str())) {
-                    ImGui::Text("  (Bank 0, Preset 0)");
+            for (const auto& sf : available_sf2) {
+                if (ImGui::TreeNode(sf.filename.c_str())) {
+                    for (const auto& p : sf.presets) {
+                        if (ImGui::Selectable(p.name.c_str())) {
+                            char buf[512];
+                            snprintf(buf, sizeof(buf), "\n\ninstrument %s {\n    soundfont \"../sounds/%s\"\n    bank %d\n    preset %d\n}", 
+                                p.name.c_str(), sf.filename.c_str(), p.bank, p.preset);
+                            if (strlen(script_buffer) + strlen(buf) < IM_ARRAYSIZE(script_buffer)) strcat(script_buffer, buf);
+                        }
+                    }
                     ImGui::TreePop();
                 }
             }
         }
 
         if (ImGui::CollapsingHeader("Samples")) {
-            for (const auto& smp : samples) {
-                ImGui::Selectable(smp.c_str());
+            for (const auto& smp : available_samples) {
+                if (ImGui::Selectable(smp.c_str())) {
+                    char buf[512];
+                    std::string clean_name = smp.substr(0, smp.find_last_of("."));
+                    snprintf(buf, sizeof(buf), "\n\ninstrument %s {\n    sample \"../sounds/%s\"\n}", clean_name.c_str(), smp.c_str());
+                    if (strlen(script_buffer) + strlen(buf) < IM_ARRAYSIZE(script_buffer)) strcat(script_buffer, buf);
+                }
             }
         }
 
         if (ImGui::CollapsingHeader("Synths")) {
-            for (const auto& synth : synths) {
-                ImGui::Selectable(synth.c_str());
+            for (const auto& synth : synth_templates) {
+                if (ImGui::Selectable(synth.c_str())) {
+                    char buf[512];
+                    snprintf(buf, sizeof(buf), "\n\ninstrument %s {\n    waveform sawtooth\n    envelope 0.1 0.2 0.5 0.3\n}", synth.c_str());
+                    if (strlen(script_buffer) + strlen(buf) < IM_ARRAYSIZE(script_buffer)) strcat(script_buffer, buf);
+                }
             }
         }
         ImGui::End();
