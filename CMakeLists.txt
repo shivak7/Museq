@@ -16,6 +16,7 @@ endif()
 # Add include directories
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/src")
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/third_party")
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/third_party/miniaudio")
 
 # Add executable
 add_executable(museq ${SOURCES})
@@ -98,4 +99,8 @@ endif()
 
 if(WIN32)
     target_link_libraries(museq PRIVATE ws2_32 winmm shlwapi)
+endif()
+
+if(UNIX)
+    target_link_libraries(museq PRIVATE pthread dl m)
 endif()

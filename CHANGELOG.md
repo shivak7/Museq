@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Real-time Playback:** Integrated `miniaudio` for instant audio playback via the `-p` / `--playback` flag, replacing the previous system-command workaround.
 - **Modular Import System:** Added `import` keyword to load instrument templates from external `.museq` files.
 - **Instrument Renaming:** Implemented automatic renaming (e.g., `Piano_1`) and warnings for instrument name conflicts during imports.
 - **Polyphony (Chords):** Added support for simultaneous notes using the `+` operator (e.g., `C4+E4+G4`).

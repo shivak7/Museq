@@ -11,18 +11,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <cstdio>
-
-#ifdef _WIN32
-    #include <windows.h>
-    #define SYSTEM_PLAY_CMD "powershell -c (New-Object Media.SoundPlayer 'temp_playback.wav').PlaySync()"
-    #define REMOVE_CMD "del temp_playback.wav"
-#elif defined(__APPLE__)
-    #define SYSTEM_PLAY_CMD "afplay temp_playback.wav"
-    #define REMOVE_CMD "rm temp_playback.wav"
-#else
-    #define SYSTEM_PLAY_CMD "aplay temp_playback.wav"
-    #define REMOVE_CMD "rm temp_playback.wav"
-#endif
+#include "AudioPlayer.h"
 
 void print_usage(const char* prog_name) {
     std::cerr << "Usage: " << prog_name << " <script_file> [options]" << std::endl;
@@ -132,16 +121,14 @@ int main(int argc, char* argv[]) {
     AudioRenderer renderer;
 
     if (playback_mode) {
-        std::cout << "Rendering to default sound output device..." << std::endl;
-        WavWriter writer;
-        writer.write(renderer, song, "temp_playback.wav", sample_rate);
-        
-        int ret = std::system(SYSTEM_PLAY_CMD);
-        if (ret != 0) {
-            std::cerr << "Error playing audio." << std::endl;
+        std::cout << "Rendering and playing..." << std::endl;
+        AudioPlayer player;
+        if (player.init()) {
+            player.play(song);
+            std::cout << "Playing... Press Enter to stop." << std::endl;
+            std::cin.get(); 
+            player.stop();
         }
-        
-        std::remove("temp_playback.wav");
     } else {
         std::string output_file_path = output_base_name + "." + format;
         if (format == "wav") {

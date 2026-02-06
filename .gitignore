@@ -29,3 +29,4 @@ backup/
 sounds/*
 !sounds/GeneralUser GS v1.471.sf2
 dist/
+testing/
