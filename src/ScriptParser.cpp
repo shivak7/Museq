@@ -682,28 +682,6 @@ void ScriptParser::parse_compact_notes(const std::string& list, Sequence& seq, f
         }
 
         for (int r = 0; r < repeat_count; ++r) {
-            // NEW: Try to parse as a chord name first (e.g. Cmaj, Dmin7)
-            bool is_chord = false;
-            std::vector<std::string> qualities = {"maj", "min", "7", "maj7", "min7", "dim", "aug", "sus4", "sus2", "add9", "maj9", "min9"};
-            for (const auto& q : qualities) {
-                if (token_body.find(q) != std::string::npos) {
-                    is_chord = true;
-                    break;
-                }
-            }
-
-            if (is_chord) {
-                Chord chord(token_body);
-                std::vector<int> chord_pitches = chord.get_notes(default_octave);
-                if (!chord_pitches.empty()) {
-                    for (size_t i = 0; i < chord_pitches.size(); ++i) {
-                        bool is_last_chord_note = (i == chord_pitches.size() - 1);
-                        seq.add_note(Note(chord_pitches[i], m_default_duration, m_default_velocity, default_pan, is_last_chord_note));
-                    }
-                    continue; // Processed as chord name
-                }
-            }
-
             for (size_t i = 0; i < chord_components.size(); ++i) {
                 const std::string& comp = chord_components[i];
                 bool is_last = (i == chord_components.size() - 1);
@@ -730,6 +708,28 @@ void ScriptParser::parse_compact_notes(const std::string& list, Sequence& seq, f
                     }
                 }
                 
+                // NEW: Try to parse as a chord name (e.g. Cmaj, Dmin7)
+                bool is_chord = false;
+                std::vector<std::string> qualities = {"maj", "min", "7", "maj7", "min7", "dim", "aug", "sus4", "sus2", "add9", "maj9", "min9"};
+                for (const auto& q : qualities) {
+                    if (note_name.find(q) != std::string::npos) {
+                        is_chord = true;
+                        break;
+                    }
+                }
+
+                if (is_chord) {
+                    Chord chord(note_name);
+                    std::vector<int> chord_pitches = chord.get_notes(default_octave);
+                    if (!chord_pitches.empty()) {
+                        for (size_t k = 0; k < chord_pitches.size(); ++k) {
+                            bool is_last_chord_note = (k == chord_pitches.size() - 1);
+                            seq.add_note(Note(chord_pitches[k], dur, vel, p_val, is_last_chord_note));
+                        }
+                        continue; // Processed as chord name
+                    }
+                }
+
                 int pitch = NoteParser::parse(note_name, m_current_scale, default_octave);
                 if (pitch > 0 || note_name == "0" || pitch == -1) {
                     seq.add_note(Note(pitch, dur, vel, p_val, is_last));
