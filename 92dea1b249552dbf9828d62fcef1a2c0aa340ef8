@@ -1,0 +1,4 @@
+Task: Update NoteParser for relative pitches
+Summary: Implemented NoteParser::parse overload that accepts a Scale object. This allows parsing relative scale degrees (e.g., '1', '3', '5') into absolute MIDI pitches based on the provided scale and default octave. Added heuristics to distinguish between scale degrees (1-31) and potential raw MIDI numbers or invalid inputs. Updated tests to verify this new functionality.
+Files: src/NoteParser.h, src/NoteParser.cpp, testing/test_music_theory.cpp.
+Why: To enable the use of scale-relative notation in Museq scripts.
