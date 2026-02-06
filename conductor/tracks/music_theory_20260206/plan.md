@@ -1,16 +1,16 @@
 # Implementation Plan - Music Theory Features
 
-## Phase 1: Core Data Structures and Scale Support
+## Phase 1: Core Data Structures and Scale Support [checkpoint: 4029469]
 - [x] Task: Define Scale and Chord data structures in the engine 1751fe8
-    - [ ] Create `Scale.h` and `Chord.h`
-    - [ ] Implement scale degree to MIDI pitch conversion logic
+    - [x] Create `Scale.h` and `Chord.h`
+    - [x] Implement scale degree to MIDI pitch conversion logic
 - [x] Task: Update NoteParser for relative pitches 92dea1b
-    - [ ] Write unit tests for relative pitch parsing
-    - [ ] Implement scale-aware parsing in `NoteParser.cpp`
+    - [x] Write unit tests for relative pitch parsing
+    - [x] Implement scale-aware parsing in `NoteParser.cpp`
 - [x] Task: Implement 'scale' keyword in ScriptParser f2596db
-    - [ ] Update `ScriptParser.cpp` to handle scale definitions
-    - [ ] Verify scale propagation through hierarchical blocks
-- [ ] Task: Conductor - User Manual Verification 'Phase 1: Scale Support' (Protocol in workflow.md)
+    - [x] Update `ScriptParser.cpp` to handle scale definitions
+    - [x] Verify scale propagation through hierarchical blocks
+- [x] Task: Conductor - User Manual Verification 'Phase 1: Scale Support' (Protocol in workflow.md) 4029469
 
 ## Phase 2: Chord Support and Integration
 - [ ] Task: Implement Chord expansion logic
