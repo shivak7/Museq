@@ -45,6 +45,18 @@ void Chord::init_intervals() {
         m_intervals = {0, 3, 6};
     } else if (m_quality == "aug") {
         m_intervals = {0, 4, 8};
+    } else if (m_quality == "sus4") {
+        m_intervals = {0, 5, 7};
+    } else if (m_quality == "sus2") {
+        m_intervals = {0, 2, 7};
+    } else if (m_quality == "maj9" || m_quality == "M9") {
+        m_intervals = {0, 4, 7, 11, 14};
+    } else if (m_quality == "min9" || m_quality == "m9") {
+        m_intervals = {0, 3, 7, 10, 14};
+    } else if (m_quality == "9") {
+        m_intervals = {0, 4, 7, 10, 14};
+    } else if (m_quality == "add9") {
+        m_intervals = {0, 4, 7, 14};
     }
 }
 

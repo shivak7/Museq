@@ -19,12 +19,24 @@ int main() {
     assert(notes[1] == 64); // E4
     assert(notes[2] == 67); // G4
 
+    // Test more chords
+    Chord d_min7("Dmin7");
+    std::vector<int> d_min7_notes = d_min7.get_notes(4);
+    assert(d_min7_notes.size() == 4);
+    assert(d_min7_notes[0] == 62);
+    assert(d_min7_notes[1] == 65);
+    assert(d_min7_notes[2] == 69);
+    assert(d_min7_notes[3] == 72);
+
+    // Test sus4 (NOT YET IMPLEMENTED)
+    Chord c_sus4("Csus4");
+    std::vector<int> c_sus4_notes = c_sus4.get_notes(4);
+    assert(c_sus4_notes.size() == 3);
+    assert(c_sus4_notes[0] == 60);
+    assert(c_sus4_notes[1] == 65); // F4
+    assert(c_sus4_notes[2] == 67); // G4
+
     // Test NoteParser with Scale
-    // "1" in C Major octave 4 -> C4 (60)
-    // "3" in C Major octave 4 -> E4 (64)
-    // "5" in C Major octave 4 -> G4 (67)
-    // "b3" in C Major? Maybe not for now. Just plain degrees.
-    
     int p1 = NoteParser::parse("1", c_major, 4);
     assert(p1 == 60);
     
