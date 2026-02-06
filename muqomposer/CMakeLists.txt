@@ -12,8 +12,6 @@ set(CMAKE_CXX_STANDARD 17)
 # macOS: brew install glfw
 # Windows: vcpkg install glfw3:x64-windows
 
-find_package(glfw3 REQUIRED)
-
 # --- ImGui Files ---
 # ImGui is usually included as source. You would download it from
 # https://github.com/ocornut/imgui and place the core files in third_party/imgui
@@ -60,31 +58,68 @@ add_executable(muqomposer
     ${MUSEQ_ENGINE_SOURCES}
 )
 
+find_package(OpenGL REQUIRED)
+
 target_link_libraries(muqomposer 
     glfw
-    GL
+    OpenGL::GL
     ${CMAKE_DL_LIBS} # for Linux
 )
+
+if(WIN32)
+    target_link_libraries(muqomposer ws2_32 winmm shlwapi)
+endif()
 
 if(UNIX)
     target_link_libraries(muqomposer pthread dl m)
 endif()
 
-# --- Dependency Discovery (Synchronized with root CMakeLists.txt) ---
+# --- Dependency Discovery ---
 
-find_package(PkgConfig REQUIRED)
+# 1. GLFW (Always needed for GUI)
+find_package(glfw3 CONFIG QUIET)
+if(TARGET glfw)
+    target_link_libraries(muqomposer glfw)
+else()
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(GLFW REQUIRED glfw3)
+    target_include_directories(muqomposer PRIVATE ${GLFW_INCLUDE_DIRS})
+    target_link_libraries(muqomposer ${GLFW_LIBRARIES})
+endif()
 
-# 1. sndfile
-pkg_check_modules(SNDFILE REQUIRED sndfile)
-target_include_directories(muqomposer PRIVATE ${SNDFILE_INCLUDE_DIRS})
-target_link_libraries(muqomposer ${SNDFILE_LIBRARIES})
+# 2. Audio Dependencies (Inherit from parent if possible)
+# On Linux, they are often in SNDFILE_LIBRARIES, VORBIS_LIBRARIES, LAME_LIBRARIES
+# On Windows, they are often in targets like SndFile::sndfile
 
-# 2. Vorbis/Ogg
-pkg_check_modules(VORBIS REQUIRED vorbis vorbisenc ogg)
-target_include_directories(muqomposer PRIVATE ${VORBIS_INCLUDE_DIRS})
-target_link_libraries(muqomposer ${VORBIS_LIBRARIES})
+# SndFile
+if(TARGET SndFile::sndfile)
+    target_link_libraries(muqomposer SndFile::sndfile)
+elseif(SNDFILE_LIBRARIES)
+    target_link_libraries(muqomposer ${SNDFILE_LIBRARIES})
+else()
+    pkg_check_modules(SNDFILE REQUIRED sndfile)
+    target_include_directories(muqomposer PRIVATE ${SNDFILE_INCLUDE_DIRS})
+    target_link_libraries(muqomposer ${SNDFILE_LIBRARIES})
+endif()
 
-# 3. LAME
-pkg_check_modules(LAME REQUIRED lame)
-target_include_directories(muqomposer PRIVATE ${LAME_INCLUDE_DIRS})
-target_link_libraries(muqomposer ${LAME_LIBRARIES})
+# Vorbis/Ogg
+if(TARGET Vorbis::vorbis AND TARGET Ogg::ogg)
+    target_link_libraries(muqomposer Vorbis::vorbis Vorbis::vorbisenc Ogg::ogg)
+elseif(VORBIS_LIBRARIES)
+    target_link_libraries(muqomposer ${VORBIS_LIBRARIES})
+else()
+    pkg_check_modules(VORBIS REQUIRED vorbis vorbisenc ogg)
+    target_include_directories(muqomposer PRIVATE ${VORBIS_INCLUDE_DIRS})
+    target_link_libraries(muqomposer ${VORBIS_LIBRARIES})
+endif()
+
+# LAME
+if(TARGET mp3lame::mp3lame)
+    target_link_libraries(muqomposer mp3lame::mp3lame)
+elseif(LAME_LIBRARIES)
+    target_link_libraries(muqomposer ${LAME_LIBRARIES})
+else()
+    pkg_check_modules(LAME REQUIRED lame)
+    target_include_directories(muqomposer PRIVATE ${LAME_INCLUDE_DIRS})
+    target_link_libraries(muqomposer ${LAME_LIBRARIES})
+endif()
