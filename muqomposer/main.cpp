@@ -82,6 +82,7 @@ int main(int, char**) {
     bool show_save_popup = false;
     bool show_load_popup = false;
     char file_path_buffer[256] = "song.museq";
+    fs::path current_dir = fs::current_path();
 
     // UI Layout Constants
     const float SIDEBAR_WIDTH = 250.0f;
@@ -92,6 +93,38 @@ int main(int, char**) {
     std::vector<std::string> soundfonts = {"GeneralUser.sf2", "Arachno.sf2"};
     std::vector<std::string> samples = {"kick.wav", "snare.wav", "hat.wav"};
     std::vector<std::string> synths = {"SawLead", "Pad", "Bass"};
+
+    // Helper for File Browser Logic
+    auto render_file_browser = [&](const char* label) {
+        ImGui::Text("Location: %s", current_dir.string().c_str());
+        ImGui::BeginChild(label, ImVec2(450, 250), true);
+        try {
+            // Parent Directory Navigation
+            if (current_dir.has_parent_path()) {
+                if (ImGui::Selectable("[ .. ] Parent Directory")) {
+                    current_dir = current_dir.parent_path();
+                }
+            }
+
+            // Iterate Directory
+            for (const auto& entry : fs::directory_iterator(current_dir)) {
+                std::string filename = entry.path().filename().string();
+                if (entry.is_directory()) {
+                    if (ImGui::Selectable(("[DIR] " + filename).c_str())) {
+                        current_dir /= filename;
+                        break; // Exit loop to avoid iterator invalidation
+                    }
+                } else if (entry.is_regular_file() && entry.path().extension() == ".museq") {
+                    if (ImGui::Selectable(filename.c_str())) {
+                        strncpy(file_path_buffer, filename.c_str(), sizeof(file_path_buffer));
+                    }
+                }
+            }
+        } catch (const std::exception& e) {
+            ImGui::TextColored(ImVec4(1,0,0,1), "Error: %s", e.what());
+        }
+        ImGui::EndChild();
+    };
 
     // Helper for Play logic
     auto play_logic = [&]() {
@@ -247,25 +280,14 @@ int main(int, char**) {
         }
 
         if (ImGui::BeginPopupModal("Save Script", &show_save_popup, ImGuiWindowFlags_AlwaysAutoResize)) {
-            ImGui::Text("Current Directory Files:");
-            ImGui::BeginChild("FileBrowser", ImVec2(300, 150), true);
-            try {
-                for (const auto& entry : fs::directory_iterator(".")) {
-                    if (entry.is_regular_file() && entry.path().extension() == ".museq") {
-                        std::string filename = entry.path().filename().string();
-                        if (ImGui::Selectable(filename.c_str())) {
-                            strncpy(file_path_buffer, filename.c_str(), sizeof(file_path_buffer));
-                        }
-                    }
-                }
-            } catch (...) {}
-            ImGui::EndChild();
+            render_file_browser("SaveBrowser");
 
             ImGui::Text("Save as:");
             ImGui::InputText("##filename", file_path_buffer, IM_ARRAYSIZE(file_path_buffer));
             
             if (ImGui::Button("Save", ImVec2(120, 0))) {
-                save_script_to_file(file_path_buffer, script_buffer);
+                fs::path full_path = current_dir / file_path_buffer;
+                save_script_to_file(full_path.string().c_str(), script_buffer);
                 show_save_popup = false;
                 ImGui::CloseCurrentPopup();
             }
@@ -283,25 +305,14 @@ int main(int, char**) {
         }
 
         if (ImGui::BeginPopupModal("Load Script", &show_load_popup, ImGuiWindowFlags_AlwaysAutoResize)) {
-            ImGui::Text("Select file to load:");
-            ImGui::BeginChild("FileBrowser", ImVec2(300, 150), true);
-            try {
-                for (const auto& entry : fs::directory_iterator(".")) {
-                    if (entry.is_regular_file() && entry.path().extension() == ".museq") {
-                        std::string filename = entry.path().filename().string();
-                        if (ImGui::Selectable(filename.c_str())) {
-                            strncpy(file_path_buffer, filename.c_str(), sizeof(file_path_buffer));
-                        }
-                    }
-                }
-            } catch (...) {}
-            ImGui::EndChild();
+            render_file_browser("LoadBrowser");
 
             ImGui::Text("Selected:");
             ImGui::InputText("##filename", file_path_buffer, IM_ARRAYSIZE(file_path_buffer));
             
             if (ImGui::Button("Load", ImVec2(120, 0))) {
-                if (load_script_from_file(file_path_buffer, script_buffer, IM_ARRAYSIZE(script_buffer))) {
+                fs::path full_path = current_dir / file_path_buffer;
+                if (load_script_from_file(full_path.string().c_str(), script_buffer, IM_ARRAYSIZE(script_buffer))) {
                     show_load_popup = false;
                     ImGui::CloseCurrentPopup();
                 } else {
