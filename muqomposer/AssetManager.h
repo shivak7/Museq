@@ -8,6 +8,21 @@
 
 namespace fs = std::filesystem;
 
+enum class AssetType {
+    NONE,
+    SF2,
+    SAMPLE,
+    DIRECTORY
+};
+
+struct AssetNode {
+    std::string name;
+    std::string full_path;
+    AssetType type;
+    std::vector<AssetNode> children;
+    bool is_directory; // Helper for test/ui
+};
+
 struct SF2Preset {
     int bank;
     int preset;
@@ -33,6 +48,10 @@ public:
     const std::vector<SF2Info>& get_soundfonts() const;
     const std::vector<std::string>& get_samples() const;
 
+    // Tree Views
+    AssetNode get_soundfont_tree(const std::string& filter = "") const;
+    AssetNode get_sample_tree(const std::string& filter = "") const;
+
 private:
     std::vector<std::string> m_watched_folders;
     std::vector<SF2Info> m_soundfonts;
@@ -40,6 +59,9 @@ private:
 
     void scan_directory(const fs::path& path);
     void process_sf2(const fs::path& path);
+    
+    // Helper to build tree from flat list
+    AssetNode build_tree_from_paths(const std::vector<std::string>& paths, AssetType leaf_type, const std::string& filter) const;
 };
 
 #endif // ASSET_MANAGER_H

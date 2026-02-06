@@ -149,3 +149,9 @@ target_link_libraries(test_script_scale PRIVATE museq_engine)
 
 add_executable(test_asset_manager testing/test_asset_manager.cpp muqomposer/AssetManager.cpp)
 target_link_libraries(test_asset_manager PRIVATE museq_engine)
+
+add_executable(test_asset_tree testing/test_asset_tree.cpp muqomposer/AssetManager.cpp)
+target_link_libraries(test_asset_tree PRIVATE museq_engine)
+
+add_executable(test_asset_filter testing/test_asset_filter.cpp muqomposer/AssetManager.cpp)
+target_link_libraries(test_asset_filter PRIVATE museq_engine)

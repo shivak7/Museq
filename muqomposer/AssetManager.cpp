@@ -6,19 +6,20 @@
 AssetManager::AssetManager() {
     // Default watched folder
     if (fs::exists("../sounds")) {
-        add_watched_folder("../sounds");
+        add_watched_folder(fs::absolute("../sounds").string());
     }
     if (fs::exists("sounds")) {
-        add_watched_folder("sounds");
+        add_watched_folder(fs::absolute("sounds").string());
     }
 }
 
 void AssetManager::add_watched_folder(const std::string& path) {
-    // Avoid duplicates
-    if (std::find(m_watched_folders.begin(), m_watched_folders.end(), path) == m_watched_folders.end()) {
-        if (fs::exists(path) && fs::is_directory(path)) {
-            m_watched_folders.push_back(path);
-            refresh_assets(); // Auto-refresh on add? Maybe.
+    if (fs::exists(path) && fs::is_directory(path)) {
+        std::string abs_path = fs::absolute(path).string();
+        // Avoid duplicates
+        if (std::find(m_watched_folders.begin(), m_watched_folders.end(), abs_path) == m_watched_folders.end()) {
+            m_watched_folders.push_back(abs_path);
+            refresh_assets();
         }
     }
 }
@@ -41,13 +42,12 @@ void AssetManager::scan_directory(const fs::path& path) {
         for (const auto& entry : fs::recursive_directory_iterator(path)) {
             if (entry.is_regular_file()) {
                 std::string ext = entry.path().extension().string();
-                // Lowercase extension for check
                 std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
 
                 if (ext == ".sf2") {
                     process_sf2(entry.path());
                 } else if (ext == ".wav" || ext == ".mp3" || ext == ".ogg") {
-                    m_samples.push_back(entry.path().string());
+                    m_samples.push_back(fs::absolute(entry.path()).string());
                 }
             }
         }
@@ -58,7 +58,7 @@ void AssetManager::scan_directory(const fs::path& path) {
 
 void AssetManager::process_sf2(const fs::path& path) {
     SF2Info info;
-    info.path = path.string();
+    info.path = fs::absolute(path).string();
     info.filename = path.filename().string();
 
     tsf* f = tsf_load_filename(path.string().c_str());
@@ -82,4 +82,99 @@ const std::vector<SF2Info>& AssetManager::get_soundfonts() const {
 
 const std::vector<std::string>& AssetManager::get_samples() const {
     return m_samples;
+}
+
+// Tree Implementation
+
+AssetNode AssetManager::get_sample_tree(const std::string& filter) const {
+    return build_tree_from_paths(m_samples, AssetType::SAMPLE, filter);
+}
+
+AssetNode AssetManager::get_soundfont_tree(const std::string& filter) const {
+    std::vector<std::string> paths;
+    for (const auto& sf : m_soundfonts) {
+        paths.push_back(sf.path);
+    }
+    return build_tree_from_paths(paths, AssetType::SF2, filter);
+}
+
+AssetNode AssetManager::build_tree_from_paths(const std::vector<std::string>& paths, AssetType leaf_type, const std::string& filter) const {
+    AssetNode root;
+    root.name = "Root";
+    root.type = AssetType::DIRECTORY;
+    root.is_directory = true;
+
+    // Normalize filter to lowercase
+    std::string filter_lower = filter;
+    std::transform(filter_lower.begin(), filter_lower.end(), filter_lower.begin(), ::tolower);
+
+    for (const auto& watched : m_watched_folders) {
+        fs::path watched_path = fs::path(watched);
+        
+        // Create a node for the watched folder
+        AssetNode watched_node;
+        watched_node.name = watched_path.filename().string();
+        if (watched_node.name.empty()) watched_node.name = watched; // fallback
+        watched_node.full_path = watched;
+        watched_node.type = AssetType::DIRECTORY;
+        watched_node.is_directory = true;
+
+        // Filter and add paths belonging to this folder
+        bool has_children = false;
+        
+        for (const auto& p_str : paths) {
+            // Apply filter
+            if (!filter_lower.empty()) {
+                fs::path p_tmp(p_str);
+                std::string name_lower = p_tmp.filename().string();
+                std::transform(name_lower.begin(), name_lower.end(), name_lower.begin(), ::tolower);
+                if (name_lower.find(filter_lower) == std::string::npos) {
+                    continue; // Skip if filter not found in filename
+                }
+            }
+
+            fs::path p = fs::path(p_str);
+            
+            // Check if p starts with watched_path
+            if (p_str.find(watched) == 0) { // p starts with watched
+                has_children = true;
+                fs::path rel = fs::relative(p, watched_path);
+                
+                // Traverse/Build
+                AssetNode* current = &watched_node;
+                for (const auto& part : rel) {
+                    std::string part_name = part.string();
+                    bool is_last = (part == rel.filename());
+                    
+                    // Check if child exists
+                    auto it = std::find_if(current->children.begin(), current->children.end(), 
+                        [&](const AssetNode& n){ return n.name == part_name; });
+                    
+                    if (it != current->children.end()) {
+                        current = &(*it);
+                    } else {
+                        AssetNode new_node;
+                        new_node.name = part_name;
+                        new_node.full_path = (fs::path(current->full_path) / part).string();
+                        if (is_last) {
+                            new_node.type = leaf_type;
+                            new_node.is_directory = false;
+                        } else {
+                            new_node.type = AssetType::DIRECTORY;
+                            new_node.is_directory = true;
+                        }
+                        current->children.push_back(new_node);
+                        current = &current->children.back();
+                    }
+                }
+            }
+        }
+        
+        // Only add watched folder if it has matching assets
+        if (has_children) {
+            root.children.push_back(watched_node);
+        }
+    }
+    
+    return root;
 }

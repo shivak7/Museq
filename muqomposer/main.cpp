@@ -16,6 +16,8 @@
 #include "AssetManager.h"
 #include <fstream>
 #include <filesystem>
+#include <functional>
+#include <algorithm>
 
 namespace fs = std::filesystem;
 
@@ -115,6 +117,48 @@ int main(int, char**) {
     // Mock Synths
     std::vector<std::string> synth_templates = {"SawLead", "SoftPad", "AcidBass", "Pluck"};
 
+    // Helper for Asset Tree Rendering
+    std::function<void(const AssetNode&)> render_asset_tree_node;
+    render_asset_tree_node = [&](const AssetNode& node) {
+        if (node.is_directory) {
+            if (node.children.empty()) return; // Don't show empty folders? Or show them?
+            if (ImGui::TreeNode(node.name.c_str())) {
+                for (const auto& child : node.children) {
+                    render_asset_tree_node(child);
+                }
+                ImGui::TreePop();
+            }
+        } else {
+            if (node.type == AssetType::SF2) {
+                // Find presets for this SF2
+                // Optimization: In real app, AssetNode could store pointer to SF2Info
+                const auto& sfs = asset_manager.get_soundfonts();
+                auto it = std::find_if(sfs.begin(), sfs.end(), [&](const SF2Info& i){ return i.path == node.full_path; });
+                
+                if (it != sfs.end()) {
+                    if (ImGui::TreeNode(node.name.c_str())) {
+                        for (const auto& p : it->presets) {
+                            if (ImGui::Selectable(p.name.c_str())) {
+                                char buf[512];
+                                snprintf(buf, sizeof(buf), "\n\ninstrument %s {\n    soundfont \"%s\"\n    bank %d\n    preset %d\n}", 
+                                    p.name.c_str(), it->path.c_str(), p.bank, p.preset);
+                                if (strlen(script_buffer) + strlen(buf) < IM_ARRAYSIZE(script_buffer)) strcat(script_buffer, buf);
+                            }
+                        }
+                        ImGui::TreePop();
+                    }
+                }
+            } else if (node.type == AssetType::SAMPLE) {
+                if (ImGui::Selectable(node.name.c_str())) {
+                    char buf[512];
+                    std::string clean_name = node.name.substr(0, node.name.find_last_of("."));
+                    snprintf(buf, sizeof(buf), "\n\ninstrument %s {\n    sample \"%s\"\n}", clean_name.c_str(), node.full_path.c_str());
+                    if (strlen(script_buffer) + strlen(buf) < IM_ARRAYSIZE(script_buffer)) strcat(script_buffer, buf);
+                }
+            }
+        }
+    };
+
     // Helper for File Browser Logic
     auto render_file_browser = [&](const char* label) {
         ImGui::Text("Location: %s", current_dir.string().c_str());
@@ -157,6 +201,9 @@ int main(int, char**) {
 
     // Folder Picker State
     bool show_folder_picker = false;
+    
+    // Search State
+    char asset_search_buffer[128] = "";
 
     // Main loop
     while (!glfwWindowShouldClose(window)) {
@@ -217,31 +264,16 @@ int main(int, char**) {
         }
 
         if (ImGui::CollapsingHeader("SoundFonts")) {
-            for (const auto& sf : asset_manager.get_soundfonts()) {
-                if (ImGui::TreeNode(sf.filename.c_str())) {
-                    for (const auto& p : sf.presets) {
-                        if (ImGui::Selectable(p.name.c_str())) {
-                            char buf[512];
-                            snprintf(buf, sizeof(buf), "\n\ninstrument %s {\n    soundfont \"%s\"\n    bank %d\n    preset %d\n}", 
-                                p.name.c_str(), sf.path.c_str(), p.bank, p.preset); // Use full path? Or relative? Using path stored.
-                            if (strlen(script_buffer) + strlen(buf) < IM_ARRAYSIZE(script_buffer)) strcat(script_buffer, buf);
-                        }
-                    }
-                    ImGui::TreePop();
-                }
+            AssetNode sf_tree = asset_manager.get_soundfont_tree(asset_search_buffer);
+            for (const auto& child : sf_tree.children) {
+                render_asset_tree_node(child);
             }
         }
 
         if (ImGui::CollapsingHeader("Samples")) {
-            for (const auto& smp : asset_manager.get_samples()) {
-                // Extract filename for display
-                std::string filename = fs::path(smp).filename().string();
-                if (ImGui::Selectable(filename.c_str())) {
-                    char buf[512];
-                    std::string clean_name = filename.substr(0, filename.find_last_of("."));
-                    snprintf(buf, sizeof(buf), "\n\ninstrument %s {\n    sample \"%s\"\n}", clean_name.c_str(), smp.c_str());
-                    if (strlen(script_buffer) + strlen(buf) < IM_ARRAYSIZE(script_buffer)) strcat(script_buffer, buf);
-                }
+            AssetNode smp_tree = asset_manager.get_sample_tree(asset_search_buffer);
+            for (const auto& child : smp_tree.children) {
+                render_asset_tree_node(child);
             }
         }
 
