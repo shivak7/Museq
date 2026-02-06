@@ -19,7 +19,7 @@
 - [x] Task: Update ScriptParser for chord names dd374d6
     - [ ] Implement chord name recognition in compact note syntax
     - [ ] Ensure chords work within `parallel` and `sequential` blocks
-- [ ] Task: Comprehensive Integration Testing
+- [x] Task: Comprehensive Integration Testing d5df2d1
     - [ ] Create test scripts using combined scales and chords
     - [ ] Verify correct rendering to WAV/MP3/OGG
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Chord Support' (Protocol in workflow.md)
