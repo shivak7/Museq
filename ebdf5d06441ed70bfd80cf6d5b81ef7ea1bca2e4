@@ -1,0 +1,4 @@
+Task: Implement Chord expansion logic
+Summary: Expanded the Chord class to support a wide range of common musical chord qualities, including sus4, sus2, add9, maj9, min9, and dominant 9th. Updated the init_intervals method to correctly map these qualities to their respective semitone intervals. Verified the implementation with updated unit tests in testing/test_music_theory.cpp.
+Files: src/Chord.cpp, testing/test_music_theory.cpp.
+Why: To provide comprehensive chord support for the Museq scripting language.
