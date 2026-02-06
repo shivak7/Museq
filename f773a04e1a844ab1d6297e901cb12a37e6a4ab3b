@@ -1,0 +1,4 @@
+Task: Enhance Tree-based Directory Scanning & Real-time Asset Filtering
+Summary: Implemented recursive directory scanning in AssetManager and a build_tree_from_paths helper to organize flat file paths into a hierarchical AssetNode structure. Added filtering logic to AssetManager getters and the tree builder. Updated muqomposer/main.cpp to render this structure using recursive ImGui::TreeNode calls and added a search input. Verified with testing/test_asset_tree.cpp and testing/test_asset_filter.cpp.
+Files: muqomposer/main.cpp, muqomposer/AssetManager.h, muqomposer/AssetManager.cpp, testing/test_asset_filter.cpp, testing/test_asset_tree.cpp, CMakeLists.txt.
+Why: To allow users to navigate complex asset libraries and quickly find files.
