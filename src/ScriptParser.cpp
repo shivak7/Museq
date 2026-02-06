@@ -53,6 +53,18 @@ Song ScriptParser::parse(const std::string& file_path) {
     return parser.m_song;
 }
 
+Song ScriptParser::parse_string(const std::string& script_content) {
+    ScriptParser parser;
+    std::stringstream collect_stream(script_content);
+    parser.collect_definitions(collect_stream, false, "string_buffer");
+    
+    std::stringstream process_stream(script_content);
+    std::map<std::string, std::string> empty_params;
+    parser.process_script_stream(process_stream, empty_params, parser.m_song.root, 0);
+
+    return parser.m_song;
+}
+
 void ScriptParser::collect_definitions(std::istream& input_stream, bool instruments_only, const std::string& filename) {
     std::string line;
     int scope_brace_count = 0;

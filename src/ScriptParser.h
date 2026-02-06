@@ -15,6 +15,7 @@ class CompositeElement;
 class ScriptParser {
 public:
     static Song parse(const std::string& file_path);
+    static Song parse_string(const std::string& script_content);
 
 private:
     Song m_song;
