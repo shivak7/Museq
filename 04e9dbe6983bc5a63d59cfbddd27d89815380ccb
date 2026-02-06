@@ -1,0 +1,4 @@
+Task: Implement Folder Loading logic
+Summary: Implemented AssetManager class to handle dynamic folder loading and asset scanning (.sf2 and audio files). Refactored muqomposer/main.cpp to use AssetManager for the Left Panel. Added 'Add Folder' button and popup logic. Added unit test testing/test_asset_manager.cpp.
+Files: muqomposer/AssetManager.h, muqomposer/AssetManager.cpp, muqomposer/main.cpp, muqomposer/CMakeLists.txt, testing/test_asset_manager.cpp, CMakeLists.txt.
+Why: To allow users to load their own asset libraries into Muqomposer.
