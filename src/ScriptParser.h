@@ -7,6 +7,7 @@
 #include <sstream>
 
 #include <set>
+#include "Scale.h"
 
 // Forward declaration of FunctionDefinition and CompositeElement
 struct FunctionDefinition;
@@ -28,6 +29,7 @@ private:
     int m_default_duration = 500; // 120 BPM
     int m_default_velocity = 100;
     int m_default_octave = 4;
+    Scale m_current_scale = Scale(ScaleType::MAJOR, "C");
 
     ScriptParser();
 

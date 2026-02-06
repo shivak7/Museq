@@ -138,3 +138,11 @@ target_link_libraries(museq PRIVATE museq_engine)
 
 # --- GUI Application ---
 add_subdirectory(muqomposer)
+
+# --- Tests ---
+enable_testing()
+add_executable(test_music_theory testing/test_music_theory.cpp)
+target_link_libraries(test_music_theory PRIVATE museq_engine)
+
+add_executable(test_script_scale testing/test_script_scale.cpp)
+target_link_libraries(test_script_scale PRIVATE museq_engine)

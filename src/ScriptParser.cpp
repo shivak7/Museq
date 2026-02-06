@@ -142,6 +142,20 @@ void ScriptParser::collect_definitions(std::istream& input_stream, bool instrume
             std::string name, val;
             if (ss >> name >> val) m_globals[name] = val;
         }
+        else if (scope_brace_count == 0 && keyword == "scale") {
+            // Scale definitions in templates
+            std::string root, type_str;
+            ss >> root >> type_str;
+            ScaleType type = ScaleType::MAJOR;
+            if (type_str == "major") type = ScaleType::MAJOR;
+            else if (type_str == "minor") type = ScaleType::MINOR;
+            else if (type_str == "dorian") type = ScaleType::DORIAN;
+            else if (type_str == "phrygian") type = ScaleType::PHRYGIAN;
+            else if (type_str == "lydian") type = ScaleType::LYDIAN;
+            else if (type_str == "mixolydian") type = ScaleType::MIXOLYDIAN;
+            else if (type_str == "locrian") type = ScaleType::LOCRIAN;
+            m_current_scale = Scale(type, root);
+        }
         else if (scope_brace_count == 0 && keyword == "instrument") {
             std::string instrument_name;
             ss >> instrument_name;
@@ -504,6 +518,18 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
             if (bpm > 0) m_default_duration = 60000 / bpm;
         } else if (keyword == "velocity") {
             ss >> m_default_velocity;
+        } else if (keyword == "scale") {
+            std::string root, type_str;
+            ss >> root >> type_str;
+            ScaleType type = ScaleType::MAJOR;
+            if (type_str == "major") type = ScaleType::MAJOR;
+            else if (type_str == "minor") type = ScaleType::MINOR;
+            else if (type_str == "dorian") type = ScaleType::DORIAN;
+            else if (type_str == "phrygian") type = ScaleType::PHRYGIAN;
+            else if (type_str == "lydian") type = ScaleType::LYDIAN;
+            else if (type_str == "mixolydian") type = ScaleType::MIXOLYDIAN;
+            else if (type_str == "locrian") type = ScaleType::LOCRIAN;
+            m_current_scale = Scale(type, root);
         } else if (m_templates.count(keyword)) {
             Instrument inst = m_templates[keyword];
             int inst_brace_count = 0;
@@ -520,11 +546,11 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
                     // ...
                     else if (lkw == "note") {
                         std::string n; int d, v; float p;
-                        if (lss >> n >> d >> v >> p) inst.sequence.add_note(Note(NoteParser::parse(n, current_octave), d, v, p));
+                        if (lss >> n >> d >> v >> p) inst.sequence.add_note(Note(NoteParser::parse(n, m_current_scale, current_octave), d, v, p));
                         else if (lss >> n >> d >> v) {
-                             inst.sequence.add_note(Note(NoteParser::parse(n, current_octave), d, v, inst.pan));
+                             inst.sequence.add_note(Note(NoteParser::parse(n, m_current_scale, current_octave), d, v, inst.pan));
                         }
-                        else inst.sequence.add_note(Note(NoteParser::parse(n, current_octave), m_default_duration, m_default_velocity, inst.pan));
+                        else inst.sequence.add_note(Note(NoteParser::parse(n, m_current_scale, current_octave), m_default_duration, m_default_velocity, inst.pan));
                     } else if (lkw == "notes") {
                         std::string note_list; std::getline(lss, note_list);
                         parse_compact_notes(note_list, inst.sequence, inst.pan, current_octave);
@@ -681,7 +707,7 @@ void ScriptParser::parse_compact_notes(const std::string& list, Sequence& seq, f
                     }
                 }
                 
-                int pitch = NoteParser::parse(note_name, default_octave);
+                int pitch = NoteParser::parse(note_name, m_current_scale, default_octave);
                 if (pitch > 0 || note_name == "0" || pitch == -1) {
                     seq.add_note(Note(pitch, dur, vel, p_val, is_last));
                 }
