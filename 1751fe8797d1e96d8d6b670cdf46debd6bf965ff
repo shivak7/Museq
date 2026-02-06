@@ -1,0 +1,4 @@
+Task: Define Scale and Chord data structures in the engine
+Summary: Implemented Scale and Chord classes to support music theory concepts. Added ScaleType enum and basic interval definitions. Added Chord parsing for major, minor, 7th, dim, and aug qualities. Created a new test file testing/test_music_theory.cpp to verify functionality.
+Files: src/Scale.h, src/Scale.cpp, src/Chord.h, src/Chord.cpp, testing/test_music_theory.cpp, CMakeLists.txt.
+Why: To support the upcoming feature of using scale-relative notes and chord names in scripts.
