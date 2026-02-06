@@ -1,7 +1,7 @@
 # Implementation Plan - Advanced Asset Management
 
 ## Phase 1: Dynamic Folder Loading and Navigation
-- [ ] Task: Implement Folder Loading logic
+- [x] Task: Implement Folder Loading logic 04e9dbe
     - [ ] Create UI button to 'Add Folder'
     - [ ] Store a list of 'Watched Folders' in Muqomposer state
 - [ ] Task: Enhance Tree-based Directory Scanning
