@@ -1,8 +1,12 @@
+#ifdef _WIN32
+    #define NOMINMAX
+#endif
 #define MINIAUDIO_IMPLEMENTATION
 #include "../third_party/miniaudio/miniaudio.h"
 #include "AudioPlayer.h"
 #include <iostream>
 #include <cstring>
+#include <algorithm>
 
 AudioPlayer::AudioPlayer() {
     m_device = new ma_device;
@@ -68,7 +72,7 @@ void AudioPlayer::data_callback(ma_device* pDevice, void* pOutput, const void* p
         return;
     }
 
-    size_t read_count = std::min(samples_to_read, samples_available);
+    size_t read_count = (std::min)(samples_to_read, samples_available);
     std::memcpy(out, &player->m_playback_buffer[player->m_playback_cursor], read_count * sizeof(float));
     player->m_playback_cursor += read_count;
 

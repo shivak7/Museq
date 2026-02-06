@@ -1,3 +1,6 @@
+#ifdef _WIN32
+    #define NOMINMAX
+#endif
 #include "OggWriter.h"
 #include "vorbis/vorbisenc.h"
 #include "AudioRenderer.h"
@@ -42,7 +45,7 @@ void OggWriter::write(AudioRenderer& renderer, const Song& song, const std::stri
     const int chunk_size = 1024;
     size_t offset = 0;
     while (offset < pcm_buffer.size()) {
-        int to_write_frames = std::min((int)(pcm_buffer.size() - offset) / 2, chunk_size);
+        int to_write_frames = (std::min)((int)(pcm_buffer.size() - offset) / 2, chunk_size);
         if (to_write_frames <= 0) break;
 
         float** buffer = vorbis_analysis_buffer(&vd, to_write_frames);

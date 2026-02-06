@@ -1,3 +1,6 @@
+#ifdef _WIN32
+    #define NOMINMAX
+#endif
 #define _USE_MATH_DEFINES
 #include "AudioRenderer.h"
 #include <cmath>
@@ -213,7 +216,7 @@ std::vector<float> render_instrument_stereo(const Instrument& instrument, float 
                         const int BLOCK_SIZE = 64;
                         int samples_processed = 0;
                         while (samples_processed < note_samples) {
-                            int chunk = std::min(BLOCK_SIZE, note_samples - samples_processed);
+                            int chunk = (std::min)(BLOCK_SIZE, note_samples - samples_processed);
                             float current_freq = target_freq;
                             if (samples_processed < portamento_samples) {
                                 float t = (float)samples_processed / portamento_samples;
