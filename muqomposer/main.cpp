@@ -197,6 +197,12 @@ int main(int, char**) {
             
             ImGui::GetWindowDrawList()->AddImage((void*)(intptr_t)splash_texture, ImVec2(0, 0), ImVec2((float)sd.width, (float)sd.height), ImVec2(0,0), ImVec2(1,1), ImColor(1.0f, 1.0f, 1.0f, alpha));
             
+            // Draw Copyright Text at bottom
+            std::string copyright = "© 2026 Shiva Ratna (https://shivak7.github.io/)";
+            float text_width = ImGui::CalcTextSize(copyright.c_str()).x;
+            ImGui::SetCursorPos(ImVec2((sd.width - text_width) * 0.5f, (float)sd.height - 40.0f));
+            ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, alpha), "%s", copyright.c_str());
+
             ImGui::End();
             ImGui::PopStyleVar(2);
             ImGui::PopStyleColor();
