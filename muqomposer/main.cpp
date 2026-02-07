@@ -164,21 +164,21 @@ int main(int, char**) {
             ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
             ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
             
-            ImGui::Begin("Splash", NULL, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings);
+            ImGui::Begin("Splash", NULL, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoInputs);
             
-            // Center Image
-            float x = (io.DisplaySize.x - splash_w) * 0.5f;
-            float y = (io.DisplaySize.y - splash_h) * 0.5f;
-            if (x < 0) x = 0; if (y < 0) y = 0;
+            // Center Image using DrawList for pixel-perfect placement
+            float x1 = (io.DisplaySize.x - (float)splash_w) * 0.5f;
+            float y1 = (io.DisplaySize.y - (float)splash_h) * 0.5f;
+            float x2 = x1 + (float)splash_w;
+            float y2 = y1 + (float)splash_h;
             
-            ImGui::SetCursorPos(ImVec2(x, y));
-            // Fade in/out logic
             float alpha = 1.0f;
             double elapsed = glfwGetTime() - start_time;
             if (elapsed < 0.5) alpha = (float)(elapsed / 0.5);
             if (elapsed > 1.5) alpha = (float)(1.0 - (elapsed - 1.5) / 0.5);
             
-            ImGui::Image((void*)(intptr_t)splash_texture, ImVec2((float)splash_w, (float)splash_h), ImVec2(0,0), ImVec2(1,1), ImVec4(1,1,1,alpha), ImVec4(0,0,0,0));
+            ImGui::GetWindowDrawList()->AddImage((void*)(intptr_t)splash_texture, ImVec2(x1, y1), ImVec2(x2, y2), ImVec2(0,0), ImVec2(1,1), ImColor(1.0f, 1.0f, 1.0f, alpha));
+            
             ImGui::End();
             ImGui::PopStyleVar(2);
             ImGui::PopStyleColor();
