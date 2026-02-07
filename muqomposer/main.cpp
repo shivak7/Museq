@@ -9,6 +9,11 @@
 #include <vector>
 #include <string>
 
+// Support for legacy OpenGL headers on Windows
+#ifndef GL_CLAMP_TO_EDGE
+#define GL_CLAMP_TO_EDGE 0x812F
+#endif
+
 // Include Museq Engine
 #include "AudioRenderer.h"
 #include "AudioPlayer.h"
