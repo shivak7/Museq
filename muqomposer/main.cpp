@@ -111,9 +111,14 @@ int main(int, char**) {
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1); // Enable vsync
 
+    // Robust path to logo
+    std::string logo_path = "Museq_logo.png";
+#ifdef MUSEQ_RESOURCE_DIR
+    logo_path = std::string(MUSEQ_RESOURCE_DIR) + "/Museq_logo.png";
+#endif
+
     // Set Window Icon
-    set_window_icon(window, "../Museq_logo.png"); // Try local or parent dir
-    if (!fs::exists("../Museq_logo.png")) set_window_icon(window, "Museq_logo.png");
+    set_window_icon(window, logo_path.c_str());
 
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
@@ -128,10 +133,7 @@ int main(int, char**) {
     // --- Splash Screen ---
     GLuint splash_texture = 0;
     int splash_w = 0, splash_h = 0;
-    bool splash_loaded = false;
-    
-    if (fs::exists("../Museq_logo.png")) splash_loaded = load_texture_from_file("../Museq_logo.png", &splash_texture, &splash_w, &splash_h);
-    else if (fs::exists("Museq_logo.png")) splash_loaded = load_texture_from_file("Museq_logo.png", &splash_texture, &splash_w, &splash_h);
+    bool splash_loaded = load_texture_from_file(logo_path.c_str(), &splash_texture, &splash_w, &splash_h);
 
     if (splash_loaded) {
         double start_time = glfwGetTime();

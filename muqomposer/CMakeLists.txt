@@ -23,7 +23,12 @@ include_directories(${IMGUI_DIR})
 include_directories(${IMGUI_DIR}/backends)
 
 # --- Executable ---
-add_executable(muqomposer main.cpp AssetManager.cpp ${IMGUI_SOURCES})
+set(MUQOMPOSER_SOURCES main.cpp AssetManager.cpp ${IMGUI_SOURCES})
+if(WIN32)
+    list(APPEND MUQOMPOSER_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/../src/museq.rc")
+endif()
+
+add_executable(muqomposer ${MUQOMPOSER_SOURCES})
 
 # --- Graphics Dependencies ---
 find_package(OpenGL REQUIRED)

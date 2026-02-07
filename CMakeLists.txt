@@ -36,6 +36,8 @@ include_directories("${CMAKE_CURRENT_SOURCE_DIR}/src")
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/third_party")
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/third_party/miniaudio")
 
+add_definitions(-DMUSEQ_RESOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+
 # Create the library target
 add_library(museq_engine STATIC ${ENGINE_SOURCES})
 
