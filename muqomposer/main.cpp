@@ -34,11 +34,21 @@ static void glfw_error_callback(int error, const char* description) {
 }
 
 // Helper to load texture
-bool load_texture_from_file(const char* filename, GLuint* out_texture, int* out_width, int* out_height) {
+bool load_texture_from_file(const char* filename, GLuint* out_texture, int* out_width, int* out_height, bool invert = false) {
     int image_width = 0;
     int image_height = 0;
     unsigned char* image_data = stbi_load(filename, &image_width, &image_height, NULL, 4);
     if (image_data == NULL) return false;
+
+    // Optional: Invert colors (RGB only, keep alpha)
+    if (invert) {
+        for (int i = 0; i < image_width * image_height * 4; i += 4) {
+            image_data[i]     = 255 - image_data[i];     // R
+            image_data[i + 1] = 255 - image_data[i + 1]; // G
+            image_data[i + 2] = 255 - image_data[i + 2]; // B
+            // Alpha stays the same
+        }
+    }
 
     // Create a OpenGL texture identifier
     GLuint image_texture;
@@ -138,7 +148,7 @@ int main(int, char**) {
     // --- Splash Screen ---
     GLuint splash_texture = 0;
     int splash_w = 0, splash_h = 0;
-    bool splash_loaded = load_texture_from_file(logo_path.c_str(), &splash_texture, &splash_w, &splash_h);
+    bool splash_loaded = load_texture_from_file(logo_path.c_str(), &splash_texture, &splash_w, &splash_h, true); // Invert colors
 
     if (splash_loaded) {
         double start_time = glfwGetTime();
@@ -151,6 +161,9 @@ int main(int, char**) {
             ImGui::SetNextWindowPos(ImVec2(0, 0));
             ImGui::SetNextWindowSize(io.DisplaySize);
             ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.1f, 0.1f, 0.1f, 1.0f)); // Dark background
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+            
             ImGui::Begin("Splash", NULL, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings);
             
             // Center Image
@@ -159,14 +172,15 @@ int main(int, char**) {
             if (x < 0) x = 0; if (y < 0) y = 0;
             
             ImGui::SetCursorPos(ImVec2(x, y));
-            // Fade in/out logic could go here
+            // Fade in/out logic
             float alpha = 1.0f;
             double elapsed = glfwGetTime() - start_time;
-            if (elapsed < 0.5) alpha = elapsed / 0.5;
-            if (elapsed > 1.5) alpha = 1.0 - (elapsed - 1.5) / 0.5;
+            if (elapsed < 0.5) alpha = (float)(elapsed / 0.5);
+            if (elapsed > 1.5) alpha = (float)(1.0 - (elapsed - 1.5) / 0.5);
             
             ImGui::Image((void*)(intptr_t)splash_texture, ImVec2((float)splash_w, (float)splash_h), ImVec2(0,0), ImVec2(1,1), ImVec4(1,1,1,alpha), ImVec4(0,0,0,0));
             ImGui::End();
+            ImGui::PopStyleVar(2);
             ImGui::PopStyleColor();
 
             ImGui::Render();
