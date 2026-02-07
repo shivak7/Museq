@@ -16,6 +16,13 @@ AssetManager::AssetManager() {
 }
 
 bool AssetManager::check_asset_exists_in_script(const std::string& script, const std::string& type, const std::string& path, int bank, int preset) {
+    auto normalize_path = [](std::string p) {
+        std::replace(p.begin(), p.end(), '\\', '/');
+        // Remove ./ prefix if any
+        if (p.find("./") == 0) p = p.substr(2);
+        return p;
+    };
+
     std::stringstream ss(script);
     std::string line;
     bool inside_instrument = false;
@@ -40,8 +47,7 @@ bool AssetManager::check_asset_exists_in_script(const std::string& script, const
                 inside_instrument = false;
                 // End of instrument, check match
                 if (type == "soundfont") {
-                    // Normalize paths for comparison (simple check)
-                    bool path_match = (current_inst_path == path) || (fs::path(current_inst_path) == fs::path(path));
+                    bool path_match = (normalize_path(current_inst_path) == normalize_path(path));
                     
                     if (current_inst_type == "soundfont" && 
                         path_match &&
@@ -50,7 +56,7 @@ bool AssetManager::check_asset_exists_in_script(const std::string& script, const
                         return true;
                     }
                 } else if (type == "sample") {
-                    bool path_match = (current_inst_path == path) || (fs::path(current_inst_path) == fs::path(path));
+                    bool path_match = (normalize_path(current_inst_path) == normalize_path(path));
                     
                     if (current_inst_type == "sample" && path_match) {
                         return true;

@@ -1,0 +1,36 @@
+<svg width="800" height="600" viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="800" height="600" fill="#1e1e1e" />
+  
+  <!-- Sidebar (Instruments/Files) -->
+  <rect width="200" height="560" fill="#252526" x="0" y="0" />
+  <text x="10" y="30" fill="#cccccc" font-family="sans-serif" font-size="14" font-weight="bold">INSTRUMENTS</text>
+  <rect x="10" y="50" width="180" height="30" rx="4" fill="#37373d" />
+  <text x="20" y="70" fill="#ffffff" font-family="sans-serif" font-size="12">Piano (Lead)</text>
+  <rect x="10" y="90" width="180" height="30" rx="4" fill="#37373d" />
+  <text x="20" y="110" fill="#ffffff" font-family="sans-serif" font-size="12">SynthKick (Drum)</text>
+  
+  <!-- Main Editor Area -->
+  <rect x="205" y="0" width="595" height="400" fill="#1e1e1e" stroke="#333" stroke-width="1" />
+  <text x="220" y="30" fill="#569cd6" font-family="monospace" font-size="14">instrument</text>
+  <text x="310" y="30" fill="#4ec9b0" font-family="monospace" font-size="14">Piano</text>
+  <text x="360" y="30" fill="#cccccc" font-family="monospace" font-size="14">{</text>
+  <text x="240" y="55" fill="#9cdcfe" font-family="monospace" font-size="14">waveform</text>
+  <text x="320" y="55" fill="#ce9178" font-family="monospace" font-size="14">sine</text>
+  <text x="220" y="80" fill="#cccccc" font-family="monospace" font-size="14">}</text>
+  
+  <!-- Cursor/Selection simulation -->
+  <rect x="220" y="95" width="2" height="20" fill="#aeafad" />
+  
+  <!-- Bottom Panel (Visualizer/Mixer) -->
+  <rect x="205" y="405" width="595" height="155" fill="#252526" />
+  <text x="220" y="425" fill="#cccccc" font-family="sans-serif" font-size="12" font-weight="bold">MASTER OUTPUT</text>
+  <!-- Waveform placeholder -->
+  <path d="M 220 500 Q 250 420 280 500 T 340 500 T 400 500 T 460 500 T 520 500" stroke="#4fc1ff" fill="none" stroke-width="2" />
+  
+  <!-- Transport Controls -->
+  <rect x="0" y="560" width="800" height="40" fill="#007acc" />
+  <circle cx="400" cy="580" r="12" fill="white" /> <!-- Play -->
+  <path d="M 397 574 L 407 580 L 397 586 Z" fill="#007acc" />
+  <text x="10" y="585" fill="white" font-family="sans-serif" font-size="12">120 BPM | 4/4 | 00:42.5</text>
+</svg>

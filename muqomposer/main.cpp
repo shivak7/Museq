@@ -257,9 +257,16 @@ int main(int, char**) {
         while (std::getline(ss, line)) {
             if (line.find("instrument ") != std::string::npos) {
                 size_t pos = line.find("instrument ") + 11;
-                size_t end = line.find_first_of(" {", pos);
+                size_t end = line.find(" {", pos);
                 if (end != std::string::npos) {
-                    active_instrument_names.push_back(line.substr(pos, end - pos));
+                    std::string name = line.substr(pos, end - pos);
+                    // Trim leading/trailing whitespace from name
+                    size_t first = name.find_first_not_of(" \t\r\n");
+                    if (first != std::string::npos) {
+                        size_t last = name.find_last_not_of(" \t\r\n");
+                        name = name.substr(first, (last - first + 1));
+                        active_instrument_names.push_back(name);
+                    }
                 }
             }
         }
@@ -323,7 +330,10 @@ int main(int, char**) {
                             if (ImGui::Selectable(p.name.c_str())) {
                                 // Smart Insertion Check
                                 if (!AssetManager::check_asset_exists_in_script(script_buffer, "soundfont", it->path, p.bank, p.preset)) {
-                                    std::string unique_name = AssetManager::get_unique_instrument_name(p.name, active_instrument_names);
+                                    std::string sanitized_name = p.name;
+                                    std::replace(sanitized_name.begin(), sanitized_name.end(), ' ', '_');
+                                    
+                                    std::string unique_name = AssetManager::get_unique_instrument_name(sanitized_name, active_instrument_names);
                                     active_instrument_names.push_back(unique_name); // Optimistic update
 
                                     char buf[512];
@@ -335,9 +345,12 @@ int main(int, char**) {
                             
                             // Drag and Drop Source
                             if (ImGui::BeginDragDropSource()) {
+                                std::string sanitized_name = p.name;
+                                std::replace(sanitized_name.begin(), sanitized_name.end(), ' ', '_');
+                                
                                 char buf[512];
                                 snprintf(buf, sizeof(buf), "\ninstrument %s {\n    soundfont \"%s\"\n    bank %d\n    preset %d\n}", 
-                                    p.name.c_str(), it->path.c_str(), p.bank, p.preset);
+                                    sanitized_name.c_str(), it->path.c_str(), p.bank, p.preset);
                                 ImGui::SetDragDropPayload("ASSET_CODE", buf, strlen(buf) + 1);
                                 ImGui::Text("Add %s", p.name.c_str());
                                 ImGui::EndDragDropSource();
@@ -351,6 +364,8 @@ int main(int, char**) {
                     // Smart Insertion Check
                     if (!AssetManager::check_asset_exists_in_script(script_buffer, "sample", node.full_path)) {
                         std::string clean_name = node.name.substr(0, node.name.find_last_of("."));
+                        std::replace(clean_name.begin(), clean_name.end(), ' ', '_');
+                        
                         std::string unique_name = AssetManager::get_unique_instrument_name(clean_name, active_instrument_names);
                         active_instrument_names.push_back(unique_name); // Optimistic update
 
@@ -362,8 +377,10 @@ int main(int, char**) {
                 
                 // Drag and Drop Source
                 if (ImGui::BeginDragDropSource()) {
-                    char buf[512];
                     std::string clean_name = node.name.substr(0, node.name.find_last_of("."));
+                    std::replace(clean_name.begin(), clean_name.end(), ' ', '_');
+                    
+                    char buf[512];
                     snprintf(buf, sizeof(buf), "\ninstrument %s {\n    sample \"%s\"\n}", clean_name.c_str(), node.full_path.c_str());
                     ImGui::SetDragDropPayload("ASSET_CODE", buf, strlen(buf) + 1);
                     ImGui::Text("Add %s", node.name.c_str());
@@ -538,7 +555,10 @@ int main(int, char**) {
                 ImGui::SameLine();
 
                 if (ImGui::Selectable(synth.c_str())) {
-                    std::string unique_name = AssetManager::get_unique_instrument_name(synth, active_instrument_names);
+                    std::string sanitized_name = synth;
+                    std::replace(sanitized_name.begin(), sanitized_name.end(), ' ', '_');
+                    
+                    std::string unique_name = AssetManager::get_unique_instrument_name(sanitized_name, active_instrument_names);
                     active_instrument_names.push_back(unique_name);
 
                     char buf[512];
