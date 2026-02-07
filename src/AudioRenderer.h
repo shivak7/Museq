@@ -33,7 +33,7 @@ private:
     std::vector<std::unique_ptr<Voice>> m_scheduled_voices;
     std::vector<Voice*> m_active_voices;
 
-    void flatten_song(std::shared_ptr<SongElement> element, double current_time_ms);
+    void flatten_song(std::shared_ptr<SongElement> element, double current_time_ms, const std::vector<Effect>& parent_effects);
 };
 
 #endif // AUDIO_RENDERER_H

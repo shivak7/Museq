@@ -27,7 +27,8 @@ void AudioRenderer::load(const Song& song, float sample_rate) {
 
     // 1. Calculate Total Duration and Flatten Tree
     m_total_samples = static_cast<long>((song.root->get_duration_ms() / 1000.0f) * m_sample_rate);
-    flatten_song(song.root, 0.0);
+    std::vector<Effect> empty_effects;
+    flatten_song(song.root, 0.0, empty_effects);
 
     // 2. Preload Soundfonts
     auto preloader = [&](auto self, std::shared_ptr<SongElement> element) -> void {
@@ -49,29 +50,39 @@ void AudioRenderer::load(const Song& song, float sample_rate) {
     preloader(preloader, song.root);
 }
 
-void AudioRenderer::flatten_song(std::shared_ptr<SongElement> element, double current_time_ms) {
+void AudioRenderer::flatten_song(std::shared_ptr<SongElement> element, double current_time_ms, const std::vector<Effect>& parent_effects) {
     double start_time = current_time_ms + element->start_offset_ms;
 
+    // Combine parent effects with local effects
+    std::vector<Effect> combined_effects = parent_effects;
+    
     if (auto inst_elem = std::dynamic_pointer_cast<InstrumentElement>(element)) {
         double start_samples = (start_time / 1000.0) * m_sample_rate;
-        m_scheduled_voices.push_back(std::make_unique<Voice>(inst_elem->instrument, start_samples, m_sample_rate));
+        Instrument inst = inst_elem->instrument;
+        // Prepend parent effects? Or append? usually parent effects (outer blocks) apply AFTER local.
+        // So append them.
+        inst.effects.insert(inst.effects.end(), combined_effects.begin(), combined_effects.end());
+        m_scheduled_voices.push_back(std::make_unique<Voice>(inst, start_samples, m_sample_rate));
     } 
     else if (auto comp_elem = std::dynamic_pointer_cast<CompositeElement>(element)) {
+        // Add local effects of this composite block
+        combined_effects.insert(combined_effects.end(), comp_elem->effects.begin(), comp_elem->effects.end());
+
         if (comp_elem->type == CompositeType::SEQUENTIAL) {
             double local_time = start_time;
             for (auto child : comp_elem->children) {
-                flatten_song(child, local_time);
+                flatten_song(child, local_time, combined_effects);
                 local_time += child->start_offset_ms + child->get_duration_ms();
             }
         } else if (comp_elem->type == CompositeType::PARALLEL) {
             for (auto child : comp_elem->children) {
-                flatten_song(child, start_time);
+                flatten_song(child, start_time, combined_effects);
             }
         } else if (comp_elem->type == CompositeType::AUTO_LOOP) {
             if (!comp_elem->children.empty()) {
                 auto leader = comp_elem->children[0];
                 double leader_dur = leader->get_duration_ms();
-                flatten_song(leader, start_time);
+                flatten_song(leader, start_time, combined_effects);
                 
                 for (size_t i = 1; i < comp_elem->children.size(); ++i) {
                     auto follower = comp_elem->children[i];
@@ -80,7 +91,7 @@ void AudioRenderer::flatten_song(std::shared_ptr<SongElement> element, double cu
                     
                     double loop_time = 0;
                     while (loop_time < leader_dur) {
-                        flatten_song(follower, start_time + loop_time);
+                        flatten_song(follower, start_time + loop_time, combined_effects);
                         loop_time += follower_dur;
                     }
                 }

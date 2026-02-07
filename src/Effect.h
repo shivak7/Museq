@@ -10,7 +10,8 @@ enum class EffectType {
     BITCRUSH,   // Glitch/Lo-fi
     FADE_IN,    // Volume ramp up
     FADE_OUT,   // Volume ramp down
-    TREMOLO     // Amplitude modulation
+    TREMOLO,    // Amplitude modulation
+    REVERB      // Reverb
 };
 
 struct Effect {

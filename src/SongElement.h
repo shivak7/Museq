@@ -37,6 +37,7 @@ class CompositeElement : public SongElement {
 public:
     CompositeType type;
     std::vector<std::shared_ptr<SongElement>> children;
+    std::vector<Effect> effects;
 
     CompositeElement(CompositeType t) : type(t) {}
 

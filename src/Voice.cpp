@@ -7,6 +7,7 @@
 #include <cmath>
 #include <algorithm>
 #include <cstring>
+#include <memory>
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -72,9 +73,15 @@ Voice::Voice(const Instrument& inst, double start_samples, float sample_rate)
             int size = static_cast<int>(sample_rate * 2);
             delay_buffers.push_back(std::vector<float>(size * 2, 0.0f));
             delay_indices.push_back(0);
+            reverb_processors.push_back(nullptr);
+        } else if (fx.type == EffectType::REVERB) {
+            reverb_processors.push_back(std::make_unique<ReverbProcessor>(sample_rate));
+            delay_buffers.push_back({});
+            delay_indices.push_back(0);
         } else {
             delay_buffers.push_back({});
             delay_indices.push_back(0);
+            reverb_processors.push_back(nullptr);
         }
     }
 }
@@ -315,6 +322,23 @@ void Voice::render(float* buffer, int frame_count, float sample_rate, std::map<s
                 delay_buf[delay_idx * 2] = local_buffer[f * 2];
                 delay_buf[delay_idx * 2 + 1] = local_buffer[f * 2 + 1];
                 delay_idx = (delay_idx + 1) % (delay_buf.size() / 2);
+            }
+        }
+        else if (fx.type == EffectType::REVERB) {
+            auto& proc = reverb_processors[fx_idx];
+            if (proc) {
+                proc->set_params(fx.param1, fx.param2);
+                // Extract separate channels for process call
+                std::vector<float> left(frame_count), right(frame_count);
+                for (int f = 0; f < frame_count; ++f) {
+                    left[f] = local_buffer[f * 2];
+                    right[f] = local_buffer[f * 2 + 1];
+                }
+                proc->process(left.data(), right.data(), frame_count);
+                for (int f = 0; f < frame_count; ++f) {
+                    local_buffer[f * 2] = left[f];
+                    local_buffer[f * 2 + 1] = right[f];
+                }
             }
         }
     }

@@ -3,8 +3,10 @@
 
 #include "Instrument.h"
 #include "tsf.h"
+#include "ReverbProcessor.h"
 #include <map>
 #include <string>
+#include <memory>
 
 // Biquad Filter for Synth
 struct BiquadState {
@@ -36,6 +38,7 @@ public:
     double total_duration_samples = 0;
     std::vector<std::vector<float>> delay_buffers; // One per delay effect
     std::vector<int> delay_indices;
+    std::vector<std::unique_ptr<ReverbProcessor>> reverb_processors;
 
     Voice(const Instrument& inst, double start_samples, float sample_rate);
     ~Voice();

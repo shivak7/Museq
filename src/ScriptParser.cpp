@@ -274,6 +274,7 @@ void ScriptParser::collect_definitions(std::istream& input_stream, bool instrume
                     else if (type_str == "fadein") { fx.type = EffectType::FADE_IN; sub_ss >> fx.param1; }
                     else if (type_str == "fadeout") { fx.type = EffectType::FADE_OUT; sub_ss >> fx.param1; }
                     else if (type_str == "tremolo") { fx.type = EffectType::TREMOLO; sub_ss >> fx.param1 >> fx.param2; }
+                    else if (type_str == "reverb") { fx.type = EffectType::REVERB; sub_ss >> fx.param1 >> fx.param2; }
                     template_inst.effects.push_back(fx);
                 } else if (sub_kw == "sequence") {
                     in_sequence = true;
@@ -528,6 +529,20 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
             if (bpm > 0) m_default_duration = 60000 / bpm;
         } else if (keyword == "velocity") {
             ss >> m_default_velocity;
+        } else if (keyword == "effect") {
+            std::string type_str; ss >> type_str;
+            Effect fx;
+            if (type_str == "delay") { fx.type = EffectType::DELAY; ss >> fx.param1 >> fx.param2; }
+            else if (type_str == "distortion") { fx.type = EffectType::DISTORTION; ss >> fx.param1; }
+            else if (type_str == "bitcrush") { fx.type = EffectType::BITCRUSH; ss >> fx.param1; }
+            else if (type_str == "fadein") { fx.type = EffectType::FADE_IN; ss >> fx.param1; }
+            else if (type_str == "fadeout") { fx.type = EffectType::FADE_OUT; ss >> fx.param1; }
+            else if (type_str == "tremolo") { fx.type = EffectType::TREMOLO; ss >> fx.param1 >> fx.param2; }
+            else if (type_str == "reverb") { fx.type = EffectType::REVERB; ss >> fx.param1 >> fx.param2; }
+            
+            if (fx.type != EffectType::NONE) {
+                current_parent->effects.push_back(fx);
+            }
         } else if (keyword == "scale") {
             std::string root, type_str;
             ss >> root >> type_str;
@@ -579,6 +594,7 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
                         else if (type_str == "fadein") { fx.type = EffectType::FADE_IN; lss >> fx.param1; }
                         else if (type_str == "fadeout") { fx.type = EffectType::FADE_OUT; lss >> fx.param1; }
                         else if (type_str == "tremolo") { fx.type = EffectType::TREMOLO; lss >> fx.param1 >> fx.param2; }
+                        else if (type_str == "reverb") { fx.type = EffectType::REVERB; lss >> fx.param1 >> fx.param2; }
                         inst.effects.push_back(fx);
                     }
                 }
