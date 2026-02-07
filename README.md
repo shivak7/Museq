@@ -189,7 +189,7 @@ Define a subtractive synth using the following properties:
 
 | Property | Parameters | Description |
 | :--- | :--- | :--- |
-| `waveform` | `<type>` | `sine`, `square`, `triangle`, `sawtooth`. |
+| `waveform` | `<type> [freq_mult]` | `sine`, `square`, `triangle`, `sawtooth`. Optional `freq_mult` defaults to 1.0. |
 | `envelope` | `<a> <d> <s> <r>` | ADSR times in seconds (Attack, Decay, Release) and Sustain level (0.0-1.0). |
 | `filter` | `<type> <freq> <q>` | `lowpass`, `highpass`, `bandpass`. Freq in Hz, Q resonance (e.g., 1.0). |
 | `lfo` | `<target> <wave> <hz> <amt>` | Target: `pitch`, `amplitude`, `cutoff`. Wave: see `waveform`. |

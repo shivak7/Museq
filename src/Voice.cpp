@@ -168,14 +168,18 @@ void Voice::render(float* buffer, int frame_count, float sample_rate, std::map<s
         if (envelope_val > 1.0f) envelope_val = 1.0f;
 
         // --- UNIVERSAL PORTAMENTO / LFO ---
-        float glide_freq = target_freq;
+        float glide_freq = target_freq * instrument.synth.frequency;
         float portamento_samples = (instrument.portamento_time / 1000.0f) * sample_rate;
 
         if (instrument.portamento_time > 0) {
-            if (last_freq < 0) last_freq = target_freq;
+            float modified_last = last_freq * instrument.synth.frequency;
+            if (last_freq < 0) {
+                last_freq = target_freq;
+                modified_last = target_freq * instrument.synth.frequency;
+            }
             if (samples_into_note < portamento_samples) {
                 float t = (float)samples_into_note / portamento_samples;
-                glide_freq = last_freq + (target_freq - last_freq) * t;
+                glide_freq = modified_last + (target_freq * instrument.synth.frequency - modified_last) * t;
             }
         }
 

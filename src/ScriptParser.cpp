@@ -216,6 +216,9 @@ void ScriptParser::collect_definitions(std::istream& input_stream, bool instrume
                     else if (w == "square") template_inst.synth.waveform = Waveform::SQUARE;
                     else if (w == "triangle") template_inst.synth.waveform = Waveform::TRIANGLE;
                     else if (w == "sawtooth") template_inst.synth.waveform = Waveform::SAWTOOTH;
+                    
+                    float freq = 1.0f;
+                    if (sub_ss >> freq) template_inst.synth.frequency = freq;
                 } else if (sub_kw == "envelope") {
                     float a, d, s, r; sub_ss >> a >> d >> s >> r;
                     template_inst.synth.envelope = AdsrEnvelope(a, d, s, r);

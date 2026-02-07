@@ -798,12 +798,14 @@ int main(int, char**) {
         ImGui::BeginChild("LineNumbers", ImVec2(line_number_width, 0), false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
         ImGui::SetScrollY(scroll_y);
         
-        // Add padding to match InputTextMultiline's internal top padding
-        ImGui::Dummy(ImVec2(0, ImGui::GetStyle().FramePadding.y));
+        float line_height = ImGui::GetTextLineHeight();
+        float frame_padding_y = ImGui::GetStyle().FramePadding.y;
 
         int line_count = 1;
         for (int i = 0; script_buffer[i]; i++) if (script_buffer[i] == '\n') line_count++;
+        
         for (int i = 1; i <= line_count; i++) {
+            ImGui::SetCursorPosY(frame_padding_y + (i - 1) * line_height);
             ImGui::TextDisabled("%4d", i);
         }
         ImGui::EndChild();
@@ -936,6 +938,10 @@ int main(int, char**) {
         ImGui::SetNextItemWidth(120);
         if (ImGui::SliderInt("BPM", &bpm, 40, 240)) {
             ScriptParser::set_global_bpm(bpm);
+        }
+        if (ImGui::IsItemActive()) {
+            if (ImGui::IsKeyPressed(ImGuiKey_LeftArrow)) { bpm--; if (bpm < 40) bpm = 40; ScriptParser::set_global_bpm(bpm); }
+            if (ImGui::IsKeyPressed(ImGuiKey_RightArrow)) { bpm++; if (bpm > 240) bpm = 240; ScriptParser::set_global_bpm(bpm); }
         }
         ImGui::SameLine();
         ImGui::TextDisabled("|");

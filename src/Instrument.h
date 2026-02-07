@@ -44,6 +44,7 @@ struct LFO {
 
 struct Synth {
     Waveform waveform;
+    float frequency = 1.0f; // Multiplier
     AdsrEnvelope envelope;
     Filter filter;
     LFO lfo;
