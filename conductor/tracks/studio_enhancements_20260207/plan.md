@@ -1,0 +1,37 @@
+# Implementation Plan - Studio Functionality and UI Enhancements
+
+## Phase 1: Build System and Splash Polish
+- [ ] Task: Configure Test Build Option
+    - [ ] Update `CMakeLists.txt` to add `option(BUILD_TESTS "Build test suite" OFF)`
+    - [ ] Wrap all `add_executable` calls for tests in `if(BUILD_TESTS)`
+- [ ] Task: Refine Splash Scaling
+    - [ ] Update `muqomposer/SplashUtils.h` to calculate `final_h` as 50% of `monitor_h` + 100px padding
+    - [ ] Recalculate `final_w` to maintain aspect ratio based on the new height
+- [ ] Task: Conductor - User Manual Verification 'Phase 1: Build & Splash' (Protocol in workflow.md)
+
+## Phase 2: Editor Ergonomics and Code Insertion
+- [ ] Task: Implement Auto-Indent
+    - [ ] Add `ImGuiInputTextFlags_EnterReturnsTrue` to script editor
+    - [ ] Calculate indentation of the previous line and insert it automatically on new line
+- [ ] Task: Add Line Numbers
+    - [ ] Render a child window or column to the left of the editor displaying line indices
+- [ ] Task: Update Smart Insertion Logic
+    - [ ] Modify `main.cpp` instrument addition logic to prepend code to the start of `script_buffer` instead of appending
+- [ ] Task: Conductor - User Manual Verification 'Phase 2: Editor' (Protocol in workflow.md)
+
+## Phase 3: Asset Search and Shortcuts
+- [ ] Task: Implement Global Asset Search
+    - [ ] Add search filtering logic to `AssetManager` or sidebar render loop
+    - [ ] Recursively filter tree nodes based on the search query
+- [ ] Task: Implement Keyboard Shortcuts
+    - [ ] Add `if (io.KeyCtrl && ImGui::IsKeyPressed(...))` checks in the main loop for P, S, L, E, Space
+- [ ] Task: Conductor - User Manual Verification 'Phase 3: Assets & Keys' (Protocol in workflow.md)
+
+## Phase 4: Export Workflow
+- [ ] Task: Create Export Dialog
+    - [ ] Create a modal popup "Export Song" with format dropdown (WAV, MP3, OGG)
+    - [ ] Add "Export" button to the transport toolbar
+- [ ] Task: Integrate Audio Writers
+    - [ ] Link `Mp3Writer`, `OggWriter`, `WavWriter` to the UI logic
+    - [ ] Implement the `AudioRenderer::render` to file pipeline in the GUI thread (or background thread with progress)
+- [ ] Task: Conductor - User Manual Verification 'Phase 4: Export' (Protocol in workflow.md)
