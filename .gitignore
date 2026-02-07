@@ -29,4 +29,9 @@ backup/
 sounds/*
 !sounds/GeneralUser GS v1.471.sf2
 dist/
-testing/
+
+# Testing (Track sources, ignore binaries)
+testing/*
+!testing/*.cpp
+!testing/*.h
+!testing/*.svg
