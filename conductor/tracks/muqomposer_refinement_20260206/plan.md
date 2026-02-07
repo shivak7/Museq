@@ -9,15 +9,15 @@
     - [x] Add "Clear All" button to the sidebar UI
 - [x] Task: Conductor - User Manual Verification 'Phase 1: UI Polish' (Protocol in workflow.md) b911c75
 
-## Phase 2: Asset Logic and Collision Handling
-- [ ] Task: Implement Smart Script Insertion
-    - [ ] Write unit tests for `ScriptParser` to check for existing instrument definitions
-    - [ ] Update `main.cpp` click/drop logic to skip insertion if the asset path is already defined
-- [ ] Task: Implement Automated Conflict Resolution
-    - [ ] Write unit tests for name incrementation logic (e.g., `Piano` -> `Piano_1`)
-    - [ ] Implement `get_unique_instrument_name` helper in `AssetManager` or `main.cpp`
-    - [ ] Integrate helper into the script insertion flow
-- [ ] Task: Conductor - User Manual Verification 'Phase 2: Collision Handling' (Protocol in workflow.md)
+## Phase 2: Asset Logic and Collision Handling [checkpoint: 4dac000]
+- [x] Task: Implement Smart Script Insertion
+    - [x] Write unit tests for `ScriptParser` to check for existing instrument definitions
+    - [x] Update `main.cpp` click/drop logic to skip insertion if the asset path is already defined
+- [x] Task: Implement Automated Conflict Resolution
+    - [x] Write unit tests for name incrementation logic (e.g., `Piano` -> `Piano_1`)
+    - [x] Implement `get_unique_instrument_name` helper in `AssetManager` or `main.cpp`
+    - [x] Integrate helper into the script insertion flow
+- [x] Task: Conductor - User Manual Verification 'Phase 2: Collision Handling' (Protocol in workflow.md) 4dac000
 
 ## Phase 3: Enhanced Previews and Visualization
 - [ ] Task: Implement Audio Preview Safety Fade
