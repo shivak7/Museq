@@ -1,12 +1,12 @@
 # Implementation Plan - Studio Functionality and UI Enhancements
 
 ## Phase 1: Build System and Splash Polish
-- [ ] Task: Configure Test Build Option
-    - [ ] Update `CMakeLists.txt` to add `option(BUILD_TESTS "Build test suite" OFF)`
-    - [ ] Wrap all `add_executable` calls for tests in `if(BUILD_TESTS)`
-- [ ] Task: Refine Splash Scaling
-    - [ ] Update `muqomposer/SplashUtils.h` to calculate `final_h` as 50% of `monitor_h` + 100px padding
-    - [ ] Recalculate `final_w` to maintain aspect ratio based on the new height
+- [x] Task: Configure Test Build Option [63bc09f]
+    - [x] Update `CMakeLists.txt` to add `option(BUILD_TESTS "Build test suite" OFF)`
+    - [x] Wrap all `add_executable` calls for tests in `if(BUILD_TESTS)`
+- [x] Task: Refine Splash Scaling [63bc09f]
+    - [x] Update `muqomposer/SplashUtils.h` to calculate `final_h` as 50% of `monitor_h` + 100px padding
+    - [x] Recalculate `final_w` to maintain aspect ratio based on the new height
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Build & Splash' (Protocol in workflow.md)
 
 ## Phase 2: Editor Ergonomics and Code Insertion
