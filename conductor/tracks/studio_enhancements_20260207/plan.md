@@ -29,11 +29,14 @@
     - [ ] Add `if (io.KeyCtrl && ImGui::IsKeyPressed(...))` checks in the main loop for P, S, L, E, Space
 - [ ] Task: Conductor - User Manual Verification 'Phase 3: Assets & Keys' (Protocol in workflow.md)
 
-## Phase 4: Export Workflow
-- [ ] Task: Create Export Dialog
-    - [ ] Create a modal popup "Export Song" with format dropdown (WAV, MP3, OGG)
-    - [ ] Add "Export" button to the transport toolbar
-- [ ] Task: Integrate Audio Writers
+## Phase 4: Export Workflow [checkpoint: 422d4d6]
+- [x] Task: Create Export Dialog [422d4d6]
+    - [x] Create a modal popup "Export Song" with format dropdown (WAV, MP3, OGG)
+    - [x] Add "Export" button to the transport toolbar
+- [x] Task: Integrate Audio Writers [422d4d6]
+    - [x] Link `Mp3Writer`, `OggWriter`, `WavWriter` to the UI logic
+    - [x] Implement the `AudioRenderer::render` to file pipeline in the GUI thread (or background thread with progress)
+- [ ] Task: Conductor - User Manual Verification 'Phase 4: Export' (Protocol in workflow.md) 422d4d6
     - [ ] Link `Mp3Writer`, `OggWriter`, `WavWriter` to the UI logic
     - [ ] Implement the `AudioRenderer::render` to file pipeline in the GUI thread (or background thread with progress)
 - [ ] Task: Conductor - User Manual Verification 'Phase 4: Export' (Protocol in workflow.md)
