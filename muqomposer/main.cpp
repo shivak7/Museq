@@ -113,6 +113,58 @@ bool load_script_from_file(const char* filename, char* buffer, size_t buffer_siz
     return false;
 }
 
+// Callback for Auto-Indent
+static int editor_callback(ImGuiInputTextCallbackData* data) {
+    if (data->EventFlag == ImGuiInputTextFlags_CallbackCharFilter) {
+        // We can handle specific character filtering here if needed
+    }
+    else if (data->EventFlag == ImGuiInputTextFlags_CallbackAlways) {
+        // Check for Enter key press manually? No, ImGui doesn't expose key events here easily.
+        // We should use CallbackCompletion or custom logic outside if we want to intercept 'Enter' specifically.
+        // Actually, the best way for auto-indent in ImGui is to check for \n insertion.
+    }
+    return 0;
+}
+
+// Helper to prepend code to the start of the buffer
+void prepend_to_buffer(char* buffer, size_t buffer_size, const char* code) {
+    size_t code_len = strlen(code);
+    size_t current_len = strlen(buffer);
+    if (code_len + current_len < buffer_size) {
+        // Move current content to make room at the front
+        memmove(buffer + code_len, buffer, current_len + 1);
+        memcpy(buffer, code, code_len);
+    }
+}
+
+// Improved Auto-Indent using a helper
+void handle_auto_indent(char* buffer, size_t buffer_size) {
+    static int last_len = 0;
+    int current_len = (int)strlen(buffer);
+    if (current_len == last_len + 1) {
+        // Check if last character added was newline
+        if (buffer[current_len - 1] == '\n') {
+            // Find start of previous line
+            int prev_line_start = current_len - 2;
+            while (prev_line_start > 0 && buffer[prev_line_start - 1] != '\n') prev_line_start--;
+            
+            // Count leading spaces/tabs on previous line
+            std::string indent = "";
+            int i = prev_line_start;
+            while (i < current_len - 1 && (buffer[i] == ' ' || buffer[i] == '\t')) {
+                indent += buffer[i];
+                i++;
+            }
+            
+            // Append indent to buffer if it fits
+            if (!indent.empty() && current_len + indent.length() < buffer_size) {
+                strcat(buffer, indent.c_str());
+            }
+        }
+    }
+    last_len = (int)strlen(buffer);
+}
+
 int main(int, char**) {
     glfwSetErrorCallback(glfw_error_callback);
     if (!glfwInit()) return 1;
@@ -403,9 +455,9 @@ int main(int, char**) {
                                     active_instrument_names.push_back(unique_name); // Optimistic update
 
                                     char buf[512];
-                                    snprintf(buf, sizeof(buf), "\n\ninstrument %s {\n    soundfont \"%s\"\n    bank %d\n    preset %d\n}", 
+                                    snprintf(buf, sizeof(buf), "instrument %s {\n    soundfont \"%s\"\n    bank %d\n    preset %d\n}\n\n", 
                                         unique_name.c_str(), it->path.c_str(), p.bank, p.preset);
-                                    if (strlen(script_buffer) + strlen(buf) < IM_ARRAYSIZE(script_buffer)) strcat(script_buffer, buf);
+                                    prepend_to_buffer(script_buffer, IM_ARRAYSIZE(script_buffer), buf);
                                 }
                             }
                             
@@ -436,8 +488,8 @@ int main(int, char**) {
                         active_instrument_names.push_back(unique_name); // Optimistic update
 
                         char buf[512];
-                        snprintf(buf, sizeof(buf), "\n\ninstrument %s {\n    sample \"%s\"\n}", unique_name.c_str(), node.full_path.c_str());
-                        if (strlen(script_buffer) + strlen(buf) < IM_ARRAYSIZE(script_buffer)) strcat(script_buffer, buf);
+                        snprintf(buf, sizeof(buf), "instrument %s {\n    sample \"%s\"\n}\n\n", unique_name.c_str(), node.full_path.c_str());
+                        prepend_to_buffer(script_buffer, IM_ARRAYSIZE(script_buffer), buf);
                     }
                 }
                 
@@ -560,18 +612,18 @@ int main(int, char**) {
                     std::string ext = fs::path(f_path).extension().string();
                     std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
                     if (ext == ".sf2") {
-                        snprintf(buf, sizeof(buf), "\n\ninstrument %s {\n    soundfont \"%s\"\n    bank 0\n    preset 0\n}", filename.c_str(), f_path.c_str());
+                        snprintf(buf, sizeof(buf), "instrument %s {\n    soundfont \"%s\"\n    bank 0\n    preset 0\n}\n\n", filename.c_str(), f_path.c_str());
                     } else {
-                        snprintf(buf, sizeof(buf), "\n\ninstrument %s {\n    sample \"%s\"\n}", filename.c_str(), f_path.c_str());
+                        snprintf(buf, sizeof(buf), "instrument %s {\n    sample \"%s\"\n}\n\n", filename.c_str(), f_path.c_str());
                     }
-                    if (strlen(script_buffer) + strlen(buf) < IM_ARRAYSIZE(script_buffer)) strcat(script_buffer, buf);
+                    prepend_to_buffer(script_buffer, IM_ARRAYSIZE(script_buffer), buf);
                 }
             }
         }
 
         if (ImGui::Button("Add New Synth", ImVec2(-FLT_MIN, 0))) { 
-            std::string new_synth = "\n\ninstrument NewSynth {\n    waveform sawtooth\n    envelope 0.01 0.1 0.8 0.2\n    filter lowpass 2000 1.0\n}";
-            if (strlen(script_buffer) + new_synth.length() < IM_ARRAYSIZE(script_buffer)) strcat(script_buffer, new_synth.c_str());
+            std::string new_synth = "instrument NewSynth {\n    waveform sawtooth\n    envelope 0.01 0.1 0.8 0.2\n    filter lowpass 2000 1.0\n}\n\n";
+            prepend_to_buffer(script_buffer, IM_ARRAYSIZE(script_buffer), new_synth.c_str());
         }
         
         // Add Folder Button
@@ -628,8 +680,8 @@ int main(int, char**) {
                     active_instrument_names.push_back(unique_name);
 
                     char buf[512];
-                    snprintf(buf, sizeof(buf), "\n\ninstrument %s {\n    waveform sawtooth\n    envelope 0.1 0.2 0.5 0.3\n}", unique_name.c_str());
-                    if (strlen(script_buffer) + strlen(buf) < IM_ARRAYSIZE(script_buffer)) strcat(script_buffer, buf);
+                    snprintf(buf, sizeof(buf), "instrument %s {\n    waveform sawtooth\n    envelope 0.1 0.2 0.5 0.3\n}\n\n", unique_name.c_str());
+                    prepend_to_buffer(script_buffer, IM_ARRAYSIZE(script_buffer), buf);
                 }
             }
         }
@@ -685,7 +737,32 @@ int main(int, char**) {
             play_logic();
         }
 
-        ImGui::InputTextMultiline("##editor", script_buffer, IM_ARRAYSIZE(script_buffer), ImVec2(-FLT_MIN, -FLT_MIN), ImGuiInputTextFlags_AllowTabInput);
+        // --- Editor with Line Numbers ---
+        float line_number_width = 40.0f;
+        float editor_width = ImGui::GetContentRegionAvail().x - line_number_width;
+
+        // Synchronize scrolling
+        static float scroll_y = 0.0f;
+
+        // Line Numbers column
+        ImGui::BeginChild("LineNumbers", ImVec2(line_number_width, 0), false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+        ImGui::SetScrollY(scroll_y);
+        int line_count = 1;
+        for (int i = 0; script_buffer[i]; i++) if (script_buffer[i] == '\n') line_count++;
+        for (int i = 1; i <= line_count; i++) {
+            ImGui::TextDisabled("%4d", i);
+        }
+        ImGui::EndChild();
+
+        ImGui::SameLine();
+
+        // Editor column
+        ImGui::BeginChild("EditorColumn", ImVec2(editor_width, 0));
+        if (ImGui::InputTextMultiline("##editor", script_buffer, IM_ARRAYSIZE(script_buffer), ImVec2(-FLT_MIN, -FLT_MIN), ImGuiInputTextFlags_AllowTabInput)) {
+            handle_auto_indent(script_buffer, IM_ARRAYSIZE(script_buffer));
+        }
+        scroll_y = ImGui::GetScrollY();
+        ImGui::EndChild();
         
         if (ImGui::BeginDragDropTarget()) {
             if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ASSET_CODE")) {
@@ -743,9 +820,7 @@ int main(int, char**) {
                         }
                     }
 
-                    if (strlen(script_buffer) + final_code.length() < IM_ARRAYSIZE(script_buffer)) {
-                        strcat(script_buffer, final_code.c_str());
-                    }
+                    prepend_to_buffer(script_buffer, IM_ARRAYSIZE(script_buffer), final_code.c_str());
                 }
             }
             ImGui::EndDragDropTarget();
