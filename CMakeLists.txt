@@ -156,36 +156,40 @@ target_link_libraries(museq PRIVATE museq_engine)
 add_subdirectory(muqomposer)
 
 # --- Tests ---
-enable_testing()
-add_executable(test_music_theory testing/test_music_theory.cpp)
-target_link_libraries(test_music_theory PRIVATE museq_engine)
+option(BUILD_TESTS "Build test suite" OFF)
 
-add_executable(test_script_scale testing/test_script_scale.cpp)
-target_link_libraries(test_script_scale PRIVATE museq_engine)
+if(BUILD_TESTS)
+    enable_testing()
+    add_executable(test_music_theory testing/test_music_theory.cpp)
+    target_link_libraries(test_music_theory PRIVATE museq_engine)
 
-add_executable(test_asset_manager testing/test_asset_manager.cpp muqomposer/AssetManager.cpp)
-target_link_libraries(test_asset_manager PRIVATE museq_engine)
+    add_executable(test_script_scale testing/test_script_scale.cpp)
+    target_link_libraries(test_script_scale PRIVATE museq_engine)
 
-add_executable(test_asset_tree testing/test_asset_tree.cpp muqomposer/AssetManager.cpp)
-target_link_libraries(test_asset_tree PRIVATE museq_engine)
+    add_executable(test_asset_manager testing/test_asset_manager.cpp muqomposer/AssetManager.cpp)
+    target_link_libraries(test_asset_manager PRIVATE museq_engine)
 
-add_executable(test_asset_filter testing/test_asset_filter.cpp muqomposer/AssetManager.cpp)
-target_link_libraries(test_asset_filter PRIVATE museq_engine)
+    add_executable(test_asset_tree testing/test_asset_tree.cpp muqomposer/AssetManager.cpp)
+    target_link_libraries(test_asset_tree PRIVATE museq_engine)
 
-add_executable(test_gui_resources testing/test_gui_resources.cpp)
-target_link_libraries(test_gui_resources PRIVATE museq_engine)
+    add_executable(test_asset_filter testing/test_asset_filter.cpp muqomposer/AssetManager.cpp)
+    target_link_libraries(test_asset_filter PRIVATE museq_engine)
 
-add_executable(test_asset_clear testing/test_asset_clear.cpp muqomposer/AssetManager.cpp)
-target_link_libraries(test_asset_clear PRIVATE museq_engine)
+    add_executable(test_gui_resources testing/test_gui_resources.cpp)
+    target_link_libraries(test_gui_resources PRIVATE museq_engine)
 
-add_executable(test_asset_check testing/test_asset_check.cpp muqomposer/AssetManager.cpp)
-target_link_libraries(test_asset_check PRIVATE museq_engine)
+    add_executable(test_asset_clear testing/test_asset_clear.cpp muqomposer/AssetManager.cpp)
+    target_link_libraries(test_asset_clear PRIVATE museq_engine)
 
-add_executable(test_conflict_resolution testing/test_conflict_resolution.cpp)
-target_link_libraries(test_conflict_resolution PRIVATE museq_engine)
+    add_executable(test_asset_check testing/test_asset_check.cpp muqomposer/AssetManager.cpp)
+    target_link_libraries(test_asset_check PRIVATE museq_engine)
 
-add_executable(test_fft testing/test_fft.cpp)
-target_link_libraries(test_fft PRIVATE museq_engine)
+    add_executable(test_conflict_resolution testing/test_conflict_resolution.cpp)
+    target_link_libraries(test_conflict_resolution PRIVATE museq_engine)
 
-add_executable(test_splash_scaling testing/test_splash_scaling.cpp)
-target_link_libraries(test_splash_scaling PRIVATE museq_engine)
+    add_executable(test_fft testing/test_fft.cpp)
+    target_link_libraries(test_fft PRIVATE museq_engine)
+
+    add_executable(test_splash_scaling testing/test_splash_scaling.cpp)
+    target_link_libraries(test_splash_scaling PRIVATE museq_engine)
+endif()
