@@ -15,6 +15,7 @@
 
 ## Studio GUI (Muqomposer)
 - **Framework:** [Dear ImGui](https://github.com/ocornut/imgui) for immediate-mode GUI.
+- **Image Loading:** [stb_image](https://github.com/nothings/stb) for loading branding assets and icons.
 - **Windowing & Input:** [GLFW](https://www.glfw.org/) for window management and event handling.
 - **Graphics API:** OpenGL (via `OpenGL::GL` or system-specific drivers).
 
