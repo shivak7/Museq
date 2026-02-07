@@ -62,6 +62,8 @@ Voice::Voice(const Instrument& inst, double start_samples, float sample_rate)
     for (const auto& note : instrument.sequence.notes) {
         total_ms += note.duration;
     }
+    // Add release time to total duration to allow for tail
+    total_ms += instrument.synth.envelope.release * 1000.0f;
     total_duration_samples = (total_ms / 1000.0) * sample_rate;
 
     for (const auto& fx : instrument.effects) {
@@ -93,15 +95,19 @@ void Voice::render(float* buffer, int frame_count, float sample_rate, std::map<s
     std::vector<float> local_buffer(frame_count * 2, 0.0f);
 
     for (int f = 0; f < frame_count; ++f) {
-        if (current_note_idx >= notes.size()) {
+        if (total_samples_rendered >= total_duration_samples) {
             is_finished = true;
             break;
         }
 
-        const auto& note = notes[current_note_idx];
+        // Use last note if we are in the release tail
+        size_t note_idx = current_note_idx;
+        if (note_idx >= notes.size()) note_idx = notes.size() - 1;
+
+        const auto& note = notes[note_idx];
         double note_duration_samples = (note.duration / 1000.0f) * sample_rate;
         
-        if (note.is_rest) {
+        if (note.is_rest && current_note_idx < notes.size()) {
             samples_into_note++;
             total_samples_rendered++;
             if (samples_into_note >= note_duration_samples) {
@@ -124,18 +130,28 @@ void Voice::render(float* buffer, int frame_count, float sample_rate, std::map<s
         float time_in_note = (float)samples_into_note / sample_rate;
         float envelope_val = 0.0f;
         
+        // If we are past the notes but still in total_duration, we are in the final release tail
+        bool in_final_tail = (current_note_idx >= notes.size());
+
         if (legato) {
             bool is_first = (current_note_idx == 0);
-            bool is_last = (current_note_idx == notes.size() - 1);
+            bool is_last = (current_note_idx == notes.size() - 1 || in_final_tail);
             if (is_first && time_in_note < env.attack) envelope_val = time_in_note / env.attack;
             else if (is_first && time_in_note < env.attack + env.decay) envelope_val = 1.0f - (1.0f - env.sustain) * ((time_in_note - env.attack) / env.decay);
-            else if (is_last && time_in_note > (note.duration / 1000.0f) - env.release) envelope_val = env.sustain * (1.0f - ((time_in_note - ((note.duration / 1000.0f) - env.release)) / env.release));
+            else if (is_last && (in_final_tail || time_in_note > (note.duration / 1000.0f) - env.release)) {
+                float tail_time = in_final_tail ? (time_in_note + (note.duration / 1000.0f)) : time_in_note;
+                float release_start = (note.duration / 1000.0f) - env.release;
+                envelope_val = env.sustain * (1.0f - ((time_in_note - release_start) / env.release));
+            }
             else envelope_val = env.sustain;
         } else {
             if (time_in_note < env.attack) envelope_val = time_in_note / env.attack;
             else if (time_in_note < env.attack + env.decay) envelope_val = 1.0f - (1.0f - env.sustain) * ((time_in_note - env.attack) / env.decay);
-            else if (time_in_note < (note.duration / 1000.0f) - env.release) envelope_val = env.sustain;
-            else envelope_val = env.sustain * (1.0f - ((time_in_note - ((note.duration / 1000.0f) - env.release)) / env.release));
+            else if (in_final_tail || time_in_note >= (note.duration / 1000.0f) - env.release) {
+                float release_start = (note.duration / 1000.0f) - env.release;
+                envelope_val = env.sustain * (1.0f - ((time_in_note - release_start) / env.release));
+            }
+            else envelope_val = env.sustain;
         }
         if (envelope_val < 0.0f) envelope_val = 0.0f;
 
@@ -209,7 +225,7 @@ void Voice::render(float* buffer, int frame_count, float sample_rate, std::map<s
 
         samples_into_note++;
         total_samples_rendered++;
-        if (samples_into_note >= note_duration_samples) {
+        if (!in_final_tail && samples_into_note >= note_duration_samples) {
             samples_into_note = 0;
             current_note_idx++;
             last_freq = current_freq;
