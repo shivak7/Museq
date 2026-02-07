@@ -19,10 +19,58 @@
 #include <functional>
 #include <algorithm>
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "../third_party/stb_image.h"
+
 namespace fs = std::filesystem;
 
 static void glfw_error_callback(int error, const char* description) {
     fprintf(stderr, "Glfw Error %d: %s\n", error, description);
+}
+
+// Helper to load texture
+bool load_texture_from_file(const char* filename, GLuint* out_texture, int* out_width, int* out_height) {
+    int image_width = 0;
+    int image_height = 0;
+    unsigned char* image_data = stbi_load(filename, &image_width, &image_height, NULL, 4);
+    if (image_data == NULL) return false;
+
+    // Create a OpenGL texture identifier
+    GLuint image_texture;
+    glGenTextures(1, &image_texture);
+    glBindTexture(GL_TEXTURE_2D, image_texture);
+
+    // Setup filtering parameters for display
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE); // This is required on WebGL for non power-of-two textures
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE); // Same
+
+    // Upload pixels into texture
+#if defined(GL_UNPACK_ROW_LENGTH) && !defined(__EMSCRIPTEN__)
+    glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+#endif
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image_width, image_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image_data);
+    stbi_image_free(image_data);
+
+    *out_texture = image_texture;
+    *out_width = image_width;
+    *out_height = image_height;
+
+    return true;
+}
+
+void set_window_icon(GLFWwindow* window, const char* filename) {
+    int width, height, channels;
+    unsigned char* data = stbi_load(filename, &width, &height, &channels, 4);
+    if (data) {
+        GLFWimage icon;
+        icon.width = width;
+        icon.height = height;
+        icon.pixels = data;
+        glfwSetWindowIcon(window, 1, &icon);
+        stbi_image_free(data);
+    }
 }
 
 void save_script_to_file(const char* filename, const char* content) {
@@ -63,6 +111,10 @@ int main(int, char**) {
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1); // Enable vsync
 
+    // Set Window Icon
+    set_window_icon(window, "../Museq_logo.png"); // Try local or parent dir
+    if (!fs::exists("../Museq_logo.png")) set_window_icon(window, "Museq_logo.png");
+
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -72,6 +124,57 @@ int main(int, char**) {
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
+
+    // --- Splash Screen ---
+    GLuint splash_texture = 0;
+    int splash_w = 0, splash_h = 0;
+    bool splash_loaded = false;
+    
+    if (fs::exists("../Museq_logo.png")) splash_loaded = load_texture_from_file("../Museq_logo.png", &splash_texture, &splash_w, &splash_h);
+    else if (fs::exists("Museq_logo.png")) splash_loaded = load_texture_from_file("Museq_logo.png", &splash_texture, &splash_w, &splash_h);
+
+    if (splash_loaded) {
+        double start_time = glfwGetTime();
+        while (glfwGetTime() - start_time < 2.0 && !glfwWindowShouldClose(window)) {
+            glfwPollEvents();
+            ImGui_ImplOpenGL3_NewFrame();
+            ImGui_ImplGlfw_NewFrame();
+            ImGui::NewFrame();
+
+            ImGui::SetNextWindowPos(ImVec2(0, 0));
+            ImGui::SetNextWindowSize(io.DisplaySize);
+            ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.1f, 0.1f, 0.1f, 1.0f)); // Dark background
+            ImGui::Begin("Splash", NULL, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings);
+            
+            // Center Image
+            float x = (io.DisplaySize.x - splash_w) * 0.5f;
+            float y = (io.DisplaySize.y - splash_h) * 0.5f;
+            if (x < 0) x = 0; if (y < 0) y = 0;
+            
+            ImGui::SetCursorPos(ImVec2(x, y));
+            // Fade in/out logic could go here
+            float alpha = 1.0f;
+            double elapsed = glfwGetTime() - start_time;
+            if (elapsed < 0.5) alpha = elapsed / 0.5;
+            if (elapsed > 1.5) alpha = 1.0 - (elapsed - 1.5) / 0.5;
+            
+            ImGui::Image((void*)(intptr_t)splash_texture, ImVec2((float)splash_w, (float)splash_h), ImVec2(0,0), ImVec2(1,1), ImVec4(1,1,1,alpha), ImVec4(0,0,0,0));
+            ImGui::End();
+            ImGui::PopStyleColor();
+
+            ImGui::Render();
+            int display_w, display_h;
+            glfwGetFramebufferSize(window, &display_w, &display_h);
+            glViewport(0, 0, display_w, display_h);
+            glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+            glClear(GL_COLOR_BUFFER_BIT);
+            ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+            glfwSwapBuffers(window);
+        }
+        // Cleanup Splash
+        // (Texture could be kept for about box, but let's free it for now or reuse)
+        // glDeleteTextures(1, &splash_texture); 
+    }
 
     // Museq Engine State
     AudioPlayer player;
@@ -360,6 +463,7 @@ int main(int, char**) {
             show_folder_picker = true;
         }
 
+        if (ImGui::Button("Clear All", ImVec2(-FLT_MIN, 0))) { asset_manager.clear_watched_folders(); }
         if (ImGui::Button("Refresh Assets", ImVec2(-FLT_MIN, 0))) { asset_manager.refresh_assets(); }
         ImGui::Separator();
 

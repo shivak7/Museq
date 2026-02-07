@@ -63,6 +63,11 @@ void AssetManager::add_watched_folder(const std::string& path) {
     }
 }
 
+void AssetManager::clear_watched_folders() {
+    m_watched_folders.clear();
+    refresh_assets();
+}
+
 const std::vector<std::string>& AssetManager::get_watched_folders() const {
     return m_watched_folders;
 }

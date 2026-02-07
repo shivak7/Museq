@@ -41,6 +41,7 @@ public:
 
     // Folder Management
     void add_watched_folder(const std::string& path);
+    void clear_watched_folders();
     const std::vector<std::string>& get_watched_folders() const;
     
     // Asset Retrieval
