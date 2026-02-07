@@ -128,7 +128,6 @@ void Voice::render(float* buffer, int frame_count, float sample_rate, std::map<s
         const auto& env = instrument.synth.envelope;
         float envelope_val = 0.0f;
         
-        float note_dur_secs = note.duration / 1000.0f;
         bool is_contiguous_legato = (instrument.portamento_time > 0 && current_note_idx > 0);
 
         if (is_contiguous_legato) {
