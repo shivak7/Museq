@@ -128,20 +128,34 @@ void Voice::render(float* buffer, int frame_count, float sample_rate, std::map<s
         const auto& env = instrument.synth.envelope;
         float envelope_val = 0.0f;
         
-        if (time_in_note < env.attack) {
-            envelope_val = time_in_note / env.attack;
-        } else if (time_in_note < env.attack + env.decay) {
-            envelope_val = 1.0f - (1.0f - env.sustain) * ((time_in_note - env.attack) / env.decay);
-        } else if (current_note_idx >= notes.size() - 1 && time_in_note > note_dur_secs) {
-            // Final release tail
-            float release_time = time_in_note - note_dur_secs;
-            envelope_val = env.sustain * (1.0f - (release_time / env.release));
-        } else if (time_in_note < note_dur_secs) {
-            envelope_val = env.sustain;
+        float note_dur_secs = note.duration / 1000.0f;
+        bool is_contiguous_legato = (instrument.portamento_time > 0 && current_note_idx > 0);
+
+        if (is_contiguous_legato) {
+            // In legato mode (portamento active and not the first note),
+            // we skip the attack phase to keep the sound continuous.
+            bool is_last_segment = (current_note_idx >= notes.size() - 1);
+            if (is_last_segment && time_in_note > note_dur_secs) {
+                float release_time = time_in_note - note_dur_secs;
+                envelope_val = env.sustain * (1.0f - (release_time / env.release));
+            } else {
+                envelope_val = env.sustain;
+            }
         } else {
-            // Handle transition release
-            float release_time = time_in_note - note_dur_secs;
-            envelope_val = env.sustain * (1.0f - (release_time / env.release));
+            // Normal AR/ADSR re-trigger
+            if (time_in_note < env.attack) {
+                envelope_val = time_in_note / env.attack;
+            } else if (time_in_note < env.attack + env.decay) {
+                envelope_val = 1.0f - (1.0f - env.sustain) * ((time_in_note - env.attack) / env.decay);
+            } else if (current_note_idx >= notes.size() - 1 && time_in_note > note_dur_secs) {
+                float release_time = time_in_note - note_dur_secs;
+                envelope_val = env.sustain * (1.0f - (release_time / env.release));
+            } else if (time_in_note < note_dur_secs) {
+                envelope_val = env.sustain;
+            } else {
+                float release_time = time_in_note - note_dur_secs;
+                envelope_val = env.sustain * (1.0f - (release_time / env.release));
+            }
         }
         
         if (envelope_val < 0.0f) envelope_val = 0.0f;
@@ -173,6 +187,8 @@ void Voice::render(float* buffer, int frame_count, float sample_rate, std::map<s
             if (!soundfont_instance && soundfonts.count(instrument.soundfont_path)) {
                 soundfont_instance = tsf_copy(soundfonts[instrument.soundfont_path]);
                 tsf_set_output(soundfont_instance, TSF_STEREO_INTERLEAVED, sample_rate, 0);
+                // Set wide pitch range for portamento (2 octaves)
+                tsf_channel_set_pitchrange(soundfont_instance, 0, 24.0f);
                 int preset = tsf_get_presetindex(soundfont_instance, instrument.bank_index, instrument.preset_index);
                 tsf_channel_set_presetindex(soundfont_instance, 0, (preset < 0 ? 0 : preset));
                 tsf_channel_note_on(soundfont_instance, 0, note.pitch, note.velocity / 127.0f);
@@ -181,7 +197,9 @@ void Voice::render(float* buffer, int frame_count, float sample_rate, std::map<s
             if (soundfont_instance) {
                 if (instrument.portamento_time > 0 || instrument.synth.lfo.target == LFOTarget::PITCH) {
                     float semitone_offset = 12.0f * std::log2(glide_freq / target_freq);
-                    int wheel_val = (int)(8192.0f + (semitone_offset * 8192.0f / 2.0f));
+                    // MIDI Pitch Wheel is 14-bit (0..16383), 8192 is center.
+                    // Range is now set to 24 semitones.
+                    int wheel_val = (int)(8192.0f + (semitone_offset * 8192.0f / 24.0f));
                     if (wheel_val < 0) wheel_val = 0;
                     if (wheel_val > 16383) wheel_val = 16383;
                     tsf_channel_set_pitchwheel(soundfont_instance, 0, wheel_val);
