@@ -24,6 +24,7 @@
 #include <filesystem>
 #include <functional>
 #include <algorithm>
+#include <cmath>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "../third_party/stb_image.h"
@@ -189,19 +190,53 @@ int main(int, char**) {
             
             ImGui::Begin("Splash", NULL, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoInputs);
             
-            // Draw scaled image to fill the window
+            // Draw scaled image to fill the top area (excluding 100px padding)
             float alpha = 1.0f;
             double elapsed = glfwGetTime() - start_time;
             if (elapsed < 0.5) alpha = (float)(elapsed / 0.5);
             if (elapsed > 1.5) alpha = (float)(1.0 - (elapsed - 1.5) / 0.5);
             
-            ImGui::GetWindowDrawList()->AddImage((void*)(intptr_t)splash_texture, ImVec2(0, 0), ImVec2((float)sd.width, (float)sd.height), ImVec2(0,0), ImVec2(1,1), ImColor(1.0f, 1.0f, 1.0f, alpha));
+            // Image area is window size minus 100px from bottom
+            float img_draw_h = (float)sd.height - 100.0f;
+            ImGui::GetWindowDrawList()->AddImage((void*)(intptr_t)splash_texture, ImVec2(0, 0), ImVec2((float)sd.width, img_draw_h), ImVec2(0,0), ImVec2(1,1), ImColor(1.0f, 1.0f, 1.0f, alpha));
             
             // Draw Copyright Text at bottom
+            ImGui::SetWindowFontScale(2.0f); // Double font size
             std::string copyright = "© 2026 Shiva Ratna (https://shivak7.github.io/)";
-            float text_width = ImGui::CalcTextSize(copyright.c_str()).x;
-            ImGui::SetCursorPos(ImVec2((sd.width - text_width) * 0.5f, (float)sd.height - 40.0f));
-            ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, alpha), "%s", copyright.c_str());
+            float text_width = ImGui::CalcTextSize(copyright.c_str()).x; // Font scale applies to current window so CalcTextSize should respect it if inside window scope? 
+            // Actually CalcTextSize uses GImGui->Font->FontSize * window_scale if called inside window.
+            
+            // Centering: (WindowWidth - TextWidth) / 2
+            // Vertical: Start of padding + (PaddingHeight - TextHeight) / 2
+            float text_x = ((float)sd.width - text_width) * 0.5f;
+            float text_y = img_draw_h + (100.0f - ImGui::GetTextLineHeight()) * 0.5f;
+            
+            ImGui::SetCursorPos(ImVec2(text_x, text_y));
+
+            // Fiery Glow Animation
+            double time = glfwGetTime();
+            float t1 = (float)((sin(time * 5.0) + 1.0) * 0.5); // 0..1
+            float t2 = (float)((sin(time * 3.0 + 1.5) + 1.0) * 0.5); // 0..1
+            
+            ImVec4 col_red(0.8f, 0.1f, 0.0f, 1.0f);
+            ImVec4 col_gold(1.0f, 0.8f, 0.0f, 1.0f);
+            ImVec4 col_orange(1.0f, 0.5f, 0.0f, 1.0f);
+            
+            ImVec4 final_col;
+            // Interpolate Red -> Gold
+            final_col.x = col_red.x + (col_gold.x - col_red.x) * t1;
+            final_col.y = col_red.y + (col_gold.y - col_red.y) * t1;
+            final_col.z = col_red.z + (col_gold.z - col_red.z) * t1;
+            
+            // Mix with Orange
+            final_col.x = final_col.x * (1.0f - t2) + col_orange.x * t2;
+            final_col.y = final_col.y * (1.0f - t2) + col_orange.y * t2;
+            final_col.z = final_col.z * (1.0f - t2) + col_orange.z * t2;
+            
+            final_col.w = alpha; // Apply global fade
+
+            ImGui::TextColored(final_col, "%s", copyright.c_str());
+            ImGui::SetWindowFontScale(1.0f); // Reset
 
             ImGui::End();
             ImGui::PopStyleVar(2);
