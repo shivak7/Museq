@@ -9,15 +9,15 @@
     - [x] Recalculate `final_w` to maintain aspect ratio based on the new height
 - [x] Task: Conductor - User Manual Verification 'Phase 1: Build & Splash' (Protocol in workflow.md) 7f73ccb
 
-## Phase 2: Editor Ergonomics and Code Insertion
-- [ ] Task: Implement Auto-Indent
-    - [ ] Add `ImGuiInputTextFlags_EnterReturnsTrue` to script editor
-    - [ ] Calculate indentation of the previous line and insert it automatically on new line
-- [ ] Task: Add Line Numbers
-    - [ ] Render a child window or column to the left of the editor displaying line indices
-- [ ] Task: Update Smart Insertion Logic
-    - [ ] Modify `main.cpp` instrument addition logic to prepend code to the start of `script_buffer` instead of appending
-- [ ] Task: Conductor - User Manual Verification 'Phase 2: Editor' (Protocol in workflow.md)
+## Phase 2: Editor Ergonomics and Code Insertion [checkpoint: 808260b]
+- [x] Task: Implement Auto-Indent [808260b]
+    - [x] Add `ImGuiInputTextFlags_EnterReturnsTrue` to script editor
+    - [x] Calculate indentation of the previous line and insert it automatically on new line
+- [x] Task: Add Line Numbers [808260b]
+    - [x] Render a child window or column to the left of the editor displaying line indices
+- [x] Task: Update Smart Insertion Logic [808260b]
+    - [x] Modify `main.cpp` instrument addition logic to prepend code to the start of `script_buffer` instead of appending
+- [ ] Task: Conductor - User Manual Verification 'Phase 2: Editor' (Protocol in workflow.md) 808260b
 
 ## Phase 3: Asset Search and Shortcuts
 - [ ] Task: Implement Global Asset Search
