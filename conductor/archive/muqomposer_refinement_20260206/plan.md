@@ -1,0 +1,39 @@
+# Implementation Plan - Muqomposer Features and Bugfixes
+
+## Phase 1: Branding and Basic UI Polish [checkpoint: b911c75]
+- [x] Task: Integrate Window Icons and Splash Screen
+    - [x] Implement dark splash screen logic in `muqomposer/main.cpp` using inverted logo colors
+    - [x] Set application window icon to `src/Museq.rc` (Windows) and `Museq_logo.png` (Linux/macOS)
+- [x] Task: Implement 'Clear All' for Assets
+    - [x] Add `clear_watched_folders()` to `AssetManager`
+    - [x] Add "Clear All" button to the sidebar UI
+- [x] Task: Conductor - User Manual Verification 'Phase 1: UI Polish' (Protocol in workflow.md) b911c75
+
+## Phase 2: Asset Logic and Collision Handling [checkpoint: 4dac000]
+- [x] Task: Implement Smart Script Insertion
+    - [x] Write unit tests for `ScriptParser` to check for existing instrument definitions
+    - [x] Update `main.cpp` click/drop logic to skip insertion if the asset path is already defined
+- [x] Task: Implement Automated Conflict Resolution
+    - [x] Write unit tests for name incrementation logic (e.g., `Piano` -> `Piano_1`)
+    - [x] Implement `get_unique_instrument_name` helper in `AssetManager` or `main.cpp`
+    - [x] Integrate helper into the script insertion flow
+- [x] Task: Conductor - User Manual Verification 'Phase 2: Collision Handling' (Protocol in workflow.md) 4dac000
+
+## Phase 3: Enhanced Previews and Visualization
+- [x] Task: Implement Audio Preview Safety Fade
+    - [x] Update `AudioPlayer` to handle a 5-second hard cap for previews
+    - [x] Implement real-time volume ramp-down starting at 4 seconds in the audio callback
+- [x] Task: Expand Preview Support
+    - [x] Add preview functionality for Synth templates in the sidebar
+    - [x] Add preview functionality for individual Sample files
+- [x] Task: Implement FFT Spectrum Analyzer
+    - [x] Integrate a simple FFT implementation (or use a lightweight library if available)
+    - [x] Add `get_spectrum_data` to `AudioPlayer`
+    - [x] Create an ImGui-based Spectrum visualizer widget in the output panel
+- [x] Task: Conductor - User Manual Verification 'Phase 3: Visualization' (Protocol in workflow.md)
+
+## Phase 4: Transport Toolbar and Final Polish
+- [~] Task: Refactor Transport Toolbar
+    - [ ] Redesign footer into a docked toolbar with Play/Stop/Save icons
+    - [ ] Add interactive BPM slider and input field
+- [ ] Task: Conductor - User Manual Verification 'Phase 4: Final Polish' (Protocol in workflow.md)
