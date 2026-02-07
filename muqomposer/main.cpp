@@ -550,6 +550,13 @@ int main(int, char**) {
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
 
+        // Keyboard Shortcuts
+        if (io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_P)) play_logic();
+        if (io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_S)) show_save_popup = true;
+        if (io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_L)) show_load_popup = true;
+        if (io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_Space)) player.stop();
+        // Export shortcut (Ctrl+E) will be implemented once export dialog is ready
+
         // Slow updates
         static double last_parse_time = 0;
         if (ImGui::GetTime() - last_parse_time > 2.0) {

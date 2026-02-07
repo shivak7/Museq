@@ -243,11 +243,35 @@ AssetNode AssetManager::get_sample_tree(const std::string& filter) const {
 }
 
 AssetNode AssetManager::get_soundfont_tree(const std::string& filter) const {
-    std::vector<std::string> paths;
-    for (const auto& sf : m_soundfonts) {
-        paths.push_back(sf.path);
+    if (filter.empty()) {
+        std::vector<std::string> paths;
+        for (const auto& sf : m_soundfonts) paths.push_back(sf.path);
+        return build_tree_from_paths(paths, AssetType::SF2, "");
     }
-    return build_tree_from_paths(paths, AssetType::SF2, filter);
+
+    std::string filter_lower = filter;
+    std::transform(filter_lower.begin(), filter_lower.end(), filter_lower.begin(), ::tolower);
+
+    std::vector<std::string> matching_paths;
+    for (const auto& sf : m_soundfonts) {
+        bool match = false;
+        std::string filename_lower = sf.filename;
+        std::transform(filename_lower.begin(), filename_lower.end(), filename_lower.begin(), ::tolower);
+        if (filename_lower.find(filter_lower) != std::string::npos) {
+            match = true;
+        } else {
+            for (const auto& p : sf.presets) {
+                std::string p_lower = p.name;
+                std::transform(p_lower.begin(), p_lower.end(), p_lower.begin(), ::tolower);
+                if (p_lower.find(filter_lower) != std::string::npos) {
+                    match = true;
+                    break;
+                }
+            }
+        }
+        if (match) matching_paths.push_back(sf.path);
+    }
+    return build_tree_from_paths(matching_paths, AssetType::SF2, "");
 }
 
 AssetNode AssetManager::build_tree_from_paths(const std::vector<std::string>& paths, AssetType leaf_type, const std::string& filter) const {
@@ -271,11 +295,8 @@ AssetNode AssetManager::build_tree_from_paths(const std::vector<std::string>& pa
         watched_node.type = AssetType::DIRECTORY;
         watched_node.is_directory = true;
 
-        // Filter and add paths belonging to this folder
-        bool has_children = false;
-        
         for (const auto& p_str : paths) {
-            // Apply filter
+            // Apply filter to filename
             if (!filter_lower.empty()) {
                 fs::path p_tmp(p_str);
                 std::string name_lower = p_tmp.filename().string();
@@ -286,19 +307,12 @@ AssetNode AssetManager::build_tree_from_paths(const std::vector<std::string>& pa
             }
 
             fs::path p = fs::path(p_str);
-            
-            // Check if p starts with watched_path
-            if (p_str.find(watched) == 0) { // p starts with watched
-                has_children = true;
+            if (p_str.find(watched) == 0) {
                 fs::path rel = fs::relative(p, watched_path);
-                
-                // Traverse/Build
                 AssetNode* current = &watched_node;
                 for (const auto& part : rel) {
                     std::string part_name = part.string();
                     bool is_last = (part == rel.filename());
-                    
-                    // Check if child exists
                     auto it = std::find_if(current->children.begin(), current->children.end(), 
                         [&](const AssetNode& n){ return n.name == part_name; });
                     
@@ -308,13 +322,8 @@ AssetNode AssetManager::build_tree_from_paths(const std::vector<std::string>& pa
                         AssetNode new_node;
                         new_node.name = part_name;
                         new_node.full_path = (fs::path(current->full_path) / part).string();
-                        if (is_last) {
-                            new_node.type = leaf_type;
-                            new_node.is_directory = false;
-                        } else {
-                            new_node.type = AssetType::DIRECTORY;
-                            new_node.is_directory = true;
-                        }
+                        new_node.type = is_last ? leaf_type : AssetType::DIRECTORY;
+                        new_node.is_directory = !is_last;
                         current->children.push_back(new_node);
                         current = &current->children.back();
                     }
@@ -322,8 +331,17 @@ AssetNode AssetManager::build_tree_from_paths(const std::vector<std::string>& pa
             }
         }
         
-        // Only add watched folder if it has matching assets
-        if (has_children) {
+        // Pruning helper lambda
+        auto prune = [](auto self, AssetNode& node) -> bool {
+            if (!node.is_directory) return true; // Keep files
+            for (auto it = node.children.begin(); it != node.children.end(); ) {
+                if (!self(self, *it)) it = node.children.erase(it);
+                else ++it;
+            }
+            return !node.children.empty(); // Keep if not empty
+        };
+
+        if (prune(prune, watched_node)) {
             root.children.push_back(watched_node);
         }
     }
