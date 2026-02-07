@@ -1,0 +1,5 @@
+Phase 1 Verification Report.
+Automated Tests: cd build && make test_splash_scaling && ./bin/test_splash_scaling (Passed).
+Manual Verification: Splash scaled to 60% monitor height, copyright text at 1.8x scale centered at bottom.
+User Confirmation: 'Great! It looks perfect.'
+Final Checkpoint SHA: 7f73ccb
