@@ -8,6 +8,12 @@
 #include "SongElement.h"
 #include "Chord.h"
 
+int ScriptParser::s_global_bpm = 120;
+
+void ScriptParser::set_global_bpm(int bpm) {
+    if (bpm > 0) s_global_bpm = bpm;
+}
+
 static std::string preprocess_line(const std::string& raw_line) {
     std::string line = raw_line;
     size_t comment_pos = line.find("//");
@@ -30,6 +36,9 @@ static std::string preprocess_line(const std::string& raw_line) {
 }
 
 ScriptParser::ScriptParser() {
+    // Set default duration based on global BPM
+    m_default_duration = 60000 / s_global_bpm;
+
     // Add built-in Rest instrument (produces silence)
     Instrument rest("Rest", Waveform::SINE, AdsrEnvelope(0, 0, 0, 0));
     m_templates["Rest"] = rest;

@@ -714,45 +714,52 @@ int main(int, char**) {
 
         ImGui::End();
 
-        // --- 4. FOOTER (Status Bar) ---
+        // --- 4. FOOTER (Transport Toolbar) ---
         ImGui::SetNextWindowPos(ImVec2(0, main_area_height));
         ImGui::SetNextWindowSize(ImVec2(io.DisplaySize.x, FOOTER_HEIGHT));
         ImGui::Begin("Footer", NULL, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar);
         
-        // Status Text
+        // Group Left: Status
         ImGui::AlignTextToFramePadding();
         ImGui::Text("%s", status_text);
         ImGui::SameLine();
         ImGui::TextDisabled("|");
         ImGui::SameLine();
-        
-        // Song Params
-        ImGui::Text("BPM: 120  Sig: 4/4");
+
+        // Group Center: Transport
+        if (ImGui::Button("[ > ] Play", ImVec2(80, 0))) {
+            play_logic();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("[ || ] Stop", ImVec2(80, 0))) {
+            player.stop();
+        }
         ImGui::SameLine();
         ImGui::TextDisabled("|");
         ImGui::SameLine();
 
-        // Transport Controls
-        float button_width = 60.0f;
-        
-        // Right align buttons roughly
-        float available_width = ImGui::GetContentRegionAvail().x;
-        float buttons_start = available_width - (button_width * 4 + 25);
-        if (buttons_start > 0) ImGui::SameLine(buttons_start + ImGui::GetCursorPosX());
+        // Group BPM
+        static int bpm = 120;
+        ImGui::SetNextItemWidth(120);
+        if (ImGui::SliderInt("BPM", &bpm, 40, 240)) {
+            ScriptParser::set_global_bpm(bpm);
+        }
+        ImGui::SameLine();
+        ImGui::TextDisabled("|");
+        ImGui::SameLine();
 
-        if (ImGui::Button("Play", ImVec2(button_width, 0))) {
-            play_logic();
+        // Group Right: Files
+        float right_btns_w = 170.0f;
+        avail_w = ImGui::GetContentRegionAvail().x;
+        if (avail_w > right_btns_w) {
+            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + avail_w - right_btns_w);
         }
-        ImGui::SameLine();
-        if (ImGui::Button("Stop", ImVec2(button_width, 0))) {
-            player.stop();
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("Load", ImVec2(button_width, 0))) {
+
+        if (ImGui::Button("Load", ImVec2(80, 0))) {
             show_load_popup = true;
         }
         ImGui::SameLine();
-        if (ImGui::Button("Save", ImVec2(button_width, 0))) {
+        if (ImGui::Button("Save", ImVec2(80, 0))) {
             show_save_popup = true;
         }
         ImGui::End();

@@ -33,7 +33,7 @@
 - [x] Task: Conductor - User Manual Verification 'Phase 3: Visualization' (Protocol in workflow.md)
 
 ## Phase 4: Transport Toolbar and Final Polish
-- [ ] Task: Refactor Transport Toolbar
+- [~] Task: Refactor Transport Toolbar
     - [ ] Redesign footer into a docked toolbar with Play/Stop/Save icons
     - [ ] Add interactive BPM slider and input field
 - [ ] Task: Conductor - User Manual Verification 'Phase 4: Final Polish' (Protocol in workflow.md)

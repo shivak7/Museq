@@ -17,9 +17,11 @@ class ScriptParser {
 public:
     static Song parse(const std::string& file_path);
     static Song parse_string(const std::string& script_content);
+    static void set_global_bpm(int bpm);
 
 private:
     Song m_song;
+    static int s_global_bpm;
     std::map<std::string, FunctionDefinition> m_functions;
     std::map<std::string, Instrument> m_templates;
     std::map<std::string, std::string> m_globals;
