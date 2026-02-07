@@ -19,11 +19,13 @@
     - [x] Modify `main.cpp` instrument addition logic to prepend code to the start of `script_buffer` instead of appending
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Editor' (Protocol in workflow.md) 808260b
 
-## Phase 3: Asset Search and Shortcuts
-- [ ] Task: Implement Global Asset Search
-    - [ ] Add search filtering logic to `AssetManager` or sidebar render loop
-    - [ ] Recursively filter tree nodes based on the search query
-- [ ] Task: Implement Keyboard Shortcuts
+## Phase 3: Asset Search and Shortcuts [checkpoint: 26373d0]
+- [x] Task: Implement Global Asset Search [26373d0]
+    - [x] Add search filtering logic to `AssetManager` or sidebar render loop
+    - [x] Recursively filter tree nodes based on the search query
+- [x] Task: Implement Keyboard Shortcuts [26373d0]
+    - [x] Add `if (io.KeyCtrl && ImGui::IsKeyPressed(...))` checks in the main loop for P, S, L, E, Space
+- [ ] Task: Conductor - User Manual Verification 'Phase 3: Assets & Keys' (Protocol in workflow.md) 26373d0
     - [ ] Add `if (io.KeyCtrl && ImGui::IsKeyPressed(...))` checks in the main loop for P, S, L, E, Space
 - [ ] Task: Conductor - User Manual Verification 'Phase 3: Assets & Keys' (Protocol in workflow.md)
 
