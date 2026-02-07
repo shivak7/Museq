@@ -220,12 +220,28 @@ Instruments can have multiple effects applied in a chain.
 | `fadein` | `<time_ms>` | Gradually increases volume at the start. |
 | `fadeout` | `<time_ms>` | Gradually decreases volume at the end. |
 | `tremolo` | `<rate_hz> <depth>` | Amplitude modulation. Depth: 0.0 to 1.0. |
+| `reverb` | `<room_size> <damp>` | Spatial reverb. Room size and dampening: 0.0 to 1.0. |
 
 ```museq
 instrument SpacePad {
     waveform triangle
     effect tremolo 5 0.5
+    effect reverb 0.8 0.5
     effect delay 400 0.4
+}
+```
+
+#### Sequence-level Effects
+Effects can also be applied to entire blocks of music (sequential or parallel). This is useful for adding global reverb or distortion to a group of instruments.
+
+```museq
+sequential {
+    effect reverb 0.7 0.4
+    
+    parallel {
+        Piano { notes C4, E4 }
+        Violin { notes G4, B4 }
+    }
 }
 ```
 
