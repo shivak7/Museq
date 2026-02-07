@@ -52,10 +52,18 @@ public:
     AssetNode get_soundfont_tree(const std::string& filter = "") const;
     AssetNode get_sample_tree(const std::string& filter = "") const;
 
+    // Favorites
+    void toggle_favorite(const std::string& path);
+    bool is_favorite(const std::string& path) const;
+    const std::vector<std::string>& get_favorites() const;
+    void load_favorites();
+    void save_favorites();
+
 private:
     std::vector<std::string> m_watched_folders;
     std::vector<SF2Info> m_soundfonts;
     std::vector<std::string> m_samples;
+    std::vector<std::string> m_favorites;
 
     void scan_directory(const fs::path& path);
     void process_sf2(const fs::path& path);

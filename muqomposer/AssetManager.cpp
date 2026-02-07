@@ -2,6 +2,7 @@
 #include "tsf.h"
 #include <iostream>
 #include <algorithm>
+#include <fstream>
 
 AssetManager::AssetManager() {
     // Default watched folder
@@ -10,6 +11,44 @@ AssetManager::AssetManager() {
     }
     if (fs::exists("sounds")) {
         add_watched_folder(fs::absolute("sounds").string());
+    }
+    load_favorites();
+}
+
+void AssetManager::toggle_favorite(const std::string& path) {
+    auto it = std::find(m_favorites.begin(), m_favorites.end(), path);
+    if (it != m_favorites.end()) {
+        m_favorites.erase(it);
+    } else {
+        m_favorites.push_back(path);
+    }
+    save_favorites();
+}
+
+bool AssetManager::is_favorite(const std::string& path) const {
+    return std::find(m_favorites.begin(), m_favorites.end(), path) != m_favorites.end();
+}
+
+const std::vector<std::string>& AssetManager::get_favorites() const {
+    return m_favorites;
+}
+
+void AssetManager::load_favorites() {
+    std::ifstream in("favorites.txt");
+    if (in.is_open()) {
+        std::string line;
+        while (std::getline(in, line)) {
+            if (!line.empty()) m_favorites.push_back(line);
+        }
+    }
+}
+
+void AssetManager::save_favorites() {
+    std::ofstream out("favorites.txt");
+    if (out.is_open()) {
+        for (const auto& f : m_favorites) {
+            out << f << "\n";
+        }
     }
 }
 
