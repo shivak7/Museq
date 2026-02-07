@@ -3,6 +3,7 @@
 #include <iostream>
 #include <algorithm>
 #include <fstream>
+#include <sstream>
 
 AssetManager::AssetManager() {
     // Default watched folder
