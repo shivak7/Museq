@@ -19,6 +19,7 @@
 #include "AudioPlayer.h"
 #include "ScriptParser.h"
 #include "AssetManager.h"
+#include "SplashUtils.h"
 #include <fstream>
 #include <filesystem>
 #include <functional>
@@ -119,9 +120,20 @@ int main(int, char**) {
     const char* glsl_version = "#version 130";
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+    
+    // --- Phase 1: Borderless Initial State ---
+    glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
+    glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE); // Start hidden to prevent flash
 
-    // Create window with graphics context
-    GLFWwindow* window = glfwCreateWindow(1280, 720, "Muqomposer", NULL, NULL);
+    // Get monitor resolution for scaling
+    GLFWmonitor* primary = glfwGetPrimaryMonitor();
+    const GLFWvidmode* mode = glfwGetVideoMode(primary);
+    int monitor_w = mode->width;
+    int monitor_h = mode->height;
+
+    // Create window with initial splash size
+    // (We'll resize it once we load the image and know its aspect ratio)
+    GLFWwindow* window = glfwCreateWindow(800, 800, "Muqomposer", NULL, NULL);
     if (window == NULL) return 1;
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1); // Enable vsync
@@ -147,10 +159,21 @@ int main(int, char**) {
 
     // --- Splash Screen ---
     GLuint splash_texture = 0;
-    int splash_w = 0, splash_h = 0;
-    bool splash_loaded = load_texture_from_file(logo_path.c_str(), &splash_texture, &splash_w, &splash_h, true); // Invert colors
+    int img_w = 0, img_h = 0;
+    bool splash_loaded = load_texture_from_file(logo_path.c_str(), &splash_texture, &img_w, &img_h, true); // Invert colors
 
     if (splash_loaded) {
+        // --- Phase 1: Dynamic Scaling and Centering ---
+        SplashDimensions sd = calculate_splash_dims(monitor_w, monitor_h, img_w, img_h);
+        glfwSetWindowSize(window, sd.width, sd.height);
+        
+        // Center window
+        int xpos = (monitor_w - sd.width) / 2;
+        int ypos = (monitor_h - sd.height) / 2;
+        glfwSetWindowPos(window, xpos, ypos);
+        
+        glfwShowWindow(window);
+
         double start_time = glfwGetTime();
         while (glfwGetTime() - start_time < 2.0 && !glfwWindowShouldClose(window)) {
             glfwPollEvents();
@@ -159,25 +182,20 @@ int main(int, char**) {
             ImGui::NewFrame();
 
             ImGui::SetNextWindowPos(ImVec2(0, 0));
-            ImGui::SetNextWindowSize(io.DisplaySize);
+            ImGui::SetNextWindowSize(ImVec2((float)sd.width, (float)sd.height));
             ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.1f, 0.1f, 0.1f, 1.0f)); // Dark background
             ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
             ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
             
             ImGui::Begin("Splash", NULL, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoInputs);
             
-            // Center Image using DrawList for pixel-perfect placement
-            float x1 = (io.DisplaySize.x - (float)splash_w) * 0.5f;
-            float y1 = (io.DisplaySize.y - (float)splash_h) * 0.5f;
-            float x2 = x1 + (float)splash_w;
-            float y2 = y1 + (float)splash_h;
-            
+            // Draw scaled image to fill the window
             float alpha = 1.0f;
             double elapsed = glfwGetTime() - start_time;
             if (elapsed < 0.5) alpha = (float)(elapsed / 0.5);
             if (elapsed > 1.5) alpha = (float)(1.0 - (elapsed - 1.5) / 0.5);
             
-            ImGui::GetWindowDrawList()->AddImage((void*)(intptr_t)splash_texture, ImVec2(x1, y1), ImVec2(x2, y2), ImVec2(0,0), ImVec2(1,1), ImColor(1.0f, 1.0f, 1.0f, alpha));
+            ImGui::GetWindowDrawList()->AddImage((void*)(intptr_t)splash_texture, ImVec2(0, 0), ImVec2((float)sd.width, (float)sd.height), ImVec2(0,0), ImVec2(1,1), ImColor(1.0f, 1.0f, 1.0f, alpha));
             
             ImGui::End();
             ImGui::PopStyleVar(2);
@@ -192,10 +210,15 @@ int main(int, char**) {
             ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
             glfwSwapBuffers(window);
         }
-        // Cleanup Splash
-        // (Texture could be kept for about box, but let's free it for now or reuse)
-        // glDeleteTextures(1, &splash_texture); 
     }
+
+    // Restore Standard Window State after Splash
+    glfwSetWindowAttrib(window, GLFW_DECORATED, GLFW_TRUE);
+    glfwSetWindowSize(window, 1280, 720);
+    // Re-center restored window
+    glfwSetWindowPos(window, (monitor_w - 1280) / 2, (monitor_h - 720) / 2);
+    // In case splash failed to show it
+    glfwShowWindow(window);
 
     // Museq Engine State
     AudioPlayer player;

@@ -186,3 +186,6 @@ target_link_libraries(test_conflict_resolution PRIVATE museq_engine)
 
 add_executable(test_fft testing/test_fft.cpp)
 target_link_libraries(test_fft PRIVATE museq_engine)
+
+add_executable(test_splash_scaling testing/test_splash_scaling.cpp)
+target_link_libraries(test_splash_scaling PRIVATE museq_engine)
