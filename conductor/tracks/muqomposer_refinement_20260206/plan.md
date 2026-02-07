@@ -1,13 +1,13 @@
 # Implementation Plan - Muqomposer Features and Bugfixes
 
-## Phase 1: Branding and Basic UI Polish
-- [ ] Task: Integrate Window Icons and Splash Screen
-    - [ ] Implement dark splash screen logic in `muqomposer/main.cpp` using inverted logo colors
-    - [ ] Set application window icon to `src/Museq.rc` (Windows) and `Museq_logo.png` (Linux/macOS)
-- [ ] Task: Implement 'Clear All' for Assets
-    - [ ] Add `clear_watched_folders()` to `AssetManager`
-    - [ ] Add "Clear All" button to the sidebar UI
-- [ ] Task: Conductor - User Manual Verification 'Phase 1: UI Polish' (Protocol in workflow.md)
+## Phase 1: Branding and Basic UI Polish [checkpoint: b911c75]
+- [x] Task: Integrate Window Icons and Splash Screen
+    - [x] Implement dark splash screen logic in `muqomposer/main.cpp` using inverted logo colors
+    - [x] Set application window icon to `src/Museq.rc` (Windows) and `Museq_logo.png` (Linux/macOS)
+- [x] Task: Implement 'Clear All' for Assets
+    - [x] Add `clear_watched_folders()` to `AssetManager`
+    - [x] Add "Clear All" button to the sidebar UI
+- [x] Task: Conductor - User Manual Verification 'Phase 1: UI Polish' (Protocol in workflow.md) b911c75
 
 ## Phase 2: Asset Logic and Collision Handling
 - [ ] Task: Implement Smart Script Insertion
