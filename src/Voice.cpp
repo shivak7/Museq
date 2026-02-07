@@ -130,30 +130,39 @@ void Voice::render(float* buffer, int frame_count, float sample_rate, std::map<s
         float time_in_note = (float)samples_into_note / sample_rate;
         float envelope_val = 0.0f;
         
-        // If we are past the notes but still in total_duration, we are in the final release tail
-        bool in_final_tail = (current_note_idx >= notes.size());
+        float note_dur_secs = note.duration / 1000.0f;
 
         if (legato) {
             bool is_first = (current_note_idx == 0);
-            bool is_last = (current_note_idx == notes.size() - 1 || in_final_tail);
-            if (is_first && time_in_note < env.attack) envelope_val = time_in_note / env.attack;
-            else if (is_first && time_in_note < env.attack + env.decay) envelope_val = 1.0f - (1.0f - env.sustain) * ((time_in_note - env.attack) / env.decay);
-            else if (is_last && (in_final_tail || time_in_note > (note.duration / 1000.0f) - env.release)) {
-                float tail_time = in_final_tail ? (time_in_note + (note.duration / 1000.0f)) : time_in_note;
-                float release_start = (note.duration / 1000.0f) - env.release;
-                envelope_val = env.sustain * (1.0f - ((time_in_note - release_start) / env.release));
+            bool is_last_segment = (current_note_idx >= notes.size() - 1);
+            
+            if (is_first && time_in_note < env.attack) {
+                envelope_val = time_in_note / env.attack;
+            } else if (is_first && time_in_note < env.attack + env.decay) {
+                envelope_val = 1.0f - (1.0f - env.sustain) * ((time_in_note - env.attack) / env.decay);
+            } else if (is_last_segment && time_in_note > note_dur_secs) {
+                // Final release tail
+                float release_time = time_in_note - note_dur_secs;
+                envelope_val = env.sustain * (1.0f - (release_time / env.release));
+            } else {
+                envelope_val = env.sustain;
             }
-            else envelope_val = env.sustain;
         } else {
-            if (time_in_note < env.attack) envelope_val = time_in_note / env.attack;
-            else if (time_in_note < env.attack + env.decay) envelope_val = 1.0f - (1.0f - env.sustain) * ((time_in_note - env.attack) / env.decay);
-            else if (in_final_tail || time_in_note >= (note.duration / 1000.0f) - env.release) {
-                float release_start = (note.duration / 1000.0f) - env.release;
-                envelope_val = env.sustain * (1.0f - ((time_in_note - release_start) / env.release));
+            if (time_in_note < env.attack) {
+                envelope_val = time_in_note / env.attack;
+            } else if (time_in_note < env.attack + env.decay) {
+                envelope_val = 1.0f - (1.0f - env.sustain) * ((time_in_note - env.attack) / env.decay);
+            } else if (time_in_note < note_dur_secs) {
+                envelope_val = env.sustain;
+            } else {
+                // Release phase (starts at note_dur_secs)
+                float release_time = time_in_note - note_dur_secs;
+                envelope_val = env.sustain * (1.0f - (release_time / env.release));
             }
-            else envelope_val = env.sustain;
         }
+        
         if (envelope_val < 0.0f) envelope_val = 0.0f;
+        if (envelope_val > 1.0f) envelope_val = 1.0f;
 
         // Universal LFO / Pitch Calculation
         float current_freq = target_freq;
@@ -225,14 +234,20 @@ void Voice::render(float* buffer, int frame_count, float sample_rate, std::map<s
 
         samples_into_note++;
         total_samples_rendered++;
-        if (!in_final_tail && samples_into_note >= note_duration_samples) {
+
+        // Advance to next note if current one is finished
+        // BUT for the last note, we don't reset samples_into_note, we let it overflow for the tail
+        if (current_note_idx < notes.size() - 1 && samples_into_note >= note_duration_samples) {
             samples_into_note = 0;
             current_note_idx++;
             last_freq = current_freq;
-            if (soundfont_instance && current_note_idx < notes.size()) {
+            if (soundfont_instance) {
                 tsf_channel_note_off(soundfont_instance, 0, note.pitch);
                 tsf_channel_note_on(soundfont_instance, 0, notes[current_note_idx].pitch, notes[current_note_idx].velocity / 127.0f);
             }
+        } else if (current_note_idx == notes.size() - 1 && samples_into_note == (int)note_duration_samples) {
+            // Nominal duration of last note reached, trigger note off but KEEP rendering for tail
+            if (soundfont_instance) tsf_channel_note_off(soundfont_instance, 0, note.pitch);
         }
     }
 
