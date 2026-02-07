@@ -20,17 +20,17 @@
 - [x] Task: Conductor - User Manual Verification 'Phase 2: Collision Handling' (Protocol in workflow.md) 4dac000
 
 ## Phase 3: Enhanced Previews and Visualization
-- [ ] Task: Implement Audio Preview Safety Fade
-    - [ ] Update `AudioPlayer` to handle a 5-second hard cap for previews
-    - [ ] Implement real-time volume ramp-down starting at 4 seconds in the audio callback
-- [ ] Task: Expand Preview Support
-    - [ ] Add preview functionality for Synth templates in the sidebar
-    - [ ] Add preview functionality for individual Sample files
-- [ ] Task: Implement FFT Spectrum Analyzer
-    - [ ] Integrate a simple FFT implementation (or use a lightweight library if available)
-    - [ ] Add `get_spectrum_data` to `AudioPlayer`
-    - [ ] Create an ImGui-based Spectrum visualizer widget in the output panel
-- [ ] Task: Conductor - User Manual Verification 'Phase 3: Visualization' (Protocol in workflow.md)
+- [x] Task: Implement Audio Preview Safety Fade
+    - [x] Update `AudioPlayer` to handle a 5-second hard cap for previews
+    - [x] Implement real-time volume ramp-down starting at 4 seconds in the audio callback
+- [x] Task: Expand Preview Support
+    - [x] Add preview functionality for Synth templates in the sidebar
+    - [x] Add preview functionality for individual Sample files
+- [x] Task: Implement FFT Spectrum Analyzer
+    - [x] Integrate a simple FFT implementation (or use a lightweight library if available)
+    - [x] Add `get_spectrum_data` to `AudioPlayer`
+    - [x] Create an ImGui-based Spectrum visualizer widget in the output panel
+- [x] Task: Conductor - User Manual Verification 'Phase 3: Visualization' (Protocol in workflow.md)
 
 ## Phase 4: Transport Toolbar and Final Polish
 - [ ] Task: Refactor Transport Toolbar

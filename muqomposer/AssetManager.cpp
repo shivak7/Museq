@@ -15,6 +15,107 @@ AssetManager::AssetManager() {
     load_favorites();
 }
 
+bool AssetManager::check_asset_exists_in_script(const std::string& script, const std::string& type, const std::string& path, int bank, int preset) {
+    std::stringstream ss(script);
+    std::string line;
+    bool inside_instrument = false;
+    
+    std::string current_inst_type;
+    std::string current_inst_path;
+    int current_inst_bank = -1;
+    int current_inst_preset = -1;
+    
+    while (std::getline(ss, line)) {
+        if (line.find("instrument ") != std::string::npos && line.find("{") != std::string::npos) {
+            inside_instrument = true;
+            current_inst_type = "";
+            current_inst_path = "";
+            current_inst_bank = -1;
+            current_inst_preset = -1;
+            continue;
+        }
+        
+        if (inside_instrument) {
+            if (line.find("}") != std::string::npos) {
+                inside_instrument = false;
+                // End of instrument, check match
+                if (type == "soundfont") {
+                    // Normalize paths for comparison (simple check)
+                    bool path_match = (current_inst_path == path) || (fs::path(current_inst_path) == fs::path(path));
+                    
+                    if (current_inst_type == "soundfont" && 
+                        path_match &&
+                        current_inst_bank == bank &&
+                        current_inst_preset == preset) {
+                        return true;
+                    }
+                } else if (type == "sample") {
+                    bool path_match = (current_inst_path == path) || (fs::path(current_inst_path) == fs::path(path));
+                    
+                    if (current_inst_type == "sample" && path_match) {
+                        return true;
+                    }
+                }
+                continue;
+            }
+            
+            // Parse fields
+            if (line.find("soundfont ") != std::string::npos) {
+                size_t start = line.find("\"");
+                if (start != std::string::npos) {
+                    start++;
+                    size_t end = line.find("\"", start);
+                    if (end != std::string::npos) {
+                        current_inst_path = line.substr(start, end - start);
+                        current_inst_type = "soundfont";
+                    }
+                }
+            }
+            else if (line.find("sample ") != std::string::npos) {
+                size_t start = line.find("\"");
+                if (start != std::string::npos) {
+                    start++;
+                    size_t end = line.find("\"", start);
+                    if (end != std::string::npos) {
+                        current_inst_path = line.substr(start, end - start);
+                        current_inst_type = "sample";
+                    }
+                }
+            }
+            else if (line.find("bank ") != std::string::npos) {
+                std::stringstream ls(line);
+                std::string temp;
+                int val;
+                ls >> temp >> val; 
+                current_inst_bank = val;
+            }
+            else if (line.find("preset ") != std::string::npos) {
+                std::stringstream ls(line);
+                std::string temp;
+                int val;
+                ls >> temp >> val;
+                current_inst_preset = val;
+            }
+        }
+    }
+    return false;
+}
+
+std::string AssetManager::get_unique_instrument_name(const std::string& base_name, const std::vector<std::string>& existing_names) {
+    if (std::find(existing_names.begin(), existing_names.end(), base_name) == existing_names.end()) {
+        return base_name;
+    }
+    
+    int index = 1;
+    while (true) {
+        std::string candidate = base_name + "_" + std::to_string(index);
+        if (std::find(existing_names.begin(), existing_names.end(), candidate) == existing_names.end()) {
+            return candidate;
+        }
+        index++;
+    }
+}
+
 void AssetManager::toggle_favorite(const std::string& path) {
     auto it = std::find(m_favorites.begin(), m_favorites.end(), path);
     if (it != m_favorites.end()) {

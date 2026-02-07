@@ -235,7 +235,7 @@ int main(int, char**) {
         preview_inst.sequence.add_note(Note(60, 1000, 100)); // C4 for 1s
         preview_song.root->children.push_back(std::make_shared<InstrumentElement>(preview_inst));
         
-        player.play(preview_song);
+        player.play(preview_song, true);
     };
 
     // File State
@@ -321,10 +321,16 @@ int main(int, char**) {
                             ImGui::SameLine();
 
                             if (ImGui::Selectable(p.name.c_str())) {
-                                char buf[512];
-                                snprintf(buf, sizeof(buf), "\n\ninstrument %s {\n    soundfont \"%s\"\n    bank %d\n    preset %d\n}", 
-                                    p.name.c_str(), it->path.c_str(), p.bank, p.preset);
-                                if (strlen(script_buffer) + strlen(buf) < IM_ARRAYSIZE(script_buffer)) strcat(script_buffer, buf);
+                                // Smart Insertion Check
+                                if (!AssetManager::check_asset_exists_in_script(script_buffer, "soundfont", it->path, p.bank, p.preset)) {
+                                    std::string unique_name = AssetManager::get_unique_instrument_name(p.name, active_instrument_names);
+                                    active_instrument_names.push_back(unique_name); // Optimistic update
+
+                                    char buf[512];
+                                    snprintf(buf, sizeof(buf), "\n\ninstrument %s {\n    soundfont \"%s\"\n    bank %d\n    preset %d\n}", 
+                                        unique_name.c_str(), it->path.c_str(), p.bank, p.preset);
+                                    if (strlen(script_buffer) + strlen(buf) < IM_ARRAYSIZE(script_buffer)) strcat(script_buffer, buf);
+                                }
                             }
                             
                             // Drag and Drop Source
@@ -342,10 +348,16 @@ int main(int, char**) {
                 }
             } else if (node.type == AssetType::SAMPLE) {
                 if (ImGui::Selectable(node.name.c_str())) {
-                    char buf[512];
-                    std::string clean_name = node.name.substr(0, node.name.find_last_of("."));
-                    snprintf(buf, sizeof(buf), "\n\ninstrument %s {\n    sample \"%s\"\n}", clean_name.c_str(), node.full_path.c_str());
-                    if (strlen(script_buffer) + strlen(buf) < IM_ARRAYSIZE(script_buffer)) strcat(script_buffer, buf);
+                    // Smart Insertion Check
+                    if (!AssetManager::check_asset_exists_in_script(script_buffer, "sample", node.full_path)) {
+                        std::string clean_name = node.name.substr(0, node.name.find_last_of("."));
+                        std::string unique_name = AssetManager::get_unique_instrument_name(clean_name, active_instrument_names);
+                        active_instrument_names.push_back(unique_name); // Optimistic update
+
+                        char buf[512];
+                        snprintf(buf, sizeof(buf), "\n\ninstrument %s {\n    sample \"%s\"\n}", unique_name.c_str(), node.full_path.c_str());
+                        if (strlen(script_buffer) + strlen(buf) < IM_ARRAYSIZE(script_buffer)) strcat(script_buffer, buf);
+                    }
                 }
                 
                 // Drag and Drop Source
@@ -513,9 +525,24 @@ int main(int, char**) {
 
         if (ImGui::CollapsingHeader("Synths")) {
             for (const auto& synth : synth_templates) {
+                ImGui::PushID(synth.c_str());
+                if (ImGui::Button("[>]", ImVec2(35, 0))) {
+                    // Preview Synth
+                    Song preview_song;
+                    Instrument preview_inst(synth, Waveform::SAWTOOTH); // Default for template
+                    preview_inst.sequence.add_note(Note(60, 1000, 100));
+                    preview_song.root->children.push_back(std::make_shared<InstrumentElement>(preview_inst));
+                    player.play(preview_song, true);
+                }
+                ImGui::PopID();
+                ImGui::SameLine();
+
                 if (ImGui::Selectable(synth.c_str())) {
+                    std::string unique_name = AssetManager::get_unique_instrument_name(synth, active_instrument_names);
+                    active_instrument_names.push_back(unique_name);
+
                     char buf[512];
-                    snprintf(buf, sizeof(buf), "\n\ninstrument %s {\n    waveform sawtooth\n    envelope 0.1 0.2 0.5 0.3\n}", synth.c_str());
+                    snprintf(buf, sizeof(buf), "\n\ninstrument %s {\n    waveform sawtooth\n    envelope 0.1 0.2 0.5 0.3\n}", unique_name.c_str());
                     if (strlen(script_buffer) + strlen(buf) < IM_ARRAYSIZE(script_buffer)) strcat(script_buffer, buf);
                 }
             }
@@ -577,8 +604,62 @@ int main(int, char**) {
         if (ImGui::BeginDragDropTarget()) {
             if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ASSET_CODE")) {
                 const char* code = (const char*)payload->Data;
-                if (strlen(script_buffer) + strlen(code) < IM_ARRAYSIZE(script_buffer)) {
-                    strcat(script_buffer, code);
+                
+                // Parse dropped code to check existence
+                std::string code_str = code;
+                std::string type, path;
+                int bank = -1, preset = -1;
+                bool should_add = true;
+
+                if (code_str.find("soundfont \"") != std::string::npos) {
+                    type = "soundfont";
+                    size_t s = code_str.find("soundfont \"") + 11;
+                    size_t e = code_str.find("\"", s);
+                    if (s != std::string::npos && e != std::string::npos) path = code_str.substr(s, e-s);
+                    
+                    if (code_str.find("bank ") != std::string::npos) {
+                        std::stringstream ss(code_str.substr(code_str.find("bank ")));
+                        std::string tmp; ss >> tmp >> bank;
+                    }
+                    if (code_str.find("preset ") != std::string::npos) {
+                        std::stringstream ss(code_str.substr(code_str.find("preset ")));
+                        std::string tmp; ss >> tmp >> preset;
+                    }
+                } else if (code_str.find("sample \"") != std::string::npos) {
+                    type = "sample";
+                    size_t s = code_str.find("sample \"") + 8;
+                    size_t e = code_str.find("\"", s);
+                    if (s != std::string::npos && e != std::string::npos) path = code_str.substr(s, e-s);
+                }
+
+                if (!type.empty()) {
+                    if (AssetManager::check_asset_exists_in_script(script_buffer, type, path, bank, preset)) {
+                        should_add = false;
+                    }
+                }
+
+                if (should_add) {
+                    std::string final_code = code;
+                    
+                    // Extract name and handle conflict
+                    size_t instr_pos = final_code.find("instrument ");
+                    if (instr_pos != std::string::npos) {
+                        size_t name_start = instr_pos + 11;
+                        size_t name_end = final_code.find(" {", name_start);
+                        if (name_end != std::string::npos) {
+                            std::string base_name = final_code.substr(name_start, name_end - name_start);
+                            std::string unique_name = AssetManager::get_unique_instrument_name(base_name, active_instrument_names);
+                            
+                            if (unique_name != base_name) {
+                                final_code.replace(name_start, name_end - name_start, unique_name);
+                            }
+                            active_instrument_names.push_back(unique_name);
+                        }
+                    }
+
+                    if (strlen(script_buffer) + final_code.length() < IM_ARRAYSIZE(script_buffer)) {
+                        strcat(script_buffer, final_code.c_str());
+                    }
                 }
             }
             ImGui::EndDragDropTarget();
@@ -589,14 +670,28 @@ int main(int, char**) {
         ImGui::SetNextWindowPos(ImVec2(SIDEBAR_WIDTH, editor_height));
         ImGui::SetNextWindowSize(ImVec2(main_area_width, visualizer_height));
         ImGui::Begin("Visualizer", NULL, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar);
-        ImGui::TextDisabled("Output Waveform");
         
+        float vis_avail_w = ImGui::GetContentRegionAvail().x;
+        ImGui::BeginChild("WaveformView", ImVec2(vis_avail_w * 0.5f, 0));
+        ImGui::TextDisabled("Output Waveform");
         static float vis_samples[512];
         player.get_visualization_data(vis_samples, 512);
-
         ImGui::PushStyleColor(ImGuiCol_PlotLines, ImVec4(0.0f, 0.8f, 1.0f, 1.0f));
         ImGui::PlotLines("##Waveform", vis_samples, IM_ARRAYSIZE(vis_samples), 0, NULL, -1.0f, 1.0f, ImVec2(-FLT_MIN, -FLT_MIN));
         ImGui::PopStyleColor();
+        ImGui::EndChild();
+
+        ImGui::SameLine();
+
+        ImGui::BeginChild("SpectrumView", ImVec2(0, 0));
+        ImGui::TextDisabled("Spectrum Analyzer");
+        static float spec_samples[256];
+        player.get_spectrum_data(spec_samples, 256);
+        ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(1.0f, 0.6f, 0.0f, 1.0f));
+        ImGui::PlotHistogram("##Spectrum", spec_samples, IM_ARRAYSIZE(spec_samples), 0, NULL, 0.0f, 0.05f, ImVec2(-FLT_MIN, -FLT_MIN));
+        ImGui::PopStyleColor();
+        ImGui::EndChild();
+
         ImGui::End();
 
         // --- 4. FOOTER (Status Bar) ---

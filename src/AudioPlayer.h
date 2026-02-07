@@ -17,7 +17,7 @@ public:
     bool init();
 
     // Start playing a song
-    void play(const Song& song);
+    void play(const Song& song, bool is_preview = false);
 
     // Stop playback
     void stop();
@@ -28,6 +28,7 @@ public:
     // Visualization
     static const int VIS_BUFFER_SIZE = 1024;
     void get_visualization_data(float* out_buffer, int count);
+    void get_spectrum_data(float* out_magnitudes, int count);
 
 private:
     // Miniaudio device handle (void* to avoid exposing miniaudio.h in header)
@@ -35,6 +36,8 @@ private:
     
     // Playback state
     bool m_playing = false;
+    bool m_is_preview = false;
+    double m_preview_samples_elapsed = 0;
     AudioRenderer m_renderer;
 
     // Visualization Ring Buffer

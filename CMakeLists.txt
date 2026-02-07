@@ -177,3 +177,12 @@ target_link_libraries(test_gui_resources PRIVATE museq_engine)
 
 add_executable(test_asset_clear testing/test_asset_clear.cpp muqomposer/AssetManager.cpp)
 target_link_libraries(test_asset_clear PRIVATE museq_engine)
+
+add_executable(test_asset_check testing/test_asset_check.cpp muqomposer/AssetManager.cpp)
+target_link_libraries(test_asset_check PRIVATE museq_engine)
+
+add_executable(test_conflict_resolution testing/test_conflict_resolution.cpp)
+target_link_libraries(test_conflict_resolution PRIVATE museq_engine)
+
+add_executable(test_fft testing/test_fft.cpp)
+target_link_libraries(test_fft PRIVATE museq_engine)

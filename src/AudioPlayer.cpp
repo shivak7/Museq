@@ -7,6 +7,37 @@
 #include <iostream>
 #include <cstring>
 #include <algorithm>
+#include <complex>
+#include <vector>
+#include <cmath>
+
+namespace {
+    const double PI = 3.14159265358979323846;
+
+    // Iterative FFT for better performance
+    void fft_iterative(std::vector<std::complex<double>>& a) {
+        int n = a.size();
+        for (int i = 1, j = 0; i < n; i++) {
+            int bit = n >> 1;
+            for (; j & bit; bit >>= 1) j ^= bit;
+            j ^= bit;
+            if (i < j) std::swap(a[i], a[j]);
+        }
+        for (int len = 2; len <= n; len <<= 1) {
+            double ang = 2 * PI / len;
+            std::complex<double> wlen(cos(ang), sin(ang));
+            for (int i = 0; i < n; i += len) {
+                std::complex<double> w(1);
+                for (int j = 0; j < len / 2; j++) {
+                    std::complex<double> u = a[i + j], v = a[i + j + len / 2] * w;
+                    a[i + j] = u + v;
+                    a[i + j + len / 2] = u - v;
+                    w *= wlen;
+                }
+            }
+        }
+    }
+}
 
 AudioPlayer::AudioPlayer() {
     m_device = new ma_device;
@@ -35,11 +66,13 @@ bool AudioPlayer::init() {
     return true;
 }
 
-void AudioPlayer::play(const Song& song) {
+void AudioPlayer::play(const Song& song, bool is_preview) {
     stop();
 
     m_renderer.load(song, 44100);
     m_playing = true;
+    m_is_preview = is_preview;
+    m_preview_samples_elapsed = 0;
 
     if (ma_device_start((ma_device*)m_device) != MA_SUCCESS) {
         std::cerr << "Failed to start playback device." << std::endl;
@@ -48,6 +81,7 @@ void AudioPlayer::play(const Song& song) {
 
 void AudioPlayer::stop() {
     m_playing = false;
+    m_is_preview = false;
     ma_device_stop((ma_device*)m_device);
 }
 
@@ -66,6 +100,29 @@ void AudioPlayer::get_visualization_data(float* out_buffer, int count) {
     }
 }
 
+void AudioPlayer::get_spectrum_data(float* out_magnitudes, int count) {
+    const int N = 1024;
+    std::vector<std::complex<double>> data(N);
+    
+    float buffer[N];
+    get_visualization_data(buffer, N);
+    
+    for (int i = 0; i < N; ++i) {
+        // Hann window to reduce leakage
+        double window = 0.5 * (1.0 - cos(2.0 * PI * i / (N - 1)));
+        data[i] = std::complex<double>(buffer[i] * window, 0);
+    }
+    
+    fft_iterative(data);
+    
+    // Magnitudes (only first half)
+    for (int i = 0; i < count && i < N/2; ++i) {
+        // Normalize by N and apply a simple logarithmic-like scaling for better visual
+        float mag = (float)std::abs(data[i]) / N;
+        out_magnitudes[i] = mag;
+    }
+}
+
 void AudioPlayer::data_callback(ma_device* pDevice, void* pOutput, const void* pInput, unsigned int frameCount) {
     AudioPlayer* player = (AudioPlayer*)pDevice->pUserData;
     if (!player || !player->m_playing) {
@@ -74,6 +131,27 @@ void AudioPlayer::data_callback(ma_device* pDevice, void* pOutput, const void* p
     }
 
     player->m_renderer.render_block((float*)pOutput, frameCount);
+
+    // Apply Preview Fade-out if needed
+    if (player->m_is_preview) {
+        float* out = (float*)pOutput;
+        double fade_start = 4.0 * 44100.0;
+        double preview_end = 5.0 * 44100.0;
+
+        for (unsigned int i = 0; i < frameCount; ++i) {
+            float gain = 1.0f;
+            if (player->m_preview_samples_elapsed >= preview_end) {
+                gain = 0.0f;
+                player->m_playing = false;
+            } else if (player->m_preview_samples_elapsed >= fade_start) {
+                gain = 1.0f - (float)((player->m_preview_samples_elapsed - fade_start) / (preview_end - fade_start));
+            }
+            
+            out[i * 2] *= gain;
+            out[i * 2 + 1] *= gain;
+            player->m_preview_samples_elapsed++;
+        }
+    }
 
     // Update Visualization Buffer (Mono downmix of the block)
     float* out = (float*)pOutput;

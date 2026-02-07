@@ -43,7 +43,13 @@ public:
     void add_watched_folder(const std::string& path);
     void clear_watched_folders();
     const std::vector<std::string>& get_watched_folders() const;
+
+    // Helper to check for existing definitions in script
+    static bool check_asset_exists_in_script(const std::string& script, const std::string& type, const std::string& path, int bank = -1, int preset = -1);
     
+    // Helper to resolve name conflicts
+    static std::string get_unique_instrument_name(const std::string& base_name, const std::vector<std::string>& existing_names);
+
     // Asset Retrieval
     void refresh_assets();
     const std::vector<SF2Info>& get_soundfonts() const;
