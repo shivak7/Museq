@@ -43,9 +43,16 @@ add_library(museq_engine STATIC ${ENGINE_SOURCES})
 
 # 1. sndfile
 find_package(SndFile CONFIG QUIET)
+if(NOT TARGET SndFile::sndfile)
+    find_package(libsndfile CONFIG QUIET)
+endif()
+
 if(TARGET SndFile::sndfile)
     message(STATUS "Found SndFile via Config")
     target_link_libraries(museq_engine PUBLIC SndFile::sndfile)
+elseif(TARGET libsndfile::sndfile)
+    message(STATUS "Found libsndfile via Config")
+    target_link_libraries(museq_engine PUBLIC libsndfile::sndfile)
 else()
     find_package(PkgConfig QUIET)
     pkg_check_modules(SNDFILE IMPORTED_TARGET sndfile)
@@ -96,9 +103,16 @@ endif()
 
 # 3. LAME
 find_package(mp3lame CONFIG QUIET)
+if(NOT TARGET mp3lame::mp3lame)
+    find_package(lame CONFIG QUIET)
+endif()
+
 if(TARGET mp3lame::mp3lame)
     message(STATUS "Found mp3lame via Config")
     target_link_libraries(museq_engine PUBLIC mp3lame::mp3lame)
+elseif(TARGET lame::lame)
+    message(STATUS "Found lame via Config")
+    target_link_libraries(museq_engine PUBLIC lame::lame)
 else()
     find_package(PkgConfig QUIET)
     pkg_check_modules(LAME IMPORTED_TARGET lame)
