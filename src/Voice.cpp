@@ -88,10 +88,7 @@ Voice::~Voice() {
 void Voice::render(float* buffer, int frame_count, float sample_rate, std::map<std::string, tsf*>& soundfonts) {
     if (is_finished) return;
 
-    bool legato = instrument.portamento_time > 0;
     const auto& notes = instrument.sequence.notes;
-
-    // Local buffer for this voice
     std::vector<float> local_buffer(frame_count * 2, 0.0f);
 
     for (int f = 0; f < frame_count; ++f) {
@@ -118,63 +115,60 @@ void Voice::render(float* buffer, int frame_count, float sample_rate, std::map<s
             continue;
         }
 
-        // --- RENDER SAMPLE ---
+        // --- PREPARE RENDER CONTEXT ---
         float mono_sample = 0.0f;
         float left_gain, right_gain;
         get_pan_gains(note.pan, left_gain, right_gain);
 
-        float target_freq = 440.0f * pow(2.0f, (note.pitch - 69.0f) / 12.0f);
-
-        // Universal Envelope Calculation
-        const auto& env = instrument.synth.envelope;
+        float target_freq = 440.0f * std::pow(2.0f, (note.pitch - 69.0f) / 12.0f);
         float time_in_note = (float)samples_into_note / sample_rate;
-        float envelope_val = 0.0f;
-        
         float note_dur_secs = note.duration / 1000.0f;
 
-        if (legato) {
-            bool is_first = (current_note_idx == 0);
-            bool is_last_segment = (current_note_idx >= notes.size() - 1);
-            
-            if (is_first && time_in_note < env.attack) {
-                envelope_val = time_in_note / env.attack;
-            } else if (is_first && time_in_note < env.attack + env.decay) {
-                envelope_val = 1.0f - (1.0f - env.sustain) * ((time_in_note - env.attack) / env.decay);
-            } else if (is_last_segment && time_in_note > note_dur_secs) {
-                // Final release tail
-                float release_time = time_in_note - note_dur_secs;
-                envelope_val = env.sustain * (1.0f - (release_time / env.release));
-            } else {
-                envelope_val = env.sustain;
-            }
+        // --- UNIVERSAL ENVELOPE ---
+        const auto& env = instrument.synth.envelope;
+        float envelope_val = 0.0f;
+        
+        if (time_in_note < env.attack) {
+            envelope_val = time_in_note / env.attack;
+        } else if (time_in_note < env.attack + env.decay) {
+            envelope_val = 1.0f - (1.0f - env.sustain) * ((time_in_note - env.attack) / env.decay);
+        } else if (current_note_idx >= notes.size() - 1 && time_in_note > note_dur_secs) {
+            // Final release tail
+            float release_time = time_in_note - note_dur_secs;
+            envelope_val = env.sustain * (1.0f - (release_time / env.release));
+        } else if (time_in_note < note_dur_secs) {
+            envelope_val = env.sustain;
         } else {
-            if (time_in_note < env.attack) {
-                envelope_val = time_in_note / env.attack;
-            } else if (time_in_note < env.attack + env.decay) {
-                envelope_val = 1.0f - (1.0f - env.sustain) * ((time_in_note - env.attack) / env.decay);
-            } else if (time_in_note < note_dur_secs) {
-                envelope_val = env.sustain;
-            } else {
-                // Release phase (starts at note_dur_secs)
-                float release_time = time_in_note - note_dur_secs;
-                envelope_val = env.sustain * (1.0f - (release_time / env.release));
-            }
+            // Handle transition release
+            float release_time = time_in_note - note_dur_secs;
+            envelope_val = env.sustain * (1.0f - (release_time / env.release));
         }
         
         if (envelope_val < 0.0f) envelope_val = 0.0f;
         if (envelope_val > 1.0f) envelope_val = 1.0f;
 
-        // Universal LFO / Pitch Calculation
-        float current_freq = target_freq;
+        // --- UNIVERSAL PORTAMENTO / LFO ---
+        float glide_freq = target_freq;
+        float portamento_samples = (instrument.portamento_time / 1000.0f) * sample_rate;
+
+        if (instrument.portamento_time > 0) {
+            if (last_freq < 0) last_freq = target_freq;
+            if (samples_into_note < portamento_samples) {
+                float t = (float)samples_into_note / portamento_samples;
+                glide_freq = last_freq + (target_freq - last_freq) * t;
+            }
+        }
+
         float lfo_val = 0.0f;
         if (instrument.synth.lfo.target != LFOTarget::NONE) {
             lfo_val = generate_sample_with_phase(instrument.synth.lfo.waveform, instrument.synth.lfo.frequency, sample_rate, lfo_phase);
             lfo_val *= instrument.synth.lfo.amount;
         }
         if (instrument.synth.lfo.target == LFOTarget::PITCH) {
-            current_freq *= pow(2.0f, lfo_val / 12.0f);
+            glide_freq *= std::pow(2.0f, lfo_val / 12.0f);
         }
 
+        // --- INSTRUMENT TYPE RENDERING ---
         if (instrument.type == InstrumentType::SOUNDFONT) {
             if (!soundfont_instance && soundfonts.count(instrument.soundfont_path)) {
                 soundfont_instance = tsf_copy(soundfonts[instrument.soundfont_path]);
@@ -185,14 +179,16 @@ void Voice::render(float* buffer, int frame_count, float sample_rate, std::map<s
             }
 
             if (soundfont_instance) {
-                // Adjust pitch if LFO is targeting it
-                if (instrument.synth.lfo.target == LFOTarget::PITCH) {
-                    tsf_channel_set_pitchwheel(soundfont_instance, 0, (int)(lfo_val * 8192.0f / 2.0f) + 8192); // Basic pitch wheel mapping
+                if (instrument.portamento_time > 0 || instrument.synth.lfo.target == LFOTarget::PITCH) {
+                    float semitone_offset = 12.0f * std::log2(glide_freq / target_freq);
+                    int wheel_val = (int)(8192.0f + (semitone_offset * 8192.0f / 2.0f));
+                    if (wheel_val < 0) wheel_val = 0;
+                    if (wheel_val > 16383) wheel_val = 16383;
+                    tsf_channel_set_pitchwheel(soundfont_instance, 0, wheel_val);
                 }
-
                 float stereo[2];
                 tsf_render_float(soundfont_instance, stereo, 1);
-                mono_sample = (stereo[0] + stereo[1]) * 0.5f; // Mix to mono
+                mono_sample = (stereo[0] + stereo[1]) * 0.5f;
             }
         } else if (instrument.type == InstrumentType::SAMPLER) {
             if (instrument.sampler) {
@@ -200,20 +196,10 @@ void Voice::render(float* buffer, int frame_count, float sample_rate, std::map<s
                 mono_sample *= (note.velocity / 127.0f);
             }
         } else {
-            // Synth Logic
-            if (last_freq < 0) last_freq = current_freq;
-            
-            float synth_freq = current_freq;
-            float portamento_samples = (instrument.portamento_time / 1000.0f) * sample_rate;
-            if (legato && samples_into_note < portamento_samples) {
-                float t = (float)samples_into_note / portamento_samples;
-                synth_freq = last_freq + (current_freq - last_freq) * t;
-            }
-
-            mono_sample = (note.velocity / 127.0f) * 0.5f * generate_sample_with_phase(instrument.synth.waveform, synth_freq, sample_rate, phase);
+            mono_sample = (note.velocity / 127.0f) * 0.5f * generate_sample_with_phase(instrument.synth.waveform, glide_freq, sample_rate, phase);
         }
 
-        // Apply Universal Amplitude Modulation (Envelope + LFO)
+        // --- UNIVERSAL POST-PROCESSING ---
         float amp_mod = 1.0f;
         if (instrument.synth.lfo.target == LFOTarget::AMPLITUDE) {
             amp_mod += lfo_val;
@@ -221,7 +207,6 @@ void Voice::render(float* buffer, int frame_count, float sample_rate, std::map<s
         }
         mono_sample *= envelope_val * amp_mod;
 
-        // Apply Universal Filter
         if (instrument.synth.filter.type != FilterType::NONE) {
             float current_cutoff = instrument.synth.filter.cutoff;
             if (instrument.synth.lfo.target == LFOTarget::FILTER_CUTOFF) current_cutoff += lfo_val; 
@@ -235,18 +220,16 @@ void Voice::render(float* buffer, int frame_count, float sample_rate, std::map<s
         samples_into_note++;
         total_samples_rendered++;
 
-        // Advance to next note if current one is finished
-        // BUT for the last note, we don't reset samples_into_note, we let it overflow for the tail
+        // Advance to next note
         if (current_note_idx < notes.size() - 1 && samples_into_note >= note_duration_samples) {
             samples_into_note = 0;
             current_note_idx++;
-            last_freq = current_freq;
+            last_freq = glide_freq; 
             if (soundfont_instance) {
                 tsf_channel_note_off(soundfont_instance, 0, note.pitch);
                 tsf_channel_note_on(soundfont_instance, 0, notes[current_note_idx].pitch, notes[current_note_idx].velocity / 127.0f);
             }
         } else if (current_note_idx == notes.size() - 1 && samples_into_note == (int)note_duration_samples) {
-            // Nominal duration of last note reached, trigger note off but KEEP rendering for tail
             if (soundfont_instance) tsf_channel_note_off(soundfont_instance, 0, note.pitch);
         }
     }
@@ -319,7 +302,6 @@ void Voice::render(float* buffer, int frame_count, float sample_rate, std::map<s
         }
     }
 
-    // Mix into main buffer
     for (size_t i = 0; i < local_buffer.size(); ++i) {
         buffer[i] += local_buffer[i];
     }
