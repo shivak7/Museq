@@ -119,8 +119,14 @@ Dependencies are handled via **vcpkg**.
     *(Replace `[path/to/vcpkg]` with the actual path to your vcpkg installation).*
 
 ### Run
+#### CLI
 ```bash
-./museq muscripts/my_song.museq
+./build/bin/museq muscripts/my_song.museq
+```
+
+#### Studio (GUI)
+```bash
+./build/bin/muqomposer
 ```
 
 ## Assets & Working Directory
@@ -128,8 +134,8 @@ Dependencies are handled via **vcpkg**.
 Museq resolves file paths (for SoundFonts and samples) relative to the **Current Working Directory** where you run the executable.
 
 To ensure your scripts run correctly:
-1.  **Run from the Project Root:** This is the easiest way. Run `./build/museq muscripts/song.museq`.
-2.  **Copy Assets:** Alternatively, copy the `sounds/` and `muscripts/` folders into your `build/` (or `Release/`) directory and run `./museq song.museq`.
+1.  **Run from the Project Root:** This is the easiest way. Run `./build/bin/museq muscripts/song.museq`.
+2.  **Copy Assets:** Alternatively, copy the `sounds/` and `muscripts/` folders into your `build/bin/` (or `Release/`) directory and run `./museq song.museq`.
 
 Ensure that the path specified in your `.museq` script (e.g., `soundfont "sounds/myfont.sf2"`) actually exists relative to where you are running the command.
 
