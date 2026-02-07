@@ -201,7 +201,7 @@ int main(int, char**) {
             ImGui::GetWindowDrawList()->AddImage((void*)(intptr_t)splash_texture, ImVec2(0, 0), ImVec2((float)sd.width, img_draw_h), ImVec2(0,0), ImVec2(1,1), ImColor(1.0f, 1.0f, 1.0f, alpha));
             
             // Draw Copyright Text at bottom
-            ImGui::SetWindowFontScale(2.0f); // Double font size
+            ImGui::SetWindowFontScale(1.8f); // Slightly smaller font
             std::string copyright = "© 2026 Shiva Ratna (https://shivak7.github.io/)";
             float text_width = ImGui::CalcTextSize(copyright.c_str()).x; // Font scale applies to current window so CalcTextSize should respect it if inside window scope? 
             // Actually CalcTextSize uses GImGui->Font->FontSize * window_scale if called inside window.
