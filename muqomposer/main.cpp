@@ -251,6 +251,8 @@ int main(int, char**) {
             ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
             glfwSwapBuffers(window);
         }
+        // Cleanup Splash Texture
+        glDeleteTextures(1, &splash_texture);
     }
 
     // Restore Standard Window State after Splash
