@@ -116,15 +116,32 @@ bool load_script_from_file(const char* filename, char* buffer, size_t buffer_siz
     return false;
 }
 
-// Callback for Auto-Indent
+// Callback for Auto-Indent and other editor features
 static int editor_callback(ImGuiInputTextCallbackData* data) {
-    if (data->EventFlag == ImGuiInputTextFlags_CallbackCharFilter) {
-        // We can handle specific character filtering here if needed
-    }
-    else if (data->EventFlag == ImGuiInputTextFlags_CallbackAlways) {
-        // Check for Enter key press manually? No, ImGui doesn't expose key events here easily.
-        // We should use CallbackCompletion or custom logic outside if we want to intercept 'Enter' specifically.
-        // Actually, the best way for auto-indent in ImGui is to check for \n insertion.
+    if (data->EventFlag == ImGuiInputTextFlags_CallbackAlways) {
+        static int last_len = 0;
+        int current_len = data->BufTextLen;
+        
+        // Detect if a newline was just added at the cursor
+        if (current_len == last_len + 1 && data->CursorPos > 0 && data->Buf[data->CursorPos - 1] == '\n') {
+            // Find start of previous line
+            int prev_line_start = data->CursorPos - 2;
+            while (prev_line_start > 0 && data->Buf[prev_line_start - 1] != '\n') prev_line_start--;
+            
+            // Extract indentation
+            int indent_end = prev_line_start;
+            while (indent_end < data->CursorPos - 1 && (data->Buf[indent_end] == ' ' || data->Buf[indent_end] == '\t')) indent_end++;
+            
+            int indent_len = indent_end - prev_line_start;
+            if (indent_len > 0) {
+                char indent_buf[64];
+                if (indent_len > 63) indent_len = 63;
+                memcpy(indent_buf, data->Buf + prev_line_start, indent_len);
+                indent_buf[indent_len] = 0;
+                data->InsertChars(data->CursorPos, indent_buf);
+            }
+        }
+        last_len = data->BufTextLen;
     }
     return 0;
 }
@@ -138,34 +155,6 @@ void prepend_to_buffer(char* buffer, size_t buffer_size, const char* code) {
         memmove(buffer + code_len, buffer, current_len + 1);
         memcpy(buffer, code, code_len);
     }
-}
-
-// Improved Auto-Indent using a helper
-void handle_auto_indent(char* buffer, size_t buffer_size) {
-    static int last_len = 0;
-    int current_len = (int)strlen(buffer);
-    if (current_len == last_len + 1) {
-        // Check if last character added was newline
-        if (buffer[current_len - 1] == '\n') {
-            // Find start of previous line
-            int prev_line_start = current_len - 2;
-            while (prev_line_start > 0 && buffer[prev_line_start - 1] != '\n') prev_line_start--;
-            
-            // Count leading spaces/tabs on previous line
-            std::string indent = "";
-            int i = prev_line_start;
-            while (i < current_len - 1 && (buffer[i] == ' ' || buffer[i] == '\t')) {
-                indent += buffer[i];
-                i++;
-            }
-            
-            // Append indent to buffer if it fits
-            if (!indent.empty() && current_len + indent.length() < buffer_size) {
-                strcat(buffer, indent.c_str());
-            }
-        }
-    }
-    last_len = (int)strlen(buffer);
 }
 
 int main(int, char**) {
@@ -360,7 +349,7 @@ int main(int, char**) {
     };
 
     // Helper for Export logic
-    auto export_logic = [&](const std::string& path, int format) {
+    auto export_logic = [&](const std::string& path, int format, float quality, int bitrate) {
         Song song = ScriptParser::parse_string(script_buffer);
         AudioRenderer renderer;
         
@@ -369,10 +358,10 @@ int main(int, char**) {
             writer.write(renderer, song, path, 44100.0f);
         } else if (format == 1) {
             Mp3Writer writer;
-            writer.write(renderer, song, path, 44100.0f);
+            writer.write(renderer, song, path, 44100.0f, bitrate);
         } else if (format == 2) {
             OggWriter writer;
-            writer.write(renderer, song, path, 44100.0f);
+            writer.write(renderer, song, path, 44100.0f, quality);
         }
         
         snprintf(status_text, sizeof(status_text), "Status: Exported to %s", fs::path(path).filename().string().c_str());
@@ -385,6 +374,8 @@ int main(int, char**) {
     char file_path_buffer[256] = "song.museq";
     char export_path_buffer[256] = "song.wav";
     int export_format = 0; // 0: WAV, 1: MP3, 2: OGG
+    float export_quality = 0.4f;
+    int export_bitrate = 192;
     fs::path current_dir = fs::current_path();
 
     // Asset Browser State
@@ -424,6 +415,19 @@ int main(int, char**) {
     // Mock Synths
     std::vector<std::string> synth_templates = {"SawLead", "SoftPad", "AcidBass", "Pluck"};
 
+    // Folder Picker State
+    bool show_folder_picker = false;
+    
+    // Search State
+    char asset_search_buffer[128] = "";
+
+    auto close_all_popups = [&]() {
+        show_save_popup = false;
+        show_load_popup = false;
+        show_export_popup = false;
+        show_folder_picker = false;
+    };
+
     // Helper for Asset Tree Rendering
     std::function<void(const AssetNode&)> render_asset_tree_node;
     render_asset_tree_node = [&](const AssetNode& node) {
@@ -455,7 +459,7 @@ int main(int, char**) {
 
             if (node.type == AssetType::SF2) {
                 // Find presets for this SF2
-                const auto& sfs = asset_manager.get_soundfonts();
+                const auto& sfs = asset_manager.get_filtered_soundfonts(asset_search_buffer);
                 auto it = std::find_if(sfs.begin(), sfs.end(), [&](const SF2Info& i){ 
                     return fs::path(i.path) == fs::path(node.full_path); 
                 });
@@ -565,22 +569,29 @@ int main(int, char**) {
         ImGui::EndChild();
     };
 
-    // Folder Picker State
-    bool show_folder_picker = false;
-    
-    // Search State
-    char asset_search_buffer[128] = "";
-
     // Main loop
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
 
         // Keyboard Shortcuts
-        if (io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_P)) play_logic();
-        if (io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_S)) show_save_popup = true;
-        if (io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_L)) show_load_popup = true;
+        if (io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_P)) {
+            if (player.is_playing()) player.stop();
+            else play_logic();
+        }
+        if (io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_S)) {
+            close_all_popups();
+            show_save_popup = true;
+        }
+        if (io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_L)) {
+            close_all_popups();
+            show_load_popup = true;
+        }
+        if (io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_E)) {
+            close_all_popups();
+            show_export_popup = true;
+        }
         if (io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_Space)) player.stop();
-        if (io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_E)) show_export_popup = true;
+        if (ImGui::IsKeyPressed(ImGuiKey_Escape)) close_all_popups();
 
         // Slow updates
         static double last_parse_time = 0;
@@ -692,28 +703,35 @@ int main(int, char**) {
 
         if (ImGui::CollapsingHeader("Synths")) {
             for (const auto& synth : synth_templates) {
-                ImGui::PushID(synth.c_str());
-                if (ImGui::Button("[>]", ImVec2(35, 0))) {
-                    // Preview Synth
-                    Song preview_song;
-                    Instrument preview_inst(synth, Waveform::SAWTOOTH); // Default for template
-                    preview_inst.sequence.add_note(Note(60, 1000, 100));
-                    preview_song.root->children.push_back(std::make_shared<InstrumentElement>(preview_inst));
-                    player.play(preview_song, true);
-                }
-                ImGui::PopID();
-                ImGui::SameLine();
+                std::string s_lower = synth;
+                std::transform(s_lower.begin(), s_lower.end(), s_lower.begin(), ::tolower);
+                std::string filter_lower = asset_search_buffer;
+                std::transform(filter_lower.begin(), filter_lower.end(), filter_lower.begin(), ::tolower);
 
-                if (ImGui::Selectable(synth.c_str())) {
-                    std::string sanitized_name = synth;
-                    std::replace(sanitized_name.begin(), sanitized_name.end(), ' ', '_');
-                    
-                    std::string unique_name = AssetManager::get_unique_instrument_name(sanitized_name, active_instrument_names);
-                    active_instrument_names.push_back(unique_name);
+                if (filter_lower.empty() || s_lower.find(filter_lower) != std::string::npos) {
+                    ImGui::PushID(synth.c_str());
+                    if (ImGui::Button("[>]", ImVec2(35, 0))) {
+                        // Preview Synth
+                        Song preview_song;
+                        Instrument preview_inst(synth, Waveform::SAWTOOTH); // Default for template
+                        preview_inst.sequence.add_note(Note(60, 1000, 100));
+                        preview_song.root->children.push_back(std::make_shared<InstrumentElement>(preview_inst));
+                        player.play(preview_song, true);
+                    }
+                    ImGui::PopID();
+                    ImGui::SameLine();
 
-                    char buf[512];
-                    snprintf(buf, sizeof(buf), "instrument %s {\n    waveform sawtooth\n    envelope 0.1 0.2 0.5 0.3\n}\n\n", unique_name.c_str());
-                    prepend_to_buffer(script_buffer, IM_ARRAYSIZE(script_buffer), buf);
+                    if (ImGui::Selectable(synth.c_str())) {
+                        std::string sanitized_name = synth;
+                        std::replace(sanitized_name.begin(), sanitized_name.end(), ' ', '_');
+                        
+                        std::string unique_name = AssetManager::get_unique_instrument_name(sanitized_name, active_instrument_names);
+                        active_instrument_names.push_back(unique_name);
+
+                        char buf[512];
+                        snprintf(buf, sizeof(buf), "instrument %s {\n    waveform sawtooth\n    envelope 0.1 0.2 0.5 0.3\n}\n\n", unique_name.c_str());
+                        prepend_to_buffer(script_buffer, IM_ARRAYSIZE(script_buffer), buf);
+                    }
                 }
             }
         }
@@ -779,6 +797,10 @@ int main(int, char**) {
         // Line Numbers column
         ImGui::BeginChild("LineNumbers", ImVec2(line_number_width, 0), false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
         ImGui::SetScrollY(scroll_y);
+        
+        // Add padding to match InputTextMultiline's internal top padding
+        ImGui::Dummy(ImVec2(0, ImGui::GetStyle().FramePadding.y));
+
         int line_count = 1;
         for (int i = 0; script_buffer[i]; i++) if (script_buffer[i] == '\n') line_count++;
         for (int i = 1; i <= line_count; i++) {
@@ -790,9 +812,7 @@ int main(int, char**) {
 
         // Editor column
         ImGui::BeginChild("EditorColumn", ImVec2(editor_width, 0));
-        if (ImGui::InputTextMultiline("##editor", script_buffer, IM_ARRAYSIZE(script_buffer), ImVec2(-FLT_MIN, -FLT_MIN), ImGuiInputTextFlags_AllowTabInput)) {
-            handle_auto_indent(script_buffer, IM_ARRAYSIZE(script_buffer));
-        }
+        ImGui::InputTextMultiline("##editor", script_buffer, IM_ARRAYSIZE(script_buffer), ImVec2(-FLT_MIN, -FLT_MIN), ImGuiInputTextFlags_AllowTabInput | ImGuiInputTextFlags_CallbackAlways, editor_callback);
         scroll_y = ImGui::GetScrollY();
         ImGui::EndChild();
         
@@ -1015,9 +1035,15 @@ int main(int, char**) {
             ImGui::Text("Filename:");
             ImGui::InputText("##exportfilename", export_path_buffer, IM_ARRAYSIZE(export_path_buffer));
 
+            if (export_format == 1) { // MP3
+                ImGui::SliderInt("Bitrate (kbps)", &export_bitrate, 64, 320);
+            } else if (export_format == 2) { // OGG
+                ImGui::SliderFloat("Quality (0.0-1.0)", &export_quality, 0.0f, 1.0f);
+            }
+
             if (ImGui::Button("Export", ImVec2(120, 0))) {
                 fs::path full_path = current_dir / export_path_buffer;
-                export_logic(full_path.string(), export_format);
+                export_logic(full_path.string(), export_format, export_quality, export_bitrate);
                 show_export_popup = false;
                 ImGui::CloseCurrentPopup();
             }

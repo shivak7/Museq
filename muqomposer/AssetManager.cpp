@@ -232,6 +232,37 @@ const std::vector<SF2Info>& AssetManager::get_soundfonts() const {
     return m_soundfonts;
 }
 
+std::vector<SF2Info> AssetManager::get_filtered_soundfonts(const std::string& filter) const {
+    if (filter.empty()) return m_soundfonts;
+
+    std::string filter_lower = filter;
+    std::transform(filter_lower.begin(), filter_lower.end(), filter_lower.begin(), ::tolower);
+
+    std::vector<SF2Info> filtered;
+    for (const auto& sf : m_soundfonts) {
+        SF2Info info = sf;
+        info.presets.clear();
+
+        bool file_match = false;
+        std::string filename_lower = sf.filename;
+        std::transform(filename_lower.begin(), filename_lower.end(), filename_lower.begin(), ::tolower);
+        if (filename_lower.find(filter_lower) != std::string::npos) file_match = true;
+
+        for (const auto& p : sf.presets) {
+            std::string p_lower = p.name;
+            std::transform(p_lower.begin(), p_lower.end(), p_lower.begin(), ::tolower);
+            if (file_match || p_lower.find(filter_lower) != std::string::npos) {
+                info.presets.push_back(p);
+            }
+        }
+
+        if (!info.presets.empty()) {
+            filtered.push_back(info);
+        }
+    }
+    return filtered;
+}
+
 const std::vector<std::string>& AssetManager::get_samples() const {
     return m_samples;
 }

@@ -53,6 +53,7 @@ public:
     // Asset Retrieval
     void refresh_assets();
     const std::vector<SF2Info>& get_soundfonts() const;
+    std::vector<SF2Info> get_filtered_soundfonts(const std::string& filter) const;
     const std::vector<std::string>& get_samples() const;
 
     // Tree Views

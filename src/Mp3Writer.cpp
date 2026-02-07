@@ -3,7 +3,7 @@
 #include <vector>
 #include "AudioRenderer.h"
 
-void Mp3Writer::write(AudioRenderer& renderer, const Song& song, const std::string& file_path, float sample_rate) {
+void Mp3Writer::write(AudioRenderer& renderer, const Song& song, const std::string& file_path, float sample_rate, int bitrate) {
     std::vector<float> pcm_buffer = renderer.render(song, sample_rate);
 
     // Initialize the LAME encoder
@@ -11,7 +11,7 @@ void Mp3Writer::write(AudioRenderer& renderer, const Song& song, const std::stri
     lame_set_in_samplerate(gfp, sample_rate);
     lame_set_num_channels(gfp, 2);
     lame_set_mode(gfp, STEREO);
-    lame_set_VBR(gfp, vbr_default);
+    lame_set_brate(gfp, bitrate);
     lame_init_params(gfp);
 
     // Encode the PCM data

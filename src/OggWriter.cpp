@@ -7,7 +7,7 @@
 #include <vector>
 #include <algorithm>
 
-void OggWriter::write(AudioRenderer& renderer, const Song& song, const std::string& file_path, float sample_rate) {
+void OggWriter::write(AudioRenderer& renderer, const Song& song, const std::string& file_path, float sample_rate, float quality) {
     std::vector<float> pcm_buffer = renderer.render(song, sample_rate);
 
     ogg_stream_state os;
@@ -20,7 +20,7 @@ void OggWriter::write(AudioRenderer& renderer, const Song& song, const std::stri
 
     vorbis_info_init(&vi);
     // Use 2 channels for stereo
-    vorbis_encode_init_vbr(&vi, 2, sample_rate, 0.4);
+    vorbis_encode_init_vbr(&vi, 2, sample_rate, quality);
     vorbis_analysis_init(&vd, &vi);
     vorbis_block_init(&vd, &vb);
     vorbis_comment_init(&vc);
