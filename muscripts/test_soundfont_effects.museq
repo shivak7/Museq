@@ -1,0 +1,13 @@
+// Test script for SoundFont filters and LFOs
+instrument FilteredPiano {
+    soundfont "sounds/GeneralUser GS v1.471.sf2"
+    bank 0
+    preset 0
+    filter lowpass 500 2.0 // Strong lowpass filter
+    lfo pitch sine 5.0 2.0 // Deep vibrato
+    envelope 0.1 0.1 0.8 0.5
+}
+
+sequential {
+    FilteredPiano { notes C4(1000), E4(1000), G4(1000) }
+}

@@ -1,0 +1,14 @@
+// Test script to check SoundFont envelope release
+// This script defines a SoundFont instrument with a very long release
+// and plays a short note. If release works, the sound should fade slowly.
+
+instrument LongReleaseSF {
+    soundfont "sounds/GeneralUser GS v1.471.sf2"
+    bank 0
+    preset 0
+    envelope 0.01 0.1 1.0 2.0 // 2 second release
+}
+
+sequential {
+    LongReleaseSF { notes C4(500) }
+}

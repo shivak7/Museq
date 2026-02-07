@@ -119,6 +119,37 @@ void Voice::render(float* buffer, int frame_count, float sample_rate, std::map<s
 
         float target_freq = 440.0f * pow(2.0f, (note.pitch - 69.0f) / 12.0f);
 
+        // Universal Envelope Calculation
+        const auto& env = instrument.synth.envelope;
+        float time_in_note = (float)samples_into_note / sample_rate;
+        float envelope_val = 0.0f;
+        
+        if (legato) {
+            bool is_first = (current_note_idx == 0);
+            bool is_last = (current_note_idx == notes.size() - 1);
+            if (is_first && time_in_note < env.attack) envelope_val = time_in_note / env.attack;
+            else if (is_first && time_in_note < env.attack + env.decay) envelope_val = 1.0f - (1.0f - env.sustain) * ((time_in_note - env.attack) / env.decay);
+            else if (is_last && time_in_note > (note.duration / 1000.0f) - env.release) envelope_val = env.sustain * (1.0f - ((time_in_note - ((note.duration / 1000.0f) - env.release)) / env.release));
+            else envelope_val = env.sustain;
+        } else {
+            if (time_in_note < env.attack) envelope_val = time_in_note / env.attack;
+            else if (time_in_note < env.attack + env.decay) envelope_val = 1.0f - (1.0f - env.sustain) * ((time_in_note - env.attack) / env.decay);
+            else if (time_in_note < (note.duration / 1000.0f) - env.release) envelope_val = env.sustain;
+            else envelope_val = env.sustain * (1.0f - ((time_in_note - ((note.duration / 1000.0f) - env.release)) / env.release));
+        }
+        if (envelope_val < 0.0f) envelope_val = 0.0f;
+
+        // Universal LFO / Pitch Calculation
+        float current_freq = target_freq;
+        float lfo_val = 0.0f;
+        if (instrument.synth.lfo.target != LFOTarget::NONE) {
+            lfo_val = generate_sample_with_phase(instrument.synth.lfo.waveform, instrument.synth.lfo.frequency, sample_rate, lfo_phase);
+            lfo_val *= instrument.synth.lfo.amount;
+        }
+        if (instrument.synth.lfo.target == LFOTarget::PITCH) {
+            current_freq *= pow(2.0f, lfo_val / 12.0f);
+        }
+
         if (instrument.type == InstrumentType::SOUNDFONT) {
             if (!soundfont_instance && soundfonts.count(instrument.soundfont_path)) {
                 soundfont_instance = tsf_copy(soundfonts[instrument.soundfont_path]);
@@ -129,65 +160,48 @@ void Voice::render(float* buffer, int frame_count, float sample_rate, std::map<s
             }
 
             if (soundfont_instance) {
+                // Adjust pitch if LFO is targeting it
+                if (instrument.synth.lfo.target == LFOTarget::PITCH) {
+                    tsf_channel_set_pitchwheel(soundfont_instance, 0, (int)(lfo_val * 8192.0f / 2.0f) + 8192); // Basic pitch wheel mapping
+                }
+
                 float stereo[2];
                 tsf_render_float(soundfont_instance, stereo, 1);
-                mono_sample = (stereo[0] + stereo[1]) * 0.5f; // Mix to mono then re-pan
+                mono_sample = (stereo[0] + stereo[1]) * 0.5f; // Mix to mono
+            }
+        } else if (instrument.type == InstrumentType::SAMPLER) {
+            if (instrument.sampler) {
+                mono_sample = instrument.sampler->get_sample(time_in_note);
+                mono_sample *= (note.velocity / 127.0f);
             }
         } else {
             // Synth Logic
-            if (last_freq < 0) last_freq = target_freq;
+            if (last_freq < 0) last_freq = current_freq;
             
-            float current_freq = target_freq;
+            float synth_freq = current_freq;
             float portamento_samples = (instrument.portamento_time / 1000.0f) * sample_rate;
             if (legato && samples_into_note < portamento_samples) {
                 float t = (float)samples_into_note / portamento_samples;
-                current_freq = last_freq + (target_freq - last_freq) * t;
+                synth_freq = last_freq + (current_freq - last_freq) * t;
             }
 
-            // LFO
-            float lfo_val = 0.0f;
-            if (instrument.synth.lfo.target != LFOTarget::NONE) {
-                lfo_val = generate_sample_with_phase(instrument.synth.lfo.waveform, instrument.synth.lfo.frequency, sample_rate, lfo_phase);
-                lfo_val *= instrument.synth.lfo.amount;
-            }
-            if (instrument.synth.lfo.target == LFOTarget::PITCH) {
-                current_freq *= pow(2.0f, lfo_val / 12.0f);
-            }
+            mono_sample = (note.velocity / 127.0f) * 0.5f * generate_sample_with_phase(instrument.synth.waveform, synth_freq, sample_rate, phase);
+        }
 
-            // Envelope
-            const auto& env = instrument.synth.envelope;
-            float time_in_note = (float)samples_into_note / sample_rate;
-            float envelope_val = 0.0f;
-            
-            if (legato) {
-                bool is_first = (current_note_idx == 0);
-                bool is_last = (current_note_idx == notes.size() - 1);
-                if (is_first && time_in_note < env.attack) envelope_val = time_in_note / env.attack;
-                else if (is_first && time_in_note < env.attack + env.decay) envelope_val = 1.0f - (1.0f - env.sustain) * ((time_in_note - env.attack) / env.decay);
-                else if (is_last && time_in_note > (note.duration / 1000.0f) - env.release) envelope_val = env.sustain * (1.0f - ((time_in_note - ((note.duration / 1000.0f) - env.release)) / env.release));
-                else envelope_val = env.sustain;
-            } else {
-                if (time_in_note < env.attack) envelope_val = time_in_note / env.attack;
-                else if (time_in_note < env.attack + env.decay) envelope_val = 1.0f - (1.0f - env.sustain) * ((time_in_note - env.attack) / env.decay);
-                else if (time_in_note < (note.duration / 1000.0f) - env.release) envelope_val = env.sustain;
-                else envelope_val = env.sustain * (1.0f - ((time_in_note - ((note.duration / 1000.0f) - env.release)) / env.release));
-            }
-            if (envelope_val < 0.0f) envelope_val = 0.0f;
+        // Apply Universal Amplitude Modulation (Envelope + LFO)
+        float amp_mod = 1.0f;
+        if (instrument.synth.lfo.target == LFOTarget::AMPLITUDE) {
+            amp_mod += lfo_val;
+            if (amp_mod < 0) amp_mod = 0;
+        }
+        mono_sample *= envelope_val * amp_mod;
 
-            float amp_mod = 1.0f;
-            if (instrument.synth.lfo.target == LFOTarget::AMPLITUDE) {
-                amp_mod += lfo_val;
-                if (amp_mod < 0) amp_mod = 0;
-            }
-
-            mono_sample = (note.velocity / 127.0f) * 0.5f * envelope_val * amp_mod * generate_sample_with_phase(instrument.synth.waveform, current_freq, sample_rate, phase);
-            
-            if (instrument.synth.filter.type != FilterType::NONE) {
-                float current_cutoff = instrument.synth.filter.cutoff;
-                if (instrument.synth.lfo.target == LFOTarget::FILTER_CUTOFF) current_cutoff += lfo_val; 
-                filter_state.update(instrument.synth.filter.type, current_cutoff, instrument.synth.filter.resonance, sample_rate);
-                mono_sample = filter_state.process(mono_sample);
-            }
+        // Apply Universal Filter
+        if (instrument.synth.filter.type != FilterType::NONE) {
+            float current_cutoff = instrument.synth.filter.cutoff;
+            if (instrument.synth.lfo.target == LFOTarget::FILTER_CUTOFF) current_cutoff += lfo_val; 
+            filter_state.update(instrument.synth.filter.type, current_cutoff, instrument.synth.filter.resonance, sample_rate);
+            mono_sample = filter_state.process(mono_sample);
         }
 
         local_buffer[f * 2] = mono_sample * left_gain;
@@ -198,7 +212,7 @@ void Voice::render(float* buffer, int frame_count, float sample_rate, std::map<s
         if (samples_into_note >= note_duration_samples) {
             samples_into_note = 0;
             current_note_idx++;
-            last_freq = target_freq;
+            last_freq = current_freq;
             if (soundfont_instance && current_note_idx < notes.size()) {
                 tsf_channel_note_off(soundfont_instance, 0, note.pitch);
                 tsf_channel_note_on(soundfont_instance, 0, notes[current_note_idx].pitch, notes[current_note_idx].velocity / 127.0f);
