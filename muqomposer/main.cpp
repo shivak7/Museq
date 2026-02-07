@@ -20,6 +20,9 @@
 #include "ScriptParser.h"
 #include "AssetManager.h"
 #include "SplashUtils.h"
+#include "WavWriter.h"
+#include "Mp3Writer.h"
+#include "OggWriter.h"
 #include <fstream>
 #include <filesystem>
 #include <functional>
@@ -356,10 +359,32 @@ int main(int, char**) {
         player.play(preview_song, true);
     };
 
+    // Helper for Export logic
+    auto export_logic = [&](const std::string& path, int format) {
+        Song song = ScriptParser::parse_string(script_buffer);
+        AudioRenderer renderer;
+        
+        if (format == 0) {
+            WavWriter writer;
+            writer.write(renderer, song, path, 44100.0f);
+        } else if (format == 1) {
+            Mp3Writer writer;
+            writer.write(renderer, song, path, 44100.0f);
+        } else if (format == 2) {
+            OggWriter writer;
+            writer.write(renderer, song, path, 44100.0f);
+        }
+        
+        snprintf(status_text, sizeof(status_text), "Status: Exported to %s", fs::path(path).filename().string().c_str());
+    };
+
     // File State
     bool show_save_popup = false;
     bool show_load_popup = false;
+    bool show_export_popup = false;
     char file_path_buffer[256] = "song.museq";
+    char export_path_buffer[256] = "song.wav";
+    int export_format = 0; // 0: WAV, 1: MP3, 2: OGG
     fs::path current_dir = fs::current_path();
 
     // Asset Browser State
@@ -555,7 +580,7 @@ int main(int, char**) {
         if (io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_S)) show_save_popup = true;
         if (io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_L)) show_load_popup = true;
         if (io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_Space)) player.stop();
-        // Export shortcut (Ctrl+E) will be implemented once export dialog is ready
+        if (io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_E)) show_export_popup = true;
 
         // Slow updates
         static double last_parse_time = 0;
@@ -897,7 +922,7 @@ int main(int, char**) {
         ImGui::SameLine();
 
         // Group Right: Files
-        float right_btns_w = 170.0f;
+        float right_btns_w = 260.0f;
         avail_w = ImGui::GetContentRegionAvail().x;
         if (avail_w > right_btns_w) {
             ImGui::SetCursorPosX(ImGui::GetCursorPosX() + avail_w - right_btns_w);
@@ -909,6 +934,10 @@ int main(int, char**) {
         ImGui::SameLine();
         if (ImGui::Button("Save", ImVec2(80, 0))) {
             show_save_popup = true;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Export", ImVec2(80, 0))) {
+            show_export_popup = true;
         }
         ImGui::End();
 
@@ -960,6 +989,41 @@ int main(int, char**) {
             ImGui::SameLine();
             if (ImGui::Button("Cancel", ImVec2(120, 0))) {
                 show_load_popup = false;
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::EndPopup();
+        }
+
+        // --- Export Popup ---
+        if (show_export_popup) {
+            ImGui::OpenPopup("Export Song");
+        }
+
+        if (ImGui::BeginPopupModal("Export Song", &show_export_popup, ImGuiWindowFlags_AlwaysAutoResize)) {
+            ImGui::Text("Export Settings");
+            ImGui::Separator();
+
+            const char* formats[] = { "WAV (Lossless)", "MP3 (Compressed)", "OGG (Vorbis)" };
+            if (ImGui::Combo("Format", &export_format, formats, IM_ARRAYSIZE(formats))) {
+                // Update extension
+                std::string base = fs::path(export_path_buffer).stem().string();
+                if (export_format == 0) snprintf(export_path_buffer, sizeof(export_path_buffer), "%s.wav", base.c_str());
+                else if (export_format == 1) snprintf(export_path_buffer, sizeof(export_path_buffer), "%s.mp3", base.c_str());
+                else if (export_format == 2) snprintf(export_path_buffer, sizeof(export_path_buffer), "%s.ogg", base.c_str());
+            }
+
+            ImGui::Text("Filename:");
+            ImGui::InputText("##exportfilename", export_path_buffer, IM_ARRAYSIZE(export_path_buffer));
+
+            if (ImGui::Button("Export", ImVec2(120, 0))) {
+                fs::path full_path = current_dir / export_path_buffer;
+                export_logic(full_path.string(), export_format);
+                show_export_popup = false;
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+                show_export_popup = false;
                 ImGui::CloseCurrentPopup();
             }
             ImGui::EndPopup();
