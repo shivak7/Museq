@@ -434,9 +434,18 @@ int main(int, char**) {
         if (!element) return -1;
         
         double absolute_start = parent_offset_ms + element->start_offset_ms;
-        double absolute_end = absolute_start + element->get_duration_ms();
+        double element_dur = element->get_duration_ms();
+        double absolute_end = absolute_start + element_dur;
 
-        if (current_time_ms < absolute_start || current_time_ms > absolute_end) return -1;
+        // If time is outside this element and it's not a root sequential container
+        // (which might have children that haven't played yet)
+        if (current_time_ms < absolute_start) return -1;
+        
+        // If it's a leaf (InstrumentElement), check if we are within its time
+        if (auto inst = std::dynamic_pointer_cast<InstrumentElement>(element)) {
+            if (current_time_ms <= absolute_end) return inst->source_line;
+            return -1;
+        }
 
         auto comp = std::dynamic_pointer_cast<CompositeElement>(element);
         if (comp) {
@@ -447,15 +456,32 @@ int main(int, char**) {
                     if (line != -1) return line;
                     running_offset += child->start_offset_ms + child->get_duration_ms();
                 }
-            } else {
+            } else if (comp->type == CompositeType::PARALLEL) {
                 for (auto& child : comp->children) {
                     int line = find_active_line(child, current_time_ms, absolute_start);
                     if (line != -1) return line;
                 }
+            } else if (comp->type == CompositeType::AUTO_LOOP) {
+                // For loops, we check the current cycle relative to start
+                if (!comp->children.empty()) {
+                    double leader_dur = comp->children[0]->get_duration_ms();
+                    if (leader_dur > 0) {
+                        double time_in_loop = std::fmod(current_time_ms - absolute_start, leader_dur);
+                        // We check the leader and followers for this time offset
+                        for (auto& child : comp->children) {
+                            int line = find_active_line(child, time_in_loop, 0); // Local to loop start
+                            if (line != -1) return line;
+                        }
+                    }
+                }
             }
+            
+            // If we are within the composite block duration but no child is "active" 
+            // (e.g. between notes in a sequence), return the block's own line if set
+            if (current_time_ms <= absolute_end && comp->source_line != -1) return comp->source_line;
         }
         
-        return element->source_line;
+        return -1;
     };
 
     // Museq State

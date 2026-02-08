@@ -494,6 +494,7 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
             size_t close_p = call_rest.find(')');
             std::string f_name = call_rest.substr(0, open_p);
             f_name.erase(std::remove_if(f_name.begin(), f_name.end(), ::isspace), f_name.end());
+            int call_line = m_current_line;
 
             if (m_functions.count(f_name)) {
                 const auto& func = m_functions[f_name];
@@ -508,7 +509,11 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
                 }
                 std::stringstream body;
                 for (const auto& l : func.body_lines) body << l << "\n";
+                
+                int saved_line = m_current_line;
+                m_current_line = call_line - 1;
                 process_script_stream(body, next_map, current_parent, depth + 1);
+                m_current_line = saved_line;
             }
         } else if (keyword == "parallel") {
             auto parallel_elem = std::make_shared<CompositeElement>(CompositeType::PARALLEL);
@@ -707,6 +712,7 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
             // Implicit function call
             const auto& func = m_functions[keyword];
             std::map<std::string, std::string> next_map;
+            int call_line = m_current_line;
             
             // Try to parse arguments if provided in parentheses
             std::string remainder;
@@ -726,7 +732,12 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
             
             std::stringstream body;
             for (const auto& l : func.body_lines) body << l << "\n";
+            
+            // Temporary override current line to the call site for all elements in this function
+            int saved_line = m_current_line;
+            m_current_line = call_line - 1; // It will be incremented in the next process_script_stream
             process_script_stream(body, next_map, current_parent, depth + 1);
+            m_current_line = saved_line;
         } else if (keyword == "}") {
             if (in_sequence_block) {
                 in_sequence_block = false;
