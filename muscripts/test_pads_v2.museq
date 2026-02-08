@@ -1,0 +1,11 @@
+import "musynths/pads.museq"
+
+sequence PadChord {
+    1.0 PadSine_v2 C3+E3+G3
+    5.0 PadSine_v2 F3+A3+C4
+    9.0 PadAmbient_v2 G3+B3+D4
+}
+
+parallel {
+    PadChord
+}
