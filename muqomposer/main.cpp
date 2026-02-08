@@ -308,6 +308,8 @@ int main(int, char**) {
     // Helper to find the active line from a SongElement tree
     std::function<int(std::shared_ptr<SongElement>, double, double)> find_active_line;
     find_active_line = [&](std::shared_ptr<SongElement> element, double current_time_ms, double parent_offset_ms) -> int {
+        if (!element) return -1;
+        
         double absolute_start = parent_offset_ms + element->start_offset_ms;
         double absolute_end = absolute_start + element->get_duration_ms();
 
@@ -335,6 +337,7 @@ int main(int, char**) {
 
     // Museq State
     TextEditor editor;
+    bool is_playing_preview = false;
     
     // Define Museq Language
     TextEditor::LanguageDefinition museq_lang;
@@ -401,6 +404,7 @@ int main(int, char**) {
         if (player_initialized) {
             last_parsed_song = ScriptParser::parse_string(editor.GetText());
             player.play(last_parsed_song);
+            is_playing_preview = false;
         }
     };
 
@@ -427,6 +431,7 @@ int main(int, char**) {
         preview_song.root->children.push_back(std::make_shared<InstrumentElement>(preview_inst));
         
         player.play(preview_song, true);
+        is_playing_preview = true;
     };
 
     // Helper for Export logic
@@ -637,6 +642,7 @@ int main(int, char**) {
                                 code += "\n" + inst + " { note C4 1000 100 }\n";
                                 Song preview_song = ScriptParser::parse_string(code);
                                 player.play(preview_song, true);
+                                is_playing_preview = true;
                             }
                             ImGui::PopID();
                             ImGui::SameLine();
@@ -755,6 +761,8 @@ int main(int, char**) {
         // Update Status and Visualization Markers
         TextEditor::ErrorMarkers markers;
         for (const auto& err : last_parsed_song.errors) {
+            // Note: Since we only assign last_parsed_song from parse_string("string_buffer")
+            // all errors here should be relevant, but filtering is good for future.
             markers[err.first] = err.second;
         }
 
@@ -763,11 +771,13 @@ int main(int, char**) {
         } else if (player.is_playing()) {
             snprintf(status_text, sizeof(status_text), "Status: Playing");
             
-            // Highlight active line
-            double pos = player.get_playback_position_ms();
-            int active_line = find_active_line(last_parsed_song.root, pos, 0);
-            if (active_line > 0) {
-                markers[active_line] = "Playback";
+            // Highlight active line (only if not a preview)
+            if (!is_playing_preview) {
+                double pos = player.get_playback_position_ms();
+                int active_line = find_active_line(last_parsed_song.root, pos, 0);
+                if (active_line > 0) {
+                    markers[active_line] = "Playback";
+                }
             }
         } else {
             snprintf(status_text, sizeof(status_text), "Status: Ready");

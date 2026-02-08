@@ -16,7 +16,7 @@ void ScriptParser::set_global_bpm(int bpm) {
 
 void ScriptParser::report_error(const std::string& message) {
     m_song.errors.push_back({m_current_line, message});
-    std::cerr << "Line " << m_current_line << ": " << message << std::endl;
+    std::cerr << "[" << m_filename << "] Line " << m_current_line << ": " << message << std::endl;
 }
 
 static std::string preprocess_line(const std::string& raw_line) {
@@ -87,6 +87,7 @@ Song ScriptParser::parse_string(const std::string& script_content) {
 void ScriptParser::collect_definitions(std::istream& input_stream, bool instruments_only, const std::string& filename) {
     std::string line;
     int scope_brace_count = 0;
+    m_filename = filename;
 
     while (std::getline(input_stream, line)) {
         m_current_line++;

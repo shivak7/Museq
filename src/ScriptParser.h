@@ -33,6 +33,7 @@ private:
     int m_default_octave = 4;
     Scale m_current_scale = Scale(ScaleType::MAJOR, "C");
     int m_current_line = 1;
+    std::string m_filename;
 
     ScriptParser();
 
