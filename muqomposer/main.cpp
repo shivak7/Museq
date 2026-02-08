@@ -42,30 +42,84 @@ struct AppFonts {
 };
 
 void load_fonts(AppFonts& fonts, float ui_size, float editor_size, bool update_texture = true) {
+
     ImGuiIO& io = ImGui::GetIO();
-    
+
     io.Fonts->Clear();
+
     io.FontGlobalScale = 1.0f;
+
     
+
+    printf("CWD: %s\n", fs::current_path().string().c_str());
+
     printf("Loading fonts... UI: %.1f, Editor: %.1f\n", ui_size, editor_size);
 
+
+
+    auto find_font = [](const std::string& name) -> std::string {
+
+        if (fs::exists(name)) return name;
+
+        if (fs::exists("../" + name)) return "../" + name;
+
+        if (fs::exists("muqomposer/" + name)) return "muqomposer/" + name;
+
+        return "";
+
+    };
+
+
+
+    std::string ui_path = find_font("FreeSans.ttf");
+
+    std::string editor_path = find_font("FreeMono.ttf");
+
+
+
     // 1. UI Font
-    fonts.main = io.Fonts->AddFontFromFileTTF("FreeSans.ttf", ui_size);
-    if (!fonts.main) {
-        printf("Fallback: Using default font for UI.\n");
-        fonts.main = io.Fonts->AddFontDefault();
-    } else {
-        printf("Success loading local FreeSans.ttf\n");
+
+    if (!ui_path.empty()) {
+
+        fonts.main = io.Fonts->AddFontFromFileTTF(ui_path.c_str(), ui_size);
+
+        if (fonts.main) printf("Success loading local UI font: %s\n", ui_path.c_str());
+
     }
 
-    // 2. Editor Font
-    fonts.editor = io.Fonts->AddFontFromFileTTF("FreeMono.ttf", editor_size);
-    if (!fonts.editor) {
-        printf("Fallback: Using main font for editor.\n");
-        fonts.editor = fonts.main;
-    } else {
-        printf("Success loading local FreeMono.ttf\n");
+    
+
+    if (!fonts.main) {
+
+        printf("Fallback: Using default font for UI.\n");
+
+        fonts.main = io.Fonts->AddFontDefault();
+
     }
+
+
+
+    // 2. Editor Font
+
+    if (!editor_path.empty()) {
+
+        fonts.editor = io.Fonts->AddFontFromFileTTF(editor_path.c_str(), editor_size);
+
+        if (fonts.editor) printf("Success loading local Editor font: %s\n", editor_path.c_str());
+
+    }
+
+    
+
+    if (!fonts.editor) {
+
+        printf("Fallback: Using main font for editor.\n");
+
+        fonts.editor = fonts.main;
+
+    }
+
+
 
     if (update_texture) {
         io.Fonts->Build();
