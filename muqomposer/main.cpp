@@ -786,11 +786,92 @@ int main(int, char**) {
         float visualizer_height = main_area_height - editor_height;
 
         // --- 1. LEFT SIDEBAR (Asset Browser) ---
-        // ... (Asset Browser code remains same) ...
         ImGui::SetNextWindowPos(ImVec2(0, 0));
         ImGui::SetNextWindowSize(ImVec2(SIDEBAR_WIDTH, main_area_height));
         ImGui::Begin("Assets", NULL, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar);
-        // ... (skipping Asset Browser details for brevity in this replace call, but keeping context)
+        
+        ImGui::SeparatorText("ASSETS");
+        
+        ImGui::InputText("Search", asset_search_buffer, IM_ARRAYSIZE(asset_search_buffer));
+
+        // Favorites Category
+        if (ImGui::CollapsingHeader("Favorites", ImGuiTreeNodeFlags_DefaultOpen)) {
+            const auto& favs = asset_manager.get_favorites();
+            if (favs.empty()) ImGui::TextDisabled("No favorites yet. Click [*] to add.");
+            for (const auto& f_path : favs) {
+                std::string filename = fs::path(f_path).filename().string();
+                
+                ImGui::PushID(("fav_cat" + f_path).c_str());
+                if (ImGui::Button("[*]", ImVec2(30, 0))) {
+                    asset_manager.toggle_favorite(f_path);
+                }
+                ImGui::PopID();
+                ImGui::SameLine();
+
+                ImGui::PushID(("fav_cat_play" + f_path).c_str());
+                if (ImGui::Button(">", ImVec2(20, 0))) {
+                    play_preview(f_path);
+                }
+                ImGui::PopID();
+                ImGui::SameLine();
+
+                if (ImGui::Selectable(filename.c_str())) {
+                    char buf[512];
+                    std::string ext = fs::path(f_path).extension().string();
+                    std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+                    if (ext == ".sf2") {
+                        snprintf(buf, sizeof(buf), "instrument %s {\n    soundfont \"%s\"\n    bank 0\n    preset 0\n}\n", filename.c_str(), f_path.c_str());
+                    } else {
+                        snprintf(buf, sizeof(buf), "instrument %s {\n    sample \"%s\"\n}\n", filename.c_str(), f_path.c_str());
+                    }
+                    prepend_to_editor(editor, buf);
+                }
+            }
+        }
+
+        if (ImGui::Button("Add New Synth", ImVec2(-FLT_MIN, 0))) { 
+            const char* new_synth = "instrument NewSynth {\n    waveform sawtooth\n    envelope 0.01 0.1 0.8 0.2\n    filter lowpass 2000 1.0\n}\n";
+            prepend_to_editor(editor, new_synth);
+        }
+        
+        // Add Folder Button
+        if (ImGui::Button("Add Folder", ImVec2(-FLT_MIN, 0))) {
+            show_folder_picker = true;
+        }
+
+        if (ImGui::Button("Clear All", ImVec2(-FLT_MIN, 0))) { asset_manager.clear_watched_folders(); }
+        if (ImGui::Button("Refresh Assets", ImVec2(-FLT_MIN, 0))) { asset_manager.refresh_assets(); }
+        ImGui::Separator();
+
+        if (ImGui::CollapsingHeader("Active / Imported", ImGuiTreeNodeFlags_DefaultOpen)) {
+            if (active_instrument_names.empty()) ImGui::TextDisabled("No instruments defined");
+            for (const auto& inst : active_instrument_names) {
+                if (strlen(asset_search_buffer) == 0 || inst.find(asset_search_buffer) != std::string::npos) {
+                    ImGui::BulletText("%s", inst.c_str());
+                }
+            }
+        }
+
+        if (ImGui::CollapsingHeader("SoundFonts")) {
+            AssetNode sf_tree = asset_manager.get_soundfont_tree(asset_search_buffer);
+            for (const auto& child : sf_tree.children) {
+                render_asset_tree_node(child);
+            }
+        }
+
+        if (ImGui::CollapsingHeader("Samples")) {
+            AssetNode smp_tree = asset_manager.get_sample_tree(asset_search_buffer);
+            for (const auto& child : smp_tree.children) {
+                render_asset_tree_node(child);
+            }
+        }
+
+        if (ImGui::CollapsingHeader("Synths")) {
+            AssetNode synth_tree = asset_manager.get_synth_tree(asset_search_buffer);
+            for (const auto& child : synth_tree.children) {
+                render_asset_tree_node(child);
+            }
+        }
         ImGui::End();
 
         // --- 2. CODE EDITOR (Top Right) ---
