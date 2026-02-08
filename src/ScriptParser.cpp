@@ -405,6 +405,12 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
         std::string keyword;
         if (!(ss >> keyword)) continue;
 
+        if (keyword == "{") continue;
+        if (keyword == "}") {
+            if (depth > 0) return;
+            continue;
+        }
+
         if (keyword == "octave") {
             ss >> m_default_octave;
         } else if (keyword == "var") {

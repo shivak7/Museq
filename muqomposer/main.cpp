@@ -638,9 +638,8 @@ int main(int, char**) {
                             ImGui::PushID((node.full_path + inst).c_str());
                             if (ImGui::Button("[>]", ImVec2(35, 0))) {
                                 std::string code = it->instrument_definitions.at(inst);
-                                // code already has "instrument Name { ... }"
-                                // We need to trigger it in a sequence
-                                std::string preview_script = code + "\nsequential { " + inst + " { note C4 1000 100 } }";
+                                // Construct multi-line preview script
+                                std::string preview_script = code + "\n\nsequential {\n    " + inst + " { note C4 1000 100 }\n}\n";
                                 
                                 Song preview_song = ScriptParser::parse_string(preview_script);
                                 if (preview_song.root) {
@@ -760,6 +759,10 @@ int main(int, char**) {
             update_active_instruments();
             last_parse_time = ImGui::GetTime();
             last_cursor_line = current_cursor_line;
+        }
+
+        if (!player.is_playing()) {
+            is_playing_preview = false;
         }
 
         // Update Status and Visualization Markers
