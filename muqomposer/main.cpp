@@ -549,10 +549,10 @@ int main(int, char**) {
 
                             ImGui::PushID((node.full_path + inst).c_str());
                             if (ImGui::Button("[>]", ImVec2(35, 0))) {
-                                Song preview_song;
-                                Instrument preview_inst(inst, Waveform::SAWTOOTH); 
-                                preview_inst.sequence.add_note(Note(60, 1000, 100));
-                                preview_song.root->children.push_back(std::make_shared<InstrumentElement>(preview_inst));
+                                std::string code = it->instrument_definitions.at(inst);
+                                // Append a trigger for preview
+                                code += "\n[ " + inst + ": C4 ]\n";
+                                Song preview_song = ScriptParser::parse_string(code);
                                 player.play(preview_song, true);
                             }
                             ImGui::PopID();
