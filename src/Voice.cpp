@@ -63,13 +63,19 @@ Voice::Voice(const Instrument& inst, double start_samples, float sample_rate)
     
     if (instrument.sequence.notes.empty()) {
         total_duration_samples = 0;
+        is_finished = true;
         return;
     }
 
     double total_ms = 0;
+    for (const auto& note : instrument.sequence.notes) {
+        total_ms += note.duration;
+    }
     // Add release time to total duration to allow for tail
     total_ms += instrument.synth.envelope.release * 1000.0f;
     total_duration_samples = (total_ms / 1000.0) * sample_rate;
+    
+    if (total_duration_samples <= 0) is_finished = true;
 
     for (const auto& fx : instrument.effects) {
         if (fx.type == EffectType::DELAY) {
