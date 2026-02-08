@@ -407,6 +407,8 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
         std::stringstream ss(line);
         std::string keyword;
         if (!(ss >> keyword)) continue;
+        
+        std::cerr << "ScriptParser: Keyword '" << keyword << "' at line " << m_current_line << std::endl;
 
         if (keyword == "{") continue;
         if (keyword == "}") {
@@ -626,6 +628,7 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
             else if (type_str == "locrian") type = ScaleType::LOCRIAN;
             m_current_scale = Scale(type, root);
         } else if (m_templates.count(keyword)) {
+            std::cerr << "ScriptParser: Found instrument '" << keyword << "'" << std::endl;
             Instrument inst = m_templates[keyword];
             int inst_brace_count = 0;
             int current_octave = m_default_octave;
@@ -695,6 +698,7 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
             }
             auto inst_elem = std::make_shared<InstrumentElement>(inst);
             inst_elem->source_line = inst_line;
+            std::cerr << "ScriptParser: Created InstrumentElement for '" << keyword << "' with " << inst.sequence.notes.size() << " notes" << std::endl;
             current_parent->children.push_back(inst_elem);
         } else if (keyword == "}") {
             if (in_sequence_block) {
