@@ -311,13 +311,13 @@ int main(int, char**) {
     TextEditor::LanguageDefinition museq_lang;
     museq_lang.mName = "Museq";
     
-    // Keywords (Primary Structure) - High Priority Pink/Orange
+    // Keywords (Primary Structure) - Pink
     const char* const primary_keywords[] = {
         "instrument", "function", "var", "import", "scale", "call", "parallel", "sequential", "repeat", "loop", "tempo", "bpm", "velocity", "octave", "offset", "phase", "note", "notes", "sequence", "start", "stop"
     };
     for (auto& k : primary_keywords) museq_lang.mKeywords.insert(k);
 
-    // Effects (Mapped to Preprocessor) - Cyan
+    // Effects (Mapped to PreprocIdentifier) - Cyan
     const char* const effects_keywords[] = {
         "delay", "distortion", "reverb", "bitcrush", "fadein", "fadeout", "tremolo", "effect"
     };
@@ -341,6 +341,7 @@ int main(int, char**) {
         museq_lang.mIdentifiers.insert({t, id});
     }
 
+    // Default coloring for anything else that looks like a word (notes, user instruments) - Green
     museq_lang.mTokenRegexStrings.push_back(std::make_pair<std::string, TextEditor::PaletteIndex>("[a-zA-Z_][a-zA-Z0-9_]*", TextEditor::PaletteIndex::Identifier));
     museq_lang.mTokenRegexStrings.push_back(std::make_pair<std::string, TextEditor::PaletteIndex>("[0-9]+", TextEditor::PaletteIndex::Number));
 
@@ -354,14 +355,14 @@ int main(int, char**) {
     
     // Custom High-Contrast Palette (Dracula-inspired)
     TextEditor::Palette dracula_palette = TextEditor::GetDarkPalette();
-    dracula_palette[(int)TextEditor::PaletteIndex::Keyword] = 0xffff79c6;         // Pink (Primary)
-    dracula_palette[(int)TextEditor::PaletteIndex::Preprocessor] = 0xff8be9fd;    // Cyan (Effects)
-    dracula_palette[(int)TextEditor::PaletteIndex::KnownIdentifier] = 0xffbd93f9; // Purple (Synth Params)
-    dracula_palette[(int)TextEditor::PaletteIndex::Identifier] = 0xff50fa7b;      // Green (User Instruments)
-    dracula_palette[(int)TextEditor::PaletteIndex::String] = 0xfff1fa8c;          // Yellow
-    dracula_palette[(int)TextEditor::PaletteIndex::Number] = 0xffbd93f9;          // Purple
-    dracula_palette[(int)TextEditor::PaletteIndex::Comment] = 0xff6272a4;         // Blue/Gray
-    dracula_palette[(int)TextEditor::PaletteIndex::Background] = 0xff282a36;      // Background
+    dracula_palette[(int)TextEditor::PaletteIndex::Keyword] = 0xffff79c6;           // Pink (Primary)
+    dracula_palette[(int)TextEditor::PaletteIndex::PreprocIdentifier] = 0xff8be9fd; // Cyan (Effects)
+    dracula_palette[(int)TextEditor::PaletteIndex::KnownIdentifier] = 0xffbd93f9;   // Purple (Synth Params)
+    dracula_palette[(int)TextEditor::PaletteIndex::Identifier] = 0xff50fa7b;        // Green (Notes & User Instruments)
+    dracula_palette[(int)TextEditor::PaletteIndex::String] = 0xfff1fa8c;            // Yellow
+    dracula_palette[(int)TextEditor::PaletteIndex::Number] = 0xffbd93f9;            // Purple (Same as synth params, or we can use another)
+    dracula_palette[(int)TextEditor::PaletteIndex::Comment] = 0xff6272a4;           // Blue/Gray
+    dracula_palette[(int)TextEditor::PaletteIndex::Background] = 0xff282a36;        // Background
     editor.SetPalette(dracula_palette);
 
     editor.SetText("// Write your Museq script here\n\ninstrument Piano {\n    waveform sine\n}\n\nsequential {\n    Piano { notes C4, E4, G4 }\n}");
@@ -440,9 +441,6 @@ int main(int, char**) {
         std::stringstream ss(editor.GetText());
         std::string line;
         
-        auto current_lang = editor.GetLanguageDefinition();
-        bool changed = false;
-
         while (std::getline(ss, line)) {
             if (line.find("instrument ") != std::string::npos) {
                 size_t pos = line.find("instrument ") + 11;
@@ -455,17 +453,9 @@ int main(int, char**) {
                         size_t last = name.find_last_not_of(" \t\r\n");
                         name = name.substr(first, (last - first + 1));
                         active_instrument_names.push_back(name);
-                        
-                        if (current_lang.mIdentifiers.find(name) == current_lang.mIdentifiers.end()) {
-                            current_lang.mIdentifiers.insert({name, TextEditor::Identifier()});
-                            changed = true;
-                        }
                     }
                 }
             }
-        }
-        if (changed) {
-            editor.SetLanguageDefinition(current_lang);
         }
     };
 
