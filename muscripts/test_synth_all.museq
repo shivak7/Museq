@@ -1,0 +1,15 @@
+import "musynths/drums.museq"
+import "musynths/leads.museq"
+import "musynths/pads.museq"
+import "musynths/sfx.museq"
+
+sequence MasterTest {
+    1.0 DrumKick_v2
+    2.0 LeadSaw_v2 C4
+    3.0 PadSine_v2 E4+G4
+    4.0 SfxLaser_v2
+}
+
+parallel {
+    MasterTest
+}

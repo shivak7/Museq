@@ -36,6 +36,6 @@ This plan outlines the steps to differentiate the `.museq` files in the `musynth
 - [ ] Task: Conductor - User Manual Verification 'Implementation - SFX Synths' (Protocol in workflow.md)
 
 ## Phase 6: Final Verification
-- [ ] Task: Ensure all files in `musynths/` are syntactically valid by running them through the `museq` CLI or `muqomposer`.
-- [ ] Task: Verify that none of the files are identical using `diff`.
+- [x] Task: Ensure all files in `musynths/` are syntactically valid by running them through the `museq` CLI or `muqomposer`. [c964478]
+- [x] Task: Verify that none of the files are identical using `diff`. [c964478]
 - [ ] Task: Conductor - User Manual Verification 'Final Verification' (Protocol in workflow.md)
