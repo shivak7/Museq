@@ -2,7 +2,7 @@
 
 ## Core Language & Build
 - **Language:** C++17 (Modern C++ features for hierarchical data structures).
-- **Build System:** CMake 3.10+ (Cross-platform configuration and dependency management).
+- **Build System:** CMake 3.10+ with optional `BUILD_TESTS` flag for developer environments.
 
 ## Audio Engine
 - **Synthesis:** Custom subtractive synthesis implementation.
