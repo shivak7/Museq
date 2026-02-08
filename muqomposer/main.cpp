@@ -41,7 +41,7 @@ struct AppFonts {
     ImFont* editor = nullptr;
 };
 
-void load_fonts(AppFonts& fonts, float ui_size, float editor_size) {
+void load_fonts(AppFonts& fonts, float ui_size, float editor_size, bool update_texture = true) {
     ImGuiIO& io = ImGui::GetIO();
     io.Fonts->Clear();
     
@@ -58,12 +58,8 @@ void load_fonts(AppFonts& fonts, float ui_size, float editor_size) {
     
     for (const char* path : ui_font_paths) {
         if (fs::exists(path)) {
-            printf("Trying UI font: %s\n", path);
             fonts.main = io.Fonts->AddFontFromFileTTF(path, ui_size);
-            if (fonts.main) {
-                printf("Success loading UI font: %s\n", path);
-                break;
-            }
+            if (fonts.main) break;
         }
     }
 
@@ -76,24 +72,24 @@ void load_fonts(AppFonts& fonts, float ui_size, float editor_size) {
     };
     for (const char* path : mono_paths) {
         if (fs::exists(path)) {
-            printf("Trying Editor font: %s\n", path);
             fonts.editor = io.Fonts->AddFontFromFileTTF(path, editor_size);
-            if (fonts.editor) {
-                printf("Success loading Editor font: %s\n", path);
-                break;
-            }
+            if (fonts.editor) break;
         }
     }
     
     if (!fonts.editor) {
-        printf("Fallback: Using main font for editor.\n");
         fonts.editor = fonts.main;
     }
 
     io.Fonts->Build();
-    ImGui_ImplOpenGL3_DestroyDeviceObjects();
-    ImGui_ImplOpenGL3_CreateDeviceObjects();
-    printf("Fonts built and texture updated.\n");
+    
+    if (update_texture) {
+        ImGui_ImplOpenGL3_DestroyDeviceObjects();
+        ImGui_ImplOpenGL3_CreateDeviceObjects();
+        printf("Fonts built and texture updated.\n");
+    } else {
+        printf("Fonts loaded into atlas.\n");
+    }
 }
 
 static void glfw_error_callback(int error, const char* description) {
@@ -234,7 +230,7 @@ int main(int, char**) {
 
     // Load Fonts
     AppFonts app_fonts;
-    load_fonts(app_fonts, settings.ui_font_size, settings.editor_font_size);
+    load_fonts(app_fonts, settings.ui_font_size, settings.editor_font_size, false);
 
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOpenGL(window, true);
