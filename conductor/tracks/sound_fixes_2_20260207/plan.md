@@ -29,8 +29,8 @@ This plan outlines the steps to differentiate the `.museq` files in the `musynth
 - [ ] Task: Conductor - User Manual Verification 'Implementation - Pad Synths' (Protocol in workflow.md)
 
 ## Phase 5: Implementation - SFX Synths
-- [ ] Task: Write a test script or `.museq` file for verifying SFX synth sounds.
-- [ ] Task: Implement `musynths/sfx.museq` with templates for:
+- [x] Task: Write a test script or `.museq` file for verifying SFX synth sounds. [8dede5a]
+- [x] Task: Implement `musynths/sfx.museq` with templates for:
     - Riser/Sweep (LFO on pitch/filter over long duration)
     - Noise Burst/Impact (Noise with complex envelope)
 - [ ] Task: Conductor - User Manual Verification 'Implementation - SFX Synths' (Protocol in workflow.md)
