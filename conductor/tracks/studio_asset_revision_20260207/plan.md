@@ -18,7 +18,7 @@ This plan outlines the steps to refactor the `AssetManager` and `muqomposer` UI 
 - [x] Task: Ensure the "Samples" tab accurately reflects the results of the unified recursive scan. [68ac9c2]
 - [x] Task: Conductor - User Manual Verification 'UI Refactoring' (Protocol in workflow.md)
 
-## Phase 3: Robustness and Polish
+## Phase 3: Robustness and Polish [checkpoint: 7874416]
 - [x] Task: Ensure the "Add Folder" popup correctly calls `refresh_assets` and that all three categories (SF2, Samples, Synths) are populated. [807333f]
 - [x] Task: Add basic error handling for malformed `.museq` files during the parsing phase. [807333f]
 - [x] Task: Verify that the search filter correctly prunes all three trees (SoundFonts, Samples, Synths). [807333f]
