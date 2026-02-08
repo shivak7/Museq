@@ -550,8 +550,8 @@ int main(int, char**) {
                             ImGui::PushID((node.full_path + inst).c_str());
                             if (ImGui::Button("[>]", ImVec2(35, 0))) {
                                 std::string code = it->instrument_definitions.at(inst);
-                                // Append a trigger for preview
-                                code += "\n[ " + inst + ": C4 ]\n";
+                                // Append a trigger for preview using standard instrument block syntax
+                                code += "\n" + inst + " { note C4 1000 100 }\n";
                                 Song preview_song = ScriptParser::parse_string(code);
                                 player.play(preview_song, true);
                             }
