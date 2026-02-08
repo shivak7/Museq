@@ -1187,7 +1187,7 @@ int main(int, char**) {
         ImGui::SameLine();
 
         // Group Right: Files
-        float right_btns_w = 260.0f;
+        float right_btns_w = 350.0f;
         float avail_w_footer = ImGui::GetContentRegionAvail().x;
         if (avail_w_footer > right_btns_w) {
             ImGui::SetCursorPosX(ImGui::GetCursorPosX() + avail_w_footer - right_btns_w);
