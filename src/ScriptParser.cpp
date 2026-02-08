@@ -658,7 +658,10 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
                                         if (lss >> p_s) p = std::stof(p_s);
                                         Note new_note(NoteParser::parse(n, m_current_scale, current_octave), d, v, p);
                                         inst.sequence.add_note(new_note);
-                                    } catch(...) {}
+                                        std::cerr << "ScriptParser:       Added note " << n << " (" << d << "ms)" << std::endl;
+                                    } catch(...) {
+                                        std::cerr << "ScriptParser:       Failed to parse note params for " << n << std::endl;
+                                    }
                                 }
                             } else {
                                 Note new_note(NoteParser::parse(n, m_current_scale, current_octave), m_default_duration, m_default_velocity, inst.pan);
