@@ -50,9 +50,9 @@ void load_fonts(AppFonts& fonts, float ui_size, float editor_size, bool update_t
     // 1. UI Font
     fonts.main = nullptr;
     const char* ui_font_paths[] = {
+        "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
         "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
         "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
-        "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
         "/usr/share/fonts/TTF/DejaVuSans.ttf"
     };
     
@@ -73,9 +73,9 @@ void load_fonts(AppFonts& fonts, float ui_size, float editor_size, bool update_t
     // 2. Editor Font
     fonts.editor = nullptr;
     const char* mono_paths[] = {
+        "/usr/share/fonts/truetype/freefont/FreeMono.ttf",
         "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",
         "/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf",
-        "/usr/share/fonts/truetype/freefont/FreeMono.ttf",
         "/usr/share/fonts/TTF/DejaVuSansMono.ttf"
     };
     for (const char* path : mono_paths) {
