@@ -14,6 +14,11 @@ void ScriptParser::set_global_bpm(int bpm) {
     if (bpm > 0) s_global_bpm = bpm;
 }
 
+void ScriptParser::report_error(const std::string& message) {
+    m_song.errors.push_back({m_current_line, message});
+    std::cerr << "Line " << m_current_line << ": " << message << std::endl;
+}
+
 static std::string preprocess_line(const std::string& raw_line) {
     std::string line = raw_line;
     size_t comment_pos = line.find("//");
@@ -52,11 +57,13 @@ Song ScriptParser::parse(const std::string& file_path) {
     }
 
     ScriptParser parser;
+    parser.m_current_line = 0;
     parser.collect_definitions(file, false, file_path);
     file.close();
     file.open(file_path);
     if (!file.is_open()) return Song();
     
+    parser.m_current_line = 0;
     std::map<std::string, std::string> empty_params;
     parser.process_script_stream(file, empty_params, parser.m_song.root, 0);
 
@@ -65,9 +72,11 @@ Song ScriptParser::parse(const std::string& file_path) {
 
 Song ScriptParser::parse_string(const std::string& script_content) {
     ScriptParser parser;
+    parser.m_current_line = 0;
     std::stringstream collect_stream(script_content);
     parser.collect_definitions(collect_stream, false, "string_buffer");
     
+    parser.m_current_line = 0;
     std::stringstream process_stream(script_content);
     std::map<std::string, std::string> empty_params;
     parser.process_script_stream(process_stream, empty_params, parser.m_song.root, 0);
@@ -80,6 +89,7 @@ void ScriptParser::collect_definitions(std::istream& input_stream, bool instrume
     int scope_brace_count = 0;
 
     while (std::getline(input_stream, line)) {
+        m_current_line++;
         line = preprocess_line(line);
         if (line.find_first_not_of(" 	\r\n") == std::string::npos) continue;
 
@@ -103,9 +113,12 @@ void ScriptParser::collect_definitions(std::istream& input_stream, bool instrume
                          m_imported_files.insert(path);
                          std::ifstream imported_file(path);
                          if (imported_file.is_open()) {
+                             int saved_line = m_current_line;
+                             m_current_line = 0; // Reset for imported file? Or keep global? Better global.
                              collect_definitions(imported_file, true, path);
+                             m_current_line = saved_line;
                          } else {
-                             std::cerr << "Warning: Could not open imported file " << path << std::endl;
+                             report_error("Could not open imported file: " + path);
                          }
                      }
                  }
@@ -115,6 +128,7 @@ void ScriptParser::collect_definitions(std::istream& input_stream, bool instrume
             if (instruments_only) {
                 int brace_count = 1;
                 while (std::getline(input_stream, line) && brace_count > 0) {
+                    m_current_line++;
                     if (line.find('{') != std::string::npos) brace_count++;
                     if (line.find('}') != std::string::npos) brace_count--;
                 }
@@ -141,6 +155,7 @@ void ScriptParser::collect_definitions(std::istream& input_stream, bool instrume
 
             int brace_count = 1;
             while (std::getline(input_stream, line) && brace_count > 0) {
+                m_current_line++;
                 if (line.find('{') != std::string::npos) brace_count++;
                 if (line.find('}') != std::string::npos) brace_count--;
                 if (brace_count > 0) func.body_lines.push_back(line);
@@ -169,6 +184,7 @@ void ScriptParser::collect_definitions(std::istream& input_stream, bool instrume
         else if (scope_brace_count == 0 && keyword == "instrument") {
             std::string instrument_name;
             ss >> instrument_name;
+            int inst_start_line = m_current_line;
             
             std::string final_name = instrument_name;
             if (m_templates.count(final_name) > 0) {
@@ -177,9 +193,7 @@ void ScriptParser::collect_definitions(std::istream& input_stream, bool instrume
                     suffix++;
                 }
                 final_name = instrument_name + "_" + std::to_string(suffix);
-                std::cerr << "Warning: Instrument conflict. Renaming '" << instrument_name 
-                          << "' from '" << filename << "' to '" << final_name 
-                          << "' to avoid overwriting existing definition." << std::endl;
+                report_error("Instrument conflict. Renaming '" + instrument_name + "' to '" + final_name + "'");
             }
 
             Instrument template_inst;
@@ -191,13 +205,19 @@ void ScriptParser::collect_definitions(std::istream& input_stream, bool instrume
             int brace_count = 0;
             if (line.find('{') != std::string::npos) brace_count = 1;
             else {
-                while(std::getline(input_stream, sub_line) && sub_line.find('{') == std::string::npos);
-                brace_count = 1;
+                while(std::getline(input_stream, sub_line)) {
+                    m_current_line++;
+                    if (sub_line.find('{') != std::string::npos) {
+                        brace_count = 1;
+                        break;
+                    }
+                }
             }
 
             bool in_sequence = false;
 
             while (brace_count > 0 && std::getline(input_stream, sub_line)) {
+                m_current_line++;
                 sub_line = preprocess_line(sub_line);
                 if (sub_line.find('{') != std::string::npos) brace_count++;
                 if (sub_line.find('}') != std::string::npos) {
@@ -285,7 +305,7 @@ void ScriptParser::collect_definitions(std::istream& input_stream, bool instrume
                     std::string n, d_s, v_s;
                     if (sub_ss >> n >> d_s >> v_s) {
                         if (d_s.find('.') != std::string::npos || v_s.find('.') != std::string::npos) {
-                            std::cerr << "Warning: Floating point value in 'note' duration/velocity. Skipping." << std::endl;
+                            report_error("Floating point value in 'note' duration/velocity. Skipping.");
                         } else {
                             try {
                                 template_inst.sequence.add_note(Note(NoteParser::parse(n), std::stoi(d_s), std::stoi(v_s)));
@@ -373,6 +393,7 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
     const std::string trim_chars = {' ', '\t', '\r', '\n', '"'};
 
     while (std::getline(input_stream, line)) {
+        m_current_line++;
         line = preprocess_line(line);
         if (line.find_first_not_of(" \t\r\n") == std::string::npos) continue;
 
@@ -390,15 +411,22 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
             if (ss >> name >> val) m_globals[name] = val;
         } else if (keyword == "offset") {
             int offset_ms; ss >> offset_ms;
+            int offset_line = m_current_line;
             std::vector<std::string> body;
             std::string sub_line;
             int brace_count = 0;
             if (line.find('{') != std::string::npos) brace_count = 1;
             else {
-                while(std::getline(input_stream, sub_line) && sub_line.find('{') == std::string::npos);
-                brace_count = 1;
+                while(std::getline(input_stream, sub_line)) {
+                    m_current_line++;
+                    if (sub_line.find('{') != std::string::npos) {
+                        brace_count = 1;
+                        break;
+                    }
+                }
             }
             while (brace_count > 0 && std::getline(input_stream, sub_line)) {
+                m_current_line++;
                 sub_line = preprocess_line(sub_line);
                 if (sub_line.find('{') != std::string::npos) brace_count++;
                 if (sub_line.find('}') != std::string::npos) brace_count--;
@@ -406,6 +434,7 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
             }
             
             auto temp_container = std::make_shared<CompositeElement>(CompositeType::SEQUENTIAL);
+            temp_container->source_line = offset_line;
             std::stringstream body_stream;
             for (const auto& bl : body) body_stream << bl << "\n";
             process_script_stream(body_stream, current_param_map, temp_container, depth + 1);
@@ -417,15 +446,22 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
         } else if (keyword == "phase") {
             float p; ss >> p;
             int offset_ms = static_cast<int>(p * m_default_duration);
+            int phase_line = m_current_line;
             std::vector<std::string> body;
             std::string sub_line;
             int brace_count = 0;
             if (line.find('{') != std::string::npos) brace_count = 1;
             else {
-                while(std::getline(input_stream, sub_line) && sub_line.find('{') == std::string::npos);
-                brace_count = 1;
+                while(std::getline(input_stream, sub_line)) {
+                    m_current_line++;
+                    if (sub_line.find('{') != std::string::npos) {
+                        brace_count = 1;
+                        break;
+                    }
+                }
             }
             while (brace_count > 0 && std::getline(input_stream, sub_line)) {
+                m_current_line++;
                 sub_line = preprocess_line(sub_line);
                 if (sub_line.find('{') != std::string::npos) brace_count++;
                 if (sub_line.find('}') != std::string::npos) brace_count--;
@@ -433,6 +469,7 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
             }
             
             auto temp_container = std::make_shared<CompositeElement>(CompositeType::SEQUENTIAL);
+            temp_container->source_line = phase_line;
             std::stringstream body_stream;
             for (const auto& bl : body) body_stream << bl << "\n";
             process_script_stream(body_stream, current_param_map, temp_container, depth + 1);
@@ -465,23 +502,32 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
             }
         } else if (keyword == "parallel") {
             auto parallel_elem = std::make_shared<CompositeElement>(CompositeType::PARALLEL);
+            parallel_elem->source_line = m_current_line;
             current_parent->children.push_back(parallel_elem);
             process_script_stream(input_stream, current_param_map, parallel_elem, depth + 1);
         } else if (keyword == "sequential") {
             auto sequential_elem = std::make_shared<CompositeElement>(CompositeType::SEQUENTIAL);
+            sequential_elem->source_line = m_current_line;
             current_parent->children.push_back(sequential_elem);
             process_script_stream(input_stream, current_param_map, sequential_elem, depth + 1);
         } else if (keyword == "repeat") {
             int count; ss >> count;
+            int repeat_line = m_current_line;
             std::vector<std::string> body;
             std::string sub_line;
             int brace_count = 0;
             if (line.find('{') != std::string::npos) brace_count = 1;
             else {
-                while(std::getline(input_stream, sub_line) && sub_line.find('{') == std::string::npos);
-                brace_count = 1;
+                while(std::getline(input_stream, sub_line)) {
+                    m_current_line++;
+                    if (sub_line.find('{') != std::string::npos) {
+                        brace_count = 1;
+                        break;
+                    }
+                }
             }
             while (brace_count > 0 && std::getline(input_stream, sub_line)) {
+                m_current_line++;
                 if (sub_line.find('{') != std::string::npos) brace_count++;
                 if (sub_line.find('}') != std::string::npos) brace_count--;
                 if (brace_count > 0) body.push_back(sub_line);
@@ -494,10 +540,12 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
         } else if (keyword == "loop") {
             std::string sub; ss >> sub;
             if (sub == "start") {
+                int loop_line = m_current_line;
                 std::string rest_of_line;
                 std::getline(ss, rest_of_line);
                 
                 auto auto_loop = std::make_shared<CompositeElement>(CompositeType::AUTO_LOOP);
+                auto_loop->source_line = loop_line;
                 
                 // Add followers (functions)
                 std::stringstream rss(rest_of_line);
@@ -519,6 +567,7 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
                 
                 // Create Leader
                 auto leader = std::make_shared<CompositeElement>(CompositeType::SEQUENTIAL);
+                leader->source_line = loop_line;
                 auto_loop->children.insert(auto_loop->children.begin(), leader); // Leader is Child 0
                 
                 current_parent->children.push_back(auto_loop);
@@ -570,6 +619,7 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
             Instrument inst = m_templates[keyword];
             int inst_brace_count = 0;
             int current_octave = m_default_octave;
+            int inst_line = m_current_line;
             
             auto process_inst_line = [&](std::string l) {
                 if (l.find('{') != std::string::npos) inst_brace_count++;
@@ -585,7 +635,7 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
                         if (lss >> n) {
                             if (lss >> d_s && lss >> v_s) {
                                 if (d_s.find('.') != std::string::npos || v_s.find('.') != std::string::npos) {
-                                    std::cerr << "Warning: Floating point value in 'note' duration/velocity. Skipping." << std::endl;
+                                    report_error("Floating point value in 'note' duration/velocity. Skipping.");
                                 } else {
                                     try {
                                         int d = std::stoi(d_s);
@@ -629,10 +679,13 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
 
             std::string sub_line;
             while (inst_brace_count > 0 && std::getline(input_stream, sub_line)) {
+                m_current_line++;
                 sub_line = preprocess_line(sub_line);
                 process_inst_line(sub_line);
             }
-            current_parent->children.push_back(std::make_shared<InstrumentElement>(inst));
+            auto inst_elem = std::make_shared<InstrumentElement>(inst);
+            inst_elem->source_line = inst_line;
+            current_parent->children.push_back(inst_elem);
         } else if (keyword == "}") {
             if (in_sequence_block) {
                 in_sequence_block = false;
@@ -645,7 +698,9 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
                 i.synth.filter = filter;
                 i.synth.lfo = lfo;
                 i.effects = temp_effects; // Copy effects
-                current_parent->children.push_back(std::make_shared<InstrumentElement>(i));
+                auto inst_elem = std::make_shared<InstrumentElement>(i);
+                inst_elem->source_line = m_current_line; // Might be better to track start line
+                current_parent->children.push_back(inst_elem);
                 in_instrument_block = false;
             } else {
                 return;
@@ -750,7 +805,7 @@ void ScriptParser::parse_compact_notes(const std::string& list, Sequence& seq, f
                     
                     std::string dur_vel_part = (second_comma != std::string::npos) ? params_str.substr(0, second_comma) : params_str;
                     if (dur_vel_part.find('.') != std::string::npos) {
-                        std::cerr << "Warning: Floating point value detected in duration/velocity of 'notes' sequence. Skipping note: " << comp << std::endl;
+                        report_error("Floating point value detected in duration/velocity of 'notes' sequence. Skipping note: " + comp);
                         continue;
                     }
 
@@ -766,7 +821,7 @@ void ScriptParser::parse_compact_notes(const std::string& list, Sequence& seq, f
                             if (pss >> p3) p_val = p3;
                         }
                     } else if (!params_clean.empty()) {
-                        std::cerr << "Warning: Invalid parameters in 'notes' sequence. Skipping note: " << comp << std::endl;
+                        report_error("Invalid parameters in 'notes' sequence. Skipping note: " + comp);
                         continue;
                     }
                 }
@@ -797,7 +852,7 @@ void ScriptParser::parse_compact_notes(const std::string& list, Sequence& seq, f
                 if (pitch > 0 || note_name == "0" || pitch == -1) {
                     seq.add_note(Note(pitch, dur, vel, p_val, is_last));
                 } else {
-                    std::cerr << "Warning: Invalid note name '" << note_name << "' in sequence. Skipping." << std::endl;
+                    report_error("Invalid note name '" + note_name + "' in sequence. Skipping.");
                 }
             }
         }

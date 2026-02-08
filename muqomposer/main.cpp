@@ -303,6 +303,35 @@ int main(int, char**) {
     AudioPlayer player;
     bool player_initialized = player.init();
     char status_text[128] = "Status: Ready";
+    Song last_parsed_song;
+
+    // Helper to find the active line from a SongElement tree
+    std::function<int(std::shared_ptr<SongElement>, double, double)> find_active_line;
+    find_active_line = [&](std::shared_ptr<SongElement> element, double current_time_ms, double parent_offset_ms) -> int {
+        double absolute_start = parent_offset_ms + element->start_offset_ms;
+        double absolute_end = absolute_start + element->get_duration_ms();
+
+        if (current_time_ms < absolute_start || current_time_ms > absolute_end) return -1;
+
+        auto comp = std::dynamic_pointer_cast<CompositeElement>(element);
+        if (comp) {
+            if (comp->type == CompositeType::SEQUENTIAL) {
+                double running_offset = absolute_start;
+                for (auto& child : comp->children) {
+                    int line = find_active_line(child, current_time_ms, running_offset);
+                    if (line != -1) return line;
+                    running_offset += child->start_offset_ms + child->get_duration_ms();
+                }
+            } else {
+                for (auto& child : comp->children) {
+                    int line = find_active_line(child, current_time_ms, absolute_start);
+                    if (line != -1) return line;
+                }
+            }
+        }
+        
+        return element->source_line;
+    };
 
     // Museq State
     TextEditor editor;
@@ -312,13 +341,13 @@ int main(int, char**) {
     museq_lang.mName = "Museq";
     
     // Keywords (Primary Structure) - Pink
-    const char* const primary_keywords[] = {
+    static const std::vector<std::string> primary_keywords = {
         "instrument", "function", "var", "import", "scale", "call", "parallel", "sequential", "repeat", "loop", "tempo", "bpm", "velocity", "octave", "offset", "phase", "note", "notes", "sequence", "start", "stop"
     };
     for (auto& k : primary_keywords) museq_lang.mKeywords.insert(k);
 
     // Effects (Mapped to PreprocIdentifier) - Cyan
-    const char* const effects_keywords[] = {
+    static const std::vector<std::string> effects_keywords = {
         "delay", "distortion", "reverb", "bitcrush", "fadein", "fadeout", "tremolo", "effect"
     };
     for (auto& e : effects_keywords) {
@@ -328,7 +357,7 @@ int main(int, char**) {
     }
 
     // Synthesizer / Parameters (Mapped to KnownIdentifier) - Purple
-    const char* const synth_keywords[] = {
+    static const std::vector<std::string> synth_keywords = {
         "waveform", "envelope", "filter", "lfo", "gain", "pan", "bank", "preset", "portamento", 
         "sine", "square", "triangle", "sawtooth", "noise",
         "lowpass", "highpass", "bandpass", "notch", "peak", "lshelf", "hshelf",
@@ -370,8 +399,8 @@ int main(int, char**) {
     // Helper for Play logic
     auto play_logic = [&]() {
         if (player_initialized) {
-            Song song = ScriptParser::parse_string(editor.GetText());
-            player.play(song);
+            last_parsed_song = ScriptParser::parse_string(editor.GetText());
+            player.play(last_parsed_song);
         }
     };
 
@@ -402,18 +431,18 @@ int main(int, char**) {
 
     // Helper for Export logic
     auto export_logic = [&](const std::string& path, int format, float quality, int bitrate) {
-        Song song = ScriptParser::parse_string(editor.GetText());
+        last_parsed_song = ScriptParser::parse_string(editor.GetText());
         AudioRenderer renderer;
         
         if (format == 0) {
             WavWriter writer;
-            writer.write(renderer, song, path, 44100.0f);
+            writer.write(renderer, last_parsed_song, path, 44100.0f);
         } else if (format == 1) {
             Mp3Writer writer;
-            writer.write(renderer, song, path, 44100.0f, bitrate);
+            writer.write(renderer, last_parsed_song, path, 44100.0f, bitrate);
         } else if (format == 2) {
             OggWriter writer;
-            writer.write(renderer, song, path, 44100.0f, quality);
+            writer.write(renderer, last_parsed_song, path, 44100.0f, quality);
         }
         
         snprintf(status_text, sizeof(status_text), "Status: Exported to %s", fs::path(path).filename().string().c_str());
@@ -672,6 +701,12 @@ int main(int, char**) {
         ImGui::EndChild();
     };
 
+    // Autocomplete State
+    bool autocomplete_open = false;
+    std::vector<std::string> autocomplete_items;
+    int autocomplete_selected = 0;
+    std::string autocomplete_prefix;
+
     // Main loop
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
@@ -703,14 +738,27 @@ int main(int, char**) {
             last_parse_time = ImGui::GetTime();
         }
 
-        // Update Status
+        // Update Status and Visualization Markers
+        TextEditor::ErrorMarkers markers;
+        for (const auto& err : last_parsed_song.errors) {
+            markers[err.first] = err.second;
+        }
+
         if (!player_initialized) {
             snprintf(status_text, sizeof(status_text), "Status: Audio Init Failed");
         } else if (player.is_playing()) {
             snprintf(status_text, sizeof(status_text), "Status: Playing");
+            
+            // Highlight active line
+            double pos = player.get_playback_position_ms();
+            int active_line = find_active_line(last_parsed_song.root, pos, 0);
+            if (active_line > 0) {
+                markers[active_line] = "Playback";
+            }
         } else {
             snprintf(status_text, sizeof(status_text), "Status: Ready");
         }
+        editor.SetErrorMarkers(markers);
 
         // Start the Dear ImGui frame
         ImGui_ImplOpenGL3_NewFrame();
@@ -866,6 +914,90 @@ int main(int, char**) {
         ImGui::PushFont(editor_font);
         editor.Render("Editor");
         ImGui::PopFont();
+
+        // Autocomplete Logic
+        if (editor.IsTextChanged() || editor.IsCursorPositionChanged()) {
+            auto pos = editor.GetCursorPosition();
+            std::string line = editor.GetCurrentLineText();
+            
+            // Find current word prefix
+            int col = pos.mColumn;
+            int start = col - 1;
+            while (start >= 0 && (isalnum(line[start]) || line[start] == '_')) start--;
+            start++;
+            
+            if (col > start) {
+                autocomplete_prefix = line.substr(start, col - start);
+                
+                if (autocomplete_prefix.length() >= 1) {
+                    autocomplete_items.clear();
+                    
+                    std::vector<std::string> all_suggestions;
+                    for (auto k : primary_keywords) all_suggestions.push_back(k);
+                    for (auto e : effects_keywords) all_suggestions.push_back(e);
+                    for (auto s : synth_keywords) all_suggestions.push_back(s);
+                    for (auto i : active_instrument_names) all_suggestions.push_back(i);
+
+                    for (const auto& s : all_suggestions) {
+                        if (s.find(autocomplete_prefix) == 0 && s != autocomplete_prefix) {
+                            autocomplete_items.push_back(s);
+                        }
+                    }
+                    
+                    if (!autocomplete_items.empty()) {
+                        autocomplete_open = true;
+                        autocomplete_selected = 0;
+                    } else {
+                        autocomplete_open = false;
+                    }
+                } else {
+                    autocomplete_open = false;
+                }
+            } else {
+                autocomplete_open = false;
+            }
+        }
+
+        if (autocomplete_open) {
+            ImGui::OpenPopup("##autocomplete");
+            
+            // Position popup at cursor
+            // (Simplified: using a fixed offset for now, ideally use GetCursorScreenPos from TextEditor if exposed)
+            ImVec2 screen_pos = ImGui::GetCursorScreenPos(); 
+            // TextEditor doesn't easily expose character screen position.
+            // We'll just show it as a generic window for now.
+            
+            if (ImGui::BeginPopup("##autocomplete", ImGuiWindowFlags_NoFocusOnAppearing)) {
+                for (int i = 0; i < (int)autocomplete_items.size(); i++) {
+                    bool is_selected = (i == autocomplete_selected);
+                    if (ImGui::Selectable(autocomplete_items[i].c_str(), is_selected)) {
+                        // Insert completion
+                        std::string completion = autocomplete_items[i].substr(autocomplete_prefix.length());
+                        editor.InsertText(completion);
+                        autocomplete_open = false;
+                    }
+                    if (is_selected) ImGui::SetItemDefaultFocus();
+                }
+                
+                // Handle keyboard navigation
+                if (ImGui::IsKeyPressed(ImGuiKey_DownArrow)) {
+                    autocomplete_selected = (autocomplete_selected + 1) % autocomplete_items.size();
+                }
+                if (ImGui::IsKeyPressed(ImGuiKey_UpArrow)) {
+                    autocomplete_selected = (autocomplete_selected - 1 + autocomplete_items.size()) % autocomplete_items.size();
+                }
+                if (ImGui::IsKeyPressed(ImGuiKey_Enter) || ImGui::IsKeyPressed(ImGuiKey_Tab)) {
+                    std::string completion = autocomplete_items[autocomplete_selected].substr(autocomplete_prefix.length());
+                    editor.InsertText(completion);
+                    autocomplete_open = false;
+                }
+                if (ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+                    autocomplete_open = false;
+                }
+                
+                ImGui::EndPopup();
+            }
+        }
         
         if (ImGui::BeginDragDropTarget()) {
             if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ASSET_CODE")) {

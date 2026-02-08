@@ -20,6 +20,7 @@ public:
     void load(const Song& song, float sample_rate = 44100.0f);
     void render_block(float* output, int frame_count);
     bool is_finished() const;
+    double get_current_time_ms() const { return (double)m_current_sample / m_sample_rate * 1000.0; }
 
     // Helper to query soundfont
     static void print_soundfont_presets(const std::string& path);

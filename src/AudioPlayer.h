@@ -24,6 +24,7 @@ public:
 
     // Check if currently playing
     bool is_playing() const;
+    double get_playback_position_ms() const;
 
     // Visualization
     static const int VIS_BUFFER_SIZE = 1024;

@@ -32,6 +32,7 @@ private:
     int m_default_velocity = 100;
     int m_default_octave = 4;
     Scale m_current_scale = Scale(ScaleType::MAJOR, "C");
+    int m_current_line = 1;
 
     ScriptParser();
 
@@ -40,6 +41,7 @@ private:
     bool skipping_definition(const std::string& line, bool& in_function, bool& in_instrument, int& brace_count, std::istream& stream, int depth);
     std::string substitute_params(const std::string& line, const std::map<std::string, std::string>& param_map);
     void parse_compact_notes(const std::string& list, Sequence& seq, float default_pan = 0.0f, int default_octave = 4);
+    void report_error(const std::string& message);
 };
 
 // FunctionDefinition struct to hold function details

@@ -7,6 +7,7 @@
 class Song {
 public:
     std::shared_ptr<CompositeElement> root;
+    std::vector<std::pair<int, std::string>> errors;
 
     Song() {
         root = std::make_shared<CompositeElement>(CompositeType::SEQUENTIAL);

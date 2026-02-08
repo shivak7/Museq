@@ -89,6 +89,10 @@ bool AudioPlayer::is_playing() const {
     return m_playing && !m_renderer.is_finished();
 }
 
+double AudioPlayer::get_playback_position_ms() const {
+    return m_renderer.get_current_time_ms();
+}
+
 void AudioPlayer::get_visualization_data(float* out_buffer, int count) {
     if (count > VIS_BUFFER_SIZE) count = VIS_BUFFER_SIZE;
     
