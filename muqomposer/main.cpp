@@ -638,8 +638,8 @@ int main(int, char**) {
                             ImGui::PushID((node.full_path + inst).c_str());
                             if (ImGui::Button("[>]", ImVec2(35, 0))) {
                                 std::string code = it->instrument_definitions.at(inst);
-                                // Construct multi-line preview script
-                                std::string preview_script = code + "\n\nsequential {\n    " + inst + " { note C4 1000 100 }\n}\n";
+                                // Construct multi-line preview script with explicit BPM
+                                std::string preview_script = "tempo 120\n" + code + "\n\nsequential {\n    " + inst + " { note C4 1000 100 }\n}\n";
                                 
                                 Song preview_song = ScriptParser::parse_string(preview_script);
                                 if (preview_song.root) {
@@ -776,11 +776,11 @@ int main(int, char**) {
         if (!player_initialized) {
             snprintf(status_text, sizeof(status_text), "Status: Audio Init Failed");
         } else if (player.is_playing()) {
-            snprintf(status_text, sizeof(status_text), "Status: Playing");
+            double pos = player.get_playback_position_ms();
+            snprintf(status_text, sizeof(status_text), "Status: Playing (%.1f ms) %s", pos, is_playing_preview ? "[PREVIEW]" : "");
             
             // Highlight active line (only if not a preview)
             if (!is_playing_preview) {
-                double pos = player.get_playback_position_ms();
                 int active_line = find_active_line(last_parsed_song.root, pos, 0);
                 if (active_line > 0) {
                     markers[active_line] = "Playback";

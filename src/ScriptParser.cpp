@@ -367,6 +367,9 @@ bool ScriptParser::skipping_definition(const std::string& line, bool& in_functio
 }
 
 void ScriptParser::process_script_stream(std::istream& input_stream, const std::map<std::string, std::string>& current_param_map, std::shared_ptr<CompositeElement> current_parent, int depth) {
+    // Update default duration based on current BPM
+    m_default_duration = 60000 / s_global_bpm;
+
     std::string line;
     bool in_function_definition = false;
     bool in_instrument_definition = false;
