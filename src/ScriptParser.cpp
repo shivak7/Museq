@@ -642,10 +642,11 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
                 std::string lkw;
                 while (lss >> lkw) {
                     if (lkw == "{" || lkw == "}") continue;
-                    // ...
-                    else if (lkw == "note") {
+                    std::cerr << "ScriptParser:   inst usage kw: '" << lkw << "'" << std::endl;
+                    if (lkw == "note") {
                         std::string n, d_s, v_s, p_s;
                         if (lss >> n) {
+                            std::cerr << "ScriptParser:     found note: '" << n << "'" << std::endl;
                             if (lss >> d_s && lss >> v_s) {
                                 if (d_s.find('.') != std::string::npos || v_s.find('.') != std::string::npos) {
                                     report_error("Floating point value in 'note' duration/velocity. Skipping.");
@@ -655,11 +656,13 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
                                         int v = std::stoi(v_s);
                                         float p = inst.pan;
                                         if (lss >> p_s) p = std::stof(p_s);
-                                        inst.sequence.add_note(Note(NoteParser::parse(n, m_current_scale, current_octave), d, v, p));
+                                        Note new_note(NoteParser::parse(n, m_current_scale, current_octave), d, v, p);
+                                        inst.sequence.add_note(new_note);
                                     } catch(...) {}
                                 }
                             } else {
-                                inst.sequence.add_note(Note(NoteParser::parse(n, m_current_scale, current_octave), m_default_duration, m_default_velocity, inst.pan));
+                                Note new_note(NoteParser::parse(n, m_current_scale, current_octave), m_default_duration, m_default_velocity, inst.pan);
+                                inst.sequence.add_note(new_note);
                             }
                         }
                     } else if (lkw == "notes") {
