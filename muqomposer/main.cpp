@@ -311,27 +311,33 @@ int main(int, char**) {
     TextEditor::LanguageDefinition museq_lang;
     museq_lang.mName = "Museq";
     
-    // Keywords
-    const char* const keywords[] = {
-        "instrument", "function", "var", "import", "scale", "call", "parallel", "sequential", "repeat", "loop", "tempo", "bpm", "velocity", "octave", "offset", "phase", "note", "notes", "sequence"
+    // Keywords (Primary Structure) - High Priority Pink/Orange
+    const char* const primary_keywords[] = {
+        "instrument", "function", "var", "import", "scale", "call", "parallel", "sequential", "repeat", "loop", "tempo", "bpm", "velocity", "octave", "offset", "phase", "note", "notes", "sequence", "start", "stop"
     };
-    for (auto& k : keywords) {
+    for (auto& k : primary_keywords) museq_lang.mKeywords.insert(k);
+
+    // Effects (Mapped to Preprocessor) - Cyan
+    const char* const effects_keywords[] = {
+        "delay", "distortion", "reverb", "bitcrush", "fadein", "fadeout", "tremolo", "effect"
+    };
+    for (auto& e : effects_keywords) {
         TextEditor::Identifier id;
-        museq_lang.mKeywords.insert(k);
+        id.mDeclaration = "Built-in effect";
+        museq_lang.mPreprocIdentifiers.insert({e, id});
     }
 
-    // Types / Sub-keywords
-    const char* const types[] = {
-        "waveform", "envelope", "filter", "lfo", "sample", "soundfont", "bank", "preset", "portamento", "pan", "gain", "effect",
+    // Synthesizer / Parameters (Mapped to KnownIdentifier) - Purple
+    const char* const synth_keywords[] = {
+        "waveform", "envelope", "filter", "lfo", "gain", "pan", "bank", "preset", "portamento", 
         "sine", "square", "triangle", "sawtooth", "noise",
         "lowpass", "highpass", "bandpass", "notch", "peak", "lshelf", "hshelf",
         "pitch", "amplitude", "cutoff",
-        "delay", "distortion", "bitcrush", "fadein", "fadeout", "tremolo", "reverb",
-        "major", "minor", "dorian", "phrygian", "lydian", "mixolydian", "locrian",
-        "start", "stop"
+        "major", "minor", "dorian", "phrygian", "lydian", "mixolydian", "locrian"
     };
-    for (auto& t : types) {
+    for (auto& t : synth_keywords) {
         TextEditor::Identifier id;
+        id.mDeclaration = "Built-in parameter";
         museq_lang.mIdentifiers.insert({t, id});
     }
 
@@ -348,12 +354,14 @@ int main(int, char**) {
     
     // Custom High-Contrast Palette (Dracula-inspired)
     TextEditor::Palette dracula_palette = TextEditor::GetDarkPalette();
-    dracula_palette[(int)TextEditor::PaletteIndex::Keyword] = 0xff79c6ff;     // Pink/Orange
-    dracula_palette[(int)TextEditor::PaletteIndex::Identifier] = 0xff50fa7b;  // Green
-    dracula_palette[(int)TextEditor::PaletteIndex::String] = 0xfff1fa8c;      // Yellow
-    dracula_palette[(int)TextEditor::PaletteIndex::Number] = 0xffbd93f9;      // Purple
-    dracula_palette[(int)TextEditor::PaletteIndex::Comment] = 0xff6272a4;     // Blue/Gray
-    dracula_palette[(int)TextEditor::PaletteIndex::Background] = 0xff282a36;  // Background
+    dracula_palette[(int)TextEditor::PaletteIndex::Keyword] = 0xffff79c6;         // Pink (Primary)
+    dracula_palette[(int)TextEditor::PaletteIndex::Preprocessor] = 0xff8be9fd;    // Cyan (Effects)
+    dracula_palette[(int)TextEditor::PaletteIndex::KnownIdentifier] = 0xffbd93f9; // Purple (Synth Params)
+    dracula_palette[(int)TextEditor::PaletteIndex::Identifier] = 0xff50fa7b;      // Green (User Instruments)
+    dracula_palette[(int)TextEditor::PaletteIndex::String] = 0xfff1fa8c;          // Yellow
+    dracula_palette[(int)TextEditor::PaletteIndex::Number] = 0xffbd93f9;          // Purple
+    dracula_palette[(int)TextEditor::PaletteIndex::Comment] = 0xff6272a4;         // Blue/Gray
+    dracula_palette[(int)TextEditor::PaletteIndex::Background] = 0xff282a36;      // Background
     editor.SetPalette(dracula_palette);
 
     editor.SetText("// Write your Museq script here\n\ninstrument Piano {\n    waveform sine\n}\n\nsequential {\n    Piano { notes C4, E4, G4 }\n}");
