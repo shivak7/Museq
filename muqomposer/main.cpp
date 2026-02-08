@@ -642,6 +642,9 @@ int main(int, char**) {
                                 std::string preview_script = "tempo 120\n" + code + "\n\nsequential {\n    " + inst + " { note C4 1000 100 }\n}\n";
                                 
                                 Song preview_song = ScriptParser::parse_string(preview_script);
+                                if (!preview_song.errors.empty()) {
+                                    snprintf(status_text, sizeof(status_text), "Preview Error: %s", preview_song.errors[0].second.c_str());
+                                }
                                 if (preview_song.root) {
                                     player.play(preview_song, true);
                                     is_playing_preview = true;
@@ -761,7 +764,7 @@ int main(int, char**) {
             last_cursor_line = current_cursor_line;
         }
 
-        if (!player.is_playing()) {
+        if (is_playing_preview && !player.is_playing()) {
             is_playing_preview = false;
         }
 
@@ -790,7 +793,7 @@ int main(int, char**) {
                     markers[active_line] = "Playback";
                 }
             }
-        } else {
+        } else if (strncmp(status_text, "Preview Error:", 14) != 0) {
             snprintf(status_text, sizeof(status_text), "Status: Ready");
         }
         editor.SetErrorMarkers(markers);
