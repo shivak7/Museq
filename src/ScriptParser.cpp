@@ -282,8 +282,16 @@ void ScriptParser::collect_definitions(std::istream& input_stream, bool instrume
                 } else if (sub_kw == "sequence") {
                     in_sequence = true;
                 } else if (sub_kw == "note" && in_sequence) {
-                    std::string n; int d, v; sub_ss >> n >> d >> v;
-                    template_inst.sequence.add_note(Note(NoteParser::parse(n), d, v));
+                    std::string n, d_s, v_s;
+                    if (sub_ss >> n >> d_s >> v_s) {
+                        if (d_s.find('.') != std::string::npos || v_s.find('.') != std::string::npos) {
+                            std::cerr << "Warning: Floating point value in 'note' duration/velocity. Skipping." << std::endl;
+                        } else {
+                            try {
+                                template_inst.sequence.add_note(Note(NoteParser::parse(n), std::stoi(d_s), std::stoi(v_s)));
+                            } catch(...) {}
+                        }
+                    }
                 } else if (sub_kw == "notes" && in_sequence) {
                     std::string note_list; std::getline(sub_ss, note_list);
                     parse_compact_notes(note_list, template_inst.sequence);
@@ -573,12 +581,24 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
                     if (lkw == "{" || lkw == "}") continue;
                     // ...
                     else if (lkw == "note") {
-                        std::string n; int d, v; float p;
-                        if (lss >> n >> d >> v >> p) inst.sequence.add_note(Note(NoteParser::parse(n, m_current_scale, current_octave), d, v, p));
-                        else if (lss >> n >> d >> v) {
-                             inst.sequence.add_note(Note(NoteParser::parse(n, m_current_scale, current_octave), d, v, inst.pan));
+                        std::string n, d_s, v_s, p_s;
+                        if (lss >> n) {
+                            if (lss >> d_s && lss >> v_s) {
+                                if (d_s.find('.') != std::string::npos || v_s.find('.') != std::string::npos) {
+                                    std::cerr << "Warning: Floating point value in 'note' duration/velocity. Skipping." << std::endl;
+                                } else {
+                                    try {
+                                        int d = std::stoi(d_s);
+                                        int v = std::stoi(v_s);
+                                        float p = inst.pan;
+                                        if (lss >> p_s) p = std::stof(p_s);
+                                        inst.sequence.add_note(Note(NoteParser::parse(n, m_current_scale, current_octave), d, v, p));
+                                    } catch(...) {}
+                                }
+                            } else {
+                                inst.sequence.add_note(Note(NoteParser::parse(n, m_current_scale, current_octave), m_default_duration, m_default_velocity, inst.pan));
+                            }
                         }
-                        else inst.sequence.add_note(Note(NoteParser::parse(n, m_current_scale, current_octave), m_default_duration, m_default_velocity, inst.pan));
                     } else if (lkw == "notes") {
                         std::string note_list; std::getline(lss, note_list);
                         parse_compact_notes(note_list, inst.sequence, inst.pan, current_octave);
@@ -722,17 +742,32 @@ void ScriptParser::parse_compact_notes(const std::string& list, Sequence& seq, f
 
                 if (open_p != std::string::npos) {
                     size_t close_p = comp.find(')');
-                    std::string params = comp.substr(open_p + 1, close_p - open_p - 1);
-                    std::replace(params.begin(), params.end(), ',', ' ');
+                    std::string params_str = comp.substr(open_p + 1, close_p - open_p - 1);
                     
-                    std::stringstream pss(params);
-                    int p1, p2; float p3;
+                    // Validation: Check for invalid floating point in dur/vel
+                    size_t first_comma = params_str.find(',');
+                    size_t second_comma = (first_comma != std::string::npos) ? params_str.find(',', first_comma + 1) : std::string::npos;
+                    
+                    std::string dur_vel_part = (second_comma != std::string::npos) ? params_str.substr(0, second_comma) : params_str;
+                    if (dur_vel_part.find('.') != std::string::npos) {
+                        std::cerr << "Warning: Floating point value detected in duration/velocity of 'notes' sequence. Skipping note: " << comp << std::endl;
+                        continue;
+                    }
+
+                    std::string params_clean = params_str;
+                    std::replace(params_clean.begin(), params_clean.end(), ',', ' ');
+                    
+                    std::stringstream pss(params_clean);
+                    int p1 = 0, p2 = 0; float p3 = 0.0f;
                     if (pss >> p1) {
                         dur = p1;
                         if (pss >> p2) {
                             vel = p2;
                             if (pss >> p3) p_val = p3;
                         }
+                    } else if (!params_clean.empty()) {
+                        std::cerr << "Warning: Invalid parameters in 'notes' sequence. Skipping note: " << comp << std::endl;
+                        continue;
                     }
                 }
                 
@@ -761,6 +796,8 @@ void ScriptParser::parse_compact_notes(const std::string& list, Sequence& seq, f
                 int pitch = NoteParser::parse(note_name, m_current_scale, default_octave);
                 if (pitch > 0 || note_name == "0" || pitch == -1) {
                     seq.add_note(Note(pitch, dur, vel, p_val, is_last));
+                } else {
+                    std::cerr << "Warning: Invalid note name '" << note_name << "' in sequence. Skipping." << std::endl;
                 }
             }
         }
