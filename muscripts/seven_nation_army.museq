@@ -1,0 +1,43 @@
+// Seven Nation Army - Opening Riff
+// Key: E Minor
+// Tempo: ~124 BPM (approx)
+
+tempo 124
+velocity 100
+
+// Define a Bass/Lead instrument
+// Using Sawtooth with a bit of filter and envelope for punch
+instrument BassLead {
+    waveform sawtooth
+    envelope 0.05 0.3 0.6 0.2 // A D S R
+    filter lowpass 800 1.5    // Cutoff and Resonance
+    gain 0.8
+    pan 0.0
+}
+
+// Function to play the riff once
+function Riff {
+    BassLead {
+        // Riff Notes: E E G E D C B
+        // Rhythm: Dotted Quarter, Eighth, Quarter, Quarter, Quarter, Quarter, Quarter
+        // At 124 BPM, 1 Beat = ~484ms
+        
+        // Compact Syntax: Pitch(Duration)
+        // Dotted Quarter (1.5 beats) ~ 726ms
+        // Eighth (0.5 beats) ~ 242ms
+        // Quarter (1 beat) ~ 484ms
+        
+        notes E3(726), E3(242), G3(484), E3(484), D3(484), C3(968), B2(968)
+        
+        // Note: The C and B are often held longer in the main riff or have rests.
+        // Adjusted C3 and B2 to be 2 beats (Half notes) for the "Duuum... Duuum" feel.
+    }
+}
+
+// Composition Structure
+sequential {
+    // Play the riff 4 times
+    repeat 4 {
+        call Riff
+    }
+}

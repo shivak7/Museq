@@ -52,7 +52,8 @@ Instrument::Instrument(const Instrument& other)
       preset_index(other.preset_index),
       portamento_time(other.portamento_time),
       pan(other.pan),
-      gain(other.gain) {
+      gain(other.gain),
+      effects(other.effects) {
     if (other.sampler) {
         sampler = new Sampler(*other.sampler);
     }
@@ -74,6 +75,7 @@ Instrument& Instrument::operator=(const Instrument& other) {
     portamento_time = other.portamento_time;
     pan = other.pan;
     gain = other.gain;
+    effects = other.effects;
 
     if (sampler) {
         delete sampler;
@@ -99,7 +101,8 @@ Instrument::Instrument(Instrument&& other) noexcept
       preset_index(other.preset_index),
       portamento_time(other.portamento_time),
       pan(other.pan),
-      gain(other.gain) {
+      gain(other.gain),
+      effects(std::move(other.effects)) {
     other.sampler = nullptr;
 }
 
@@ -119,6 +122,7 @@ Instrument& Instrument::operator=(Instrument&& other) noexcept {
     portamento_time = other.portamento_time;
     pan = other.pan;
     gain = other.gain;
+    effects = std::move(other.effects);
 
     if (sampler) {
         delete sampler;
