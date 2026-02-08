@@ -57,17 +57,59 @@ void load_fonts(AppFonts& fonts, float ui_size, float editor_size, bool update_t
 
 
 
-    auto find_font = [](const std::string& name) -> std::string {
+        auto find_font = [](const std::string& name) -> std::string {
 
-        if (fs::exists(name)) return name;
 
-        if (fs::exists("../" + name)) return "../" + name;
 
-        if (fs::exists("muqomposer/" + name)) return "muqomposer/" + name;
+            // Check relative paths
 
-        return "";
 
-    };
+
+            const char* paths[] = {
+
+
+
+                "fonts/",
+
+
+
+                "muqomposer/fonts/",
+
+
+
+                "../muqomposer/fonts/",
+
+
+
+                "../../muqomposer/fonts/"
+
+
+
+            };
+
+
+
+            for (const char* p : paths) {
+
+
+
+                std::string path = p + name;
+
+
+
+                if (fs::exists(path)) return path;
+
+
+
+            }
+
+
+
+            return "";
+
+
+
+        };
 
 
 
