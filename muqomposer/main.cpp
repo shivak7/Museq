@@ -933,10 +933,10 @@ int main(int, char**) {
                     autocomplete_items.clear();
                     
                     std::vector<std::string> all_suggestions;
-                    for (auto k : primary_keywords) all_suggestions.push_back(k);
-                    for (auto e : effects_keywords) all_suggestions.push_back(e);
-                    for (auto s : synth_keywords) all_suggestions.push_back(s);
-                    for (auto i : active_instrument_names) all_suggestions.push_back(i);
+                    for (const auto& k : primary_keywords) all_suggestions.push_back(k);
+                    for (const auto& e : effects_keywords) all_suggestions.push_back(e);
+                    for (const auto& s : synth_keywords) all_suggestions.push_back(s);
+                    for (const auto& i : active_instrument_names) all_suggestions.push_back(i);
 
                     for (const auto& s : all_suggestions) {
                         if (s.find(autocomplete_prefix) == 0 && s != autocomplete_prefix) {
@@ -959,13 +959,11 @@ int main(int, char**) {
         }
 
         if (autocomplete_open) {
-            ImGui::OpenPopup("##autocomplete");
+            // Position popup at text cursor
+            ImVec2 cursor_pos = editor.GetCursorScreenPos();
+            ImGui::SetNextWindowPos(ImVec2(cursor_pos.x, cursor_pos.y + ImGui::GetTextLineHeightWithSpacing()));
             
-            // Position popup at cursor
-            // (Simplified: using a fixed offset for now, ideally use GetCursorScreenPos from TextEditor if exposed)
-            ImVec2 screen_pos = ImGui::GetCursorScreenPos(); 
-            // TextEditor doesn't easily expose character screen position.
-            // We'll just show it as a generic window for now.
+            ImGui::OpenPopup("##autocomplete");
             
             if (ImGui::BeginPopup("##autocomplete", ImGuiWindowFlags_NoFocusOnAppearing)) {
                 for (int i = 0; i < (int)autocomplete_items.size(); i++) {
@@ -984,7 +982,7 @@ int main(int, char**) {
                     autocomplete_selected = (autocomplete_selected + 1) % autocomplete_items.size();
                 }
                 if (ImGui::IsKeyPressed(ImGuiKey_UpArrow)) {
-                    autocomplete_selected = (autocomplete_selected - 1 + autocomplete_items.size()) % autocomplete_items.size();
+                    autocomplete_selected = (autocomplete_selected - 1 + (int)autocomplete_items.size()) % autocomplete_items.size();
                 }
                 if (ImGui::IsKeyPressed(ImGuiKey_Enter) || ImGui::IsKeyPressed(ImGuiKey_Tab)) {
                     std::string completion = autocomplete_items[autocomplete_selected].substr(autocomplete_prefix.length());
@@ -995,6 +993,10 @@ int main(int, char**) {
                     autocomplete_open = false;
                 }
                 
+                if (ImGui::IsMouseClicked(0) && !ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow)) {
+                    autocomplete_open = false;
+                }
+
                 ImGui::EndPopup();
             }
         }

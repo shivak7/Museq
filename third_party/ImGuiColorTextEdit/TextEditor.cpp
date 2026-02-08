@@ -3157,3 +3157,15 @@ const TextEditor::LanguageDefinition& TextEditor::LanguageDefinition::Lua()
 	}
 	return langDef;
 }
+
+ImVec2 TextEditor::GetCursorScreenPos() const
+{
+	auto pos = GetActualCursorCoordinates();
+	float cx = TextDistanceToLineStart(pos);
+	ImVec2 lineStartScreenPos = ImGui::GetCursorScreenPos();
+	
+	float scrollX = ImGui::GetScrollX();
+	float scrollY = ImGui::GetScrollY();
+
+	return ImVec2(lineStartScreenPos.x + mTextStart + cx - scrollX, lineStartScreenPos.y + (float)pos.mLine * mCharAdvance.y - scrollY);
+}

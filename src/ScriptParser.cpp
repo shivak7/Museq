@@ -705,6 +705,8 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
             } else {
                 return;
             }
+        } else {
+            report_error("Unknown keyword or instrument: " + keyword);
         }
     }
 }
