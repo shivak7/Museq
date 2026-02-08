@@ -16,14 +16,21 @@ set(IMGUI_SOURCES
     ${IMGUI_DIR}/backends/imgui_impl_opengl3.cpp
 )
 
+# --- ImGuiColorTextEdit Files ---
+set(TEXT_EDITOR_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../third_party/ImGuiColorTextEdit")
+set(TEXT_EDITOR_SOURCES
+    ${TEXT_EDITOR_DIR}/TextEditor.cpp
+)
+
 # --- Include Directories ---
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../src")
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../third_party")
 include_directories(${IMGUI_DIR})
 include_directories(${IMGUI_DIR}/backends)
+include_directories(${TEXT_EDITOR_DIR})
 
 # --- Executable ---
-set(MUQOMPOSER_SOURCES main.cpp AssetManager.cpp ${IMGUI_SOURCES})
+set(MUQOMPOSER_SOURCES main.cpp AssetManager.cpp ${IMGUI_SOURCES} ${TEXT_EDITOR_SOURCES})
 if(WIN32)
     list(APPEND MUQOMPOSER_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/../src/museq.rc")
 endif()

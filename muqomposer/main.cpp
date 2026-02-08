@@ -23,6 +23,7 @@
 #include "WavWriter.h"
 #include "Mp3Writer.h"
 #include "OggWriter.h"
+#include "TextEditor.h"
 #include <fstream>
 #include <filesystem>
 #include <functional>
@@ -118,43 +119,13 @@ bool load_script_from_file(const char* filename, char* buffer, size_t buffer_siz
 
 // Callback for Auto-Indent and other editor features
 static int editor_callback(ImGuiInputTextCallbackData* data) {
-    if (data->EventFlag == ImGuiInputTextFlags_CallbackAlways) {
-        static int last_len = 0;
-        int current_len = data->BufTextLen;
-        
-        // Detect if a newline was just added at the cursor
-        if (current_len == last_len + 1 && data->CursorPos > 0 && data->Buf[data->CursorPos - 1] == '\n') {
-            // Find start of previous line
-            int prev_line_start = data->CursorPos - 2;
-            while (prev_line_start > 0 && data->Buf[prev_line_start - 1] != '\n') prev_line_start--;
-            
-            // Extract indentation
-            int indent_end = prev_line_start;
-            while (indent_end < data->CursorPos - 1 && (data->Buf[indent_end] == ' ' || data->Buf[indent_end] == '\t')) indent_end++;
-            
-            int indent_len = indent_end - prev_line_start;
-            if (indent_len > 0) {
-                char indent_buf[64];
-                if (indent_len > 63) indent_len = 63;
-                memcpy(indent_buf, data->Buf + prev_line_start, indent_len);
-                indent_buf[indent_len] = 0;
-                data->InsertChars(data->CursorPos, indent_buf);
-            }
-        }
-        last_len = data->BufTextLen;
-    }
-    return 0;
+    return 0; // Legacy, ImGuiColorTextEdit handles indent
 }
 
-// Helper to prepend code to the start of the buffer
-void prepend_to_buffer(char* buffer, size_t buffer_size, const char* code) {
-    size_t code_len = strlen(code);
-    size_t current_len = strlen(buffer);
-    if (code_len + current_len < buffer_size) {
-        // Move current content to make room at the front
-        memmove(buffer + code_len, buffer, current_len + 1);
-        memcpy(buffer, code, code_len);
-    }
+// Helper to prepend code to the start of the editor
+void prepend_to_editor(TextEditor& editor, const char* code) {
+    std::string current = editor.GetText();
+    editor.SetText(std::string(code) + "\n" + current);
 }
 
 int main(int, char**) {
@@ -313,12 +284,15 @@ int main(int, char**) {
     char status_text[128] = "Status: Ready";
 
     // Museq State
-    char script_buffer[16384] = "// Write your Museq script here\n\ninstrument Piano {\n    waveform sine\n}\n\nsequential {\n    Piano { notes C4, E4, G4 }\n}";
+    TextEditor editor;
+    editor.SetLanguageDefinition(TextEditor::LanguageDefinition::CPlusPlus());
+    editor.SetPalette(TextEditor::GetDarkPalette());
+    editor.SetText("// Write your Museq script here\n\ninstrument Piano {\n    waveform sine\n}\n\nsequential {\n    Piano { notes C4, E4, G4 }\n}");
     
     // Helper for Play logic
     auto play_logic = [&]() {
         if (player_initialized) {
-            Song song = ScriptParser::parse_string(script_buffer);
+            Song song = ScriptParser::parse_string(editor.GetText());
             player.play(song);
         }
     };
@@ -350,7 +324,7 @@ int main(int, char**) {
 
     // Helper for Export logic
     auto export_logic = [&](const std::string& path, int format, float quality, int bitrate) {
-        Song song = ScriptParser::parse_string(script_buffer);
+        Song song = ScriptParser::parse_string(editor.GetText());
         AudioRenderer renderer;
         
         if (format == 0) {
@@ -386,7 +360,7 @@ int main(int, char**) {
 
     auto update_active_instruments = [&]() {
         active_instrument_names.clear();
-        std::stringstream ss(script_buffer);
+        std::stringstream ss(editor.GetText());
         std::string line;
         while (std::getline(ss, line)) {
             if (line.find("instrument ") != std::string::npos) {
@@ -473,7 +447,7 @@ int main(int, char**) {
 
                             if (ImGui::Selectable(p.name.c_str())) {
                                 // Smart Insertion Check
-                                if (!AssetManager::check_asset_exists_in_script(script_buffer, "soundfont", it->path, p.bank, p.preset)) {
+                                if (!AssetManager::check_asset_exists_in_script(editor.GetText(), "soundfont", it->path, p.bank, p.preset)) {
                                     std::string sanitized_name = p.name;
                                     std::replace(sanitized_name.begin(), sanitized_name.end(), ' ', '_');
                                     
@@ -481,9 +455,9 @@ int main(int, char**) {
                                     active_instrument_names.push_back(unique_name); // Optimistic update
 
                                     char buf[512];
-                                    snprintf(buf, sizeof(buf), "instrument %s {\n    soundfont \"%s\"\n    bank %d\n    preset %d\n}\n\n", 
+                                    snprintf(buf, sizeof(buf), "instrument %s {\n    soundfont \"%s\"\n    bank %d\n    preset %d\n}\n", 
                                         unique_name.c_str(), it->path.c_str(), p.bank, p.preset);
-                                    prepend_to_buffer(script_buffer, IM_ARRAYSIZE(script_buffer), buf);
+                                    prepend_to_editor(editor, buf);
                                 }
                             }
                             
@@ -506,7 +480,7 @@ int main(int, char**) {
             } else if (node.type == AssetType::SAMPLE) {
                 if (ImGui::Selectable(node.name.c_str())) {
                     // Smart Insertion Check
-                    if (!AssetManager::check_asset_exists_in_script(script_buffer, "sample", node.full_path)) {
+                    if (!AssetManager::check_asset_exists_in_script(editor.GetText(), "sample", node.full_path)) {
                         std::string clean_name = node.name.substr(0, node.name.find_last_of("."));
                         std::replace(clean_name.begin(), clean_name.end(), ' ', '_');
                         
@@ -514,8 +488,8 @@ int main(int, char**) {
                         active_instrument_names.push_back(unique_name); // Optimistic update
 
                         char buf[512];
-                        snprintf(buf, sizeof(buf), "instrument %s {\n    sample \"%s\"\n}\n\n", unique_name.c_str(), node.full_path.c_str());
-                        prepend_to_buffer(script_buffer, IM_ARRAYSIZE(script_buffer), buf);
+                        snprintf(buf, sizeof(buf), "instrument %s {\n    sample \"%s\"\n}\n", unique_name.c_str(), node.full_path.c_str());
+                        prepend_to_editor(editor, buf);
                     }
                 }
                 
@@ -570,7 +544,7 @@ int main(int, char**) {
                                 if (pos != std::string::npos) {
                                     code.replace(pos + 11, inst.length(), unique_name);
                                 }
-                                prepend_to_buffer(script_buffer, IM_ARRAYSIZE(script_buffer), (code + "\n").c_str());
+                                prepend_to_editor(editor, code.c_str());
                             }
                             
                             if (ImGui::BeginDragDropSource()) {
@@ -705,18 +679,18 @@ int main(int, char**) {
                     std::string ext = fs::path(f_path).extension().string();
                     std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
                     if (ext == ".sf2") {
-                        snprintf(buf, sizeof(buf), "instrument %s {\n    soundfont \"%s\"\n    bank 0\n    preset 0\n}\n\n", filename.c_str(), f_path.c_str());
+                        snprintf(buf, sizeof(buf), "instrument %s {\n    soundfont \"%s\"\n    bank 0\n    preset 0\n}\n", filename.c_str(), f_path.c_str());
                     } else {
-                        snprintf(buf, sizeof(buf), "instrument %s {\n    sample \"%s\"\n}\n\n", filename.c_str(), f_path.c_str());
+                        snprintf(buf, sizeof(buf), "instrument %s {\n    sample \"%s\"\n}\n", filename.c_str(), f_path.c_str());
                     }
-                    prepend_to_buffer(script_buffer, IM_ARRAYSIZE(script_buffer), buf);
+                    prepend_to_editor(editor, buf);
                 }
             }
         }
 
         if (ImGui::Button("Add New Synth", ImVec2(-FLT_MIN, 0))) { 
-            std::string new_synth = "instrument NewSynth {\n    waveform sawtooth\n    envelope 0.01 0.1 0.8 0.2\n    filter lowpass 2000 1.0\n}\n\n";
-            prepend_to_buffer(script_buffer, IM_ARRAYSIZE(script_buffer), new_synth.c_str());
+            const char* new_synth = "instrument NewSynth {\n    waveform sawtooth\n    envelope 0.01 0.1 0.8 0.2\n    filter lowpass 2000 1.0\n}\n";
+            prepend_to_editor(editor, new_synth);
         }
         
         // Add Folder Button
@@ -809,42 +783,8 @@ int main(int, char**) {
             play_logic();
         }
 
-        // --- Editor with Line Numbers ---
-        float line_number_width = 40.0f;
-        float editor_width = ImGui::GetContentRegionAvail().x - line_number_width;
-
-        // Synchronize scrolling
-        static float shared_scroll_y = 0.0f;
-
-        float line_height = ImGui::GetTextLineHeight();
-        float frame_padding_y = ImGui::GetStyle().FramePadding.y;
-        
-        int line_count = 1;
-        for (int i = 0; script_buffer[i]; i++) if (script_buffer[i] == '\n') line_count++;
-        
-        float total_content_height = line_count * line_height + frame_padding_y * 2.0f;
-
-        // Line Numbers column
-        ImGui::BeginChild("LineNumbers", ImVec2(line_number_width, 0), false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
-        ImGui::SetScrollY(shared_scroll_y);
-        
-        for (int i = 1; i <= line_count; i++) {
-            ImGui::SetCursorPosY(frame_padding_y + (i - 1) * line_height);
-            ImGui::TextDisabled("%4d", i);
-        }
-        // Ensure child height matches content for proper scrolling bounds
-        ImGui::Dummy(ImVec2(0, total_content_height)); 
-        ImGui::EndChild();
-
-        ImGui::SameLine();
-
-        // Editor column
-        ImGui::BeginChild("EditorColumn", ImVec2(editor_width, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
-        ImGui::SetScrollY(shared_scroll_y);
-        // Set height to total_content_height to disable internal vertical scroll and use child window scroll
-        ImGui::InputTextMultiline("##editor", script_buffer, IM_ARRAYSIZE(script_buffer), ImVec2(-FLT_MIN, total_content_height), ImGuiInputTextFlags_AllowTabInput | ImGuiInputTextFlags_CallbackAlways, editor_callback);
-        shared_scroll_y = ImGui::GetScrollY();
-        ImGui::EndChild();
+        // --- New Advanced Editor ---
+        editor.Render("Editor");
         
         if (ImGui::BeginDragDropTarget()) {
             if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ASSET_CODE")) {
@@ -878,7 +818,7 @@ int main(int, char**) {
                 }
 
                 if (!type.empty()) {
-                    if (AssetManager::check_asset_exists_in_script(script_buffer, type, path, bank, preset)) {
+                    if (AssetManager::check_asset_exists_in_script(editor.GetText(), type, path, bank, preset)) {
                         should_add = false;
                     }
                 }
@@ -902,7 +842,8 @@ int main(int, char**) {
                         }
                     }
 
-                    prepend_to_buffer(script_buffer, IM_ARRAYSIZE(script_buffer), final_code.c_str());
+                    std::string current_text = editor.GetText();
+                    editor.SetText(final_code + "\n" + current_text);
                 }
             }
             ImGui::EndDragDropTarget();
@@ -1008,7 +949,7 @@ int main(int, char**) {
             
             if (ImGui::Button("Save", ImVec2(120, 0))) {
                 fs::path full_path = current_dir / file_path_buffer;
-                save_script_to_file(full_path.string().c_str(), script_buffer);
+                save_script_to_file(full_path.string().c_str(), editor.GetText().c_str());
                 show_save_popup = false;
                 ImGui::CloseCurrentPopup();
             }
@@ -1033,7 +974,11 @@ int main(int, char**) {
             
             if (ImGui::Button("Load", ImVec2(120, 0))) {
                 fs::path full_path = current_dir / file_path_buffer;
-                if (load_script_from_file(full_path.string().c_str(), script_buffer, IM_ARRAYSIZE(script_buffer))) {
+                
+                std::ifstream in(full_path);
+                if (in.is_open()) {
+                    std::string content((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+                    editor.SetText(content);
                     show_load_popup = false;
                     ImGui::CloseCurrentPopup();
                 } else {
