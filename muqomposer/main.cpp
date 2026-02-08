@@ -732,12 +732,29 @@ int main(int, char**) {
         if (io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_Space)) player.stop();
         if (ImGui::IsKeyPressed(ImGuiKey_Escape)) close_all_popups();
 
-        // Reactive Parsing
+        // Reactive Parsing (Debounced)
         static double last_parse_time = 0;
-        if (ImGui::GetTime() - last_parse_time > 2.0 || (editor.IsTextChanged() && ImGui::GetTime() - last_parse_time > 0.5)) {
+        static int last_parse_line_count = 0;
+        int current_line_count = editor.GetTotalLines();
+        
+        // Parse if periodic timer expires OR if line count changes (likely Enter pressed)
+        // But delay parsing while typing (if text changed)
+        static double last_text_change_time = 0;
+        if (editor.IsTextChanged()) last_text_change_time = ImGui::GetTime();
+
+        bool should_parse = false;
+        // Parse every 2s for generic updates
+        if (ImGui::GetTime() - last_parse_time > 2.0) should_parse = true; 
+        // Parse immediately on line change (structural change)
+        if (current_line_count != last_parse_line_count) should_parse = true;
+        // Parse 500ms after user STOPS typing
+        if (ImGui::GetTime() - last_text_change_time > 0.5 && last_text_change_time > last_parse_time) should_parse = true;
+        
+        if (should_parse) {
             last_parsed_song = ScriptParser::parse_string(editor.GetText());
             update_active_instruments();
             last_parse_time = ImGui::GetTime();
+            last_parse_line_count = current_line_count;
         }
 
         // Update Status and Visualization Markers
@@ -970,8 +987,9 @@ int main(int, char**) {
             ImVec2 cursor_screen_pos = editor.GetCursorScreenPos(editor_pos); 
             ImGui::SetNextWindowPos(ImVec2(cursor_screen_pos.x, cursor_screen_pos.y + ImGui::GetTextLineHeightWithSpacing()));
             
-            if (!ImGui::IsPopupOpen("##autocomplete_popup")) {
-                ImGui::OpenPopup("##autocomplete_popup");
+            // Steal focus for keyboard navigation
+            if (autocomplete_just_opened) {
+                ImGui::SetNextWindowFocus();
             }
 
             if (ImGui::BeginPopup("##autocomplete_popup", ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_AlwaysAutoResize)) {
@@ -981,6 +999,7 @@ int main(int, char**) {
                         std::string completion = autocomplete_items[i].substr(autocomplete_prefix.length());
                         editor.InsertText(completion);
                         autocomplete_open = false;
+                        ImGui::CloseCurrentPopup();
                     }
                     if (is_selected && autocomplete_just_opened) {
                         ImGui::SetScrollHereY();
@@ -988,28 +1007,32 @@ int main(int, char**) {
                     }
                 }
 
-                // Handle keyboard navigation in the popup
-                if (ImGui::IsKeyPressed(ImGuiKey_DownArrow)) {
-                    autocomplete_selected = (autocomplete_selected + 1) % autocomplete_items.size();
-                }
-                if (ImGui::IsKeyPressed(ImGuiKey_UpArrow)) {
-                    autocomplete_selected = (autocomplete_selected - 1 + (int)autocomplete_items.size()) % autocomplete_items.size();
-                }
-                if (ImGui::IsKeyPressed(ImGuiKey_Enter) || ImGui::IsKeyPressed(ImGuiKey_Tab)) {
-                    std::string completion = autocomplete_items[autocomplete_selected].substr(autocomplete_prefix.length());
-                    editor.InsertText(completion);
-                    autocomplete_open = false;
-                    ImGui::CloseCurrentPopup();
-                }
-                if (ImGui::IsKeyPressed(ImGuiKey_Escape)) {
-                    autocomplete_open = false;
-                    ImGui::CloseCurrentPopup();
+                if (ImGui::IsWindowFocused()) {
+                    if (ImGui::IsKeyPressed(ImGuiKey_DownArrow)) {
+                        autocomplete_selected = (autocomplete_selected + 1) % autocomplete_items.size();
+                    }
+                    if (ImGui::IsKeyPressed(ImGuiKey_UpArrow)) {
+                        autocomplete_selected = (autocomplete_selected - 1 + (int)autocomplete_items.size()) % autocomplete_items.size();
+                    }
+                    if (ImGui::IsKeyPressed(ImGuiKey_Enter) || ImGui::IsKeyPressed(ImGuiKey_Tab)) {
+                        std::string completion = autocomplete_items[autocomplete_selected].substr(autocomplete_prefix.length());
+                        editor.InsertText(completion);
+                        autocomplete_open = false;
+                        ImGui::CloseCurrentPopup();
+                    }
+                    if (ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+                        autocomplete_open = false;
+                        ImGui::CloseCurrentPopup();
+                    }
                 }
 
                 ImGui::EndPopup();
             } else {
-                // If BeginPopup fails but autocomplete_open is true, it means it was closed by clicking outside
                 autocomplete_open = false;
+            }
+            
+            if (!ImGui::IsPopupOpen("##autocomplete_popup") && autocomplete_open) {
+                 ImGui::OpenPopup("##autocomplete_popup");
             }
         }
         
