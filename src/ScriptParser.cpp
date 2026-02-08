@@ -746,8 +746,14 @@ void ScriptParser::parse_compact_notes(const std::string& list, Sequence& seq, f
     std::stringstream ss(clean);
     std::string raw_token;
     while (ss >> raw_token) {
-        if (raw_token.empty()) continue;
+        if (raw_token.empty() || raw_token == "}" || raw_token == "{") continue;
         
+        // Strip trailing braces if they are attached to the last note
+        if (raw_token.back() == '}') {
+            raw_token.pop_back();
+            if (raw_token.empty()) continue;
+        }
+
         // Handle parentheses grouping (e.g., C(500))
         if (raw_token.find('(') != std::string::npos && raw_token.find(')') == std::string::npos) {
             std::string next;
