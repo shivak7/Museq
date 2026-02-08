@@ -817,8 +817,8 @@ int main(int, char**) {
         static float shared_scroll_y = 0.0f;
 
         // Line Numbers column
-        ImGui::SetNextWindowScroll(ImVec2(0, shared_scroll_y));
         ImGui::BeginChild("LineNumbers", ImVec2(line_number_width, 0), false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+        ImGui::SetScrollY(shared_scroll_y);
         
         float line_height = ImGui::GetTextLineHeight();
         float frame_padding_y = ImGui::GetStyle().FramePadding.y;
@@ -835,8 +835,8 @@ int main(int, char**) {
         ImGui::SameLine();
 
         // Editor column
-        ImGui::SetNextWindowScroll(ImVec2(0, shared_scroll_y));
         ImGui::BeginChild("EditorColumn", ImVec2(editor_width, 0));
+        ImGui::SetScrollY(shared_scroll_y);
         ImGui::InputTextMultiline("##editor", script_buffer, IM_ARRAYSIZE(script_buffer), ImVec2(-FLT_MIN, -FLT_MIN), ImGuiInputTextFlags_AllowTabInput | ImGuiInputTextFlags_CallbackAlways, editor_callback);
         shared_scroll_y = ImGui::GetScrollY();
         ImGui::EndChild();
