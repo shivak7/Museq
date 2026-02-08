@@ -518,7 +518,7 @@ int main(int, char**) {
     dracula_palette[(int)TextEditor::PaletteIndex::Number] = 0xffbd93f9;            // Purple (Same as synth params, or we can use another)
     dracula_palette[(int)TextEditor::PaletteIndex::Comment] = 0xff6272a4;           // Blue/Gray
     dracula_palette[(int)TextEditor::PaletteIndex::Background] = 0xff000000;        // Black Background
-    dracula_palette[(int)TextEditor::PaletteIndex::PlaybackMarker] = 0x808be9fd;    // Semi-transparent Cyan
+    dracula_palette[(int)TextEditor::PaletteIndex::PlaybackMarker] = 0xff8be9fd;    // Solid Cyan
     editor.SetPalette(dracula_palette);
 
     editor.SetText("// Write your Museq script here\n\ninstrument Piano {\n    waveform sine\n}\n\nsequential {\n    Piano { notes C4, E4, G4 }\n}");
