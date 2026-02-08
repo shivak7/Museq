@@ -48,19 +48,26 @@ void load_fonts(AppFonts& fonts, float ui_size, float editor_size, bool update_t
     printf("Loading fonts... UI: %.1f, Editor: %.1f\n", ui_size, editor_size);
 
     // 1. UI Font
-    fonts.main = io.Fonts->AddFontDefault();
-    
+    fonts.main = nullptr;
     const char* ui_font_paths[] = {
         "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
         "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
-        "/usr/share/fonts/truetype/freefont/FreeSans.ttf"
+        "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
+        "/usr/share/fonts/TTF/DejaVuSans.ttf"
     };
     
     for (const char* path : ui_font_paths) {
         if (fs::exists(path)) {
             fonts.main = io.Fonts->AddFontFromFileTTF(path, ui_size);
-            if (fonts.main) break;
+            if (fonts.main) {
+                printf("Success loading UI font: %s\n", path);
+                break;
+            }
         }
+    }
+    if (!fonts.main) {
+        printf("Fallback: Using default font for UI.\n");
+        fonts.main = io.Fonts->AddFontDefault();
     }
 
     // 2. Editor Font
@@ -68,16 +75,21 @@ void load_fonts(AppFonts& fonts, float ui_size, float editor_size, bool update_t
     const char* mono_paths[] = {
         "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",
         "/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf",
-        "/usr/share/fonts/truetype/freefont/FreeMono.ttf"
+        "/usr/share/fonts/truetype/freefont/FreeMono.ttf",
+        "/usr/share/fonts/TTF/DejaVuSansMono.ttf"
     };
     for (const char* path : mono_paths) {
         if (fs::exists(path)) {
             fonts.editor = io.Fonts->AddFontFromFileTTF(path, editor_size);
-            if (fonts.editor) break;
+            if (fonts.editor) {
+                printf("Success loading Editor font: %s\n", path);
+                break;
+            }
         }
     }
     
     if (!fonts.editor) {
+        printf("Fallback: Using main font for editor.\n");
         fonts.editor = fonts.main;
     }
 
@@ -87,7 +99,10 @@ void load_fonts(AppFonts& fonts, float ui_size, float editor_size, bool update_t
         ImGui_ImplOpenGL3_CreateDeviceObjects();
         printf("Fonts built and texture updated.\n");
     } else {
-        printf("Fonts loaded into atlas.\n");
+        // Build is handled by backends during first frame if not called here
+        // but we can call it if we want to be sure.
+        // io.Fonts->Build(); 
+        printf("Fonts added to atlas (no build).\n");
     }
 }
 
@@ -852,6 +867,8 @@ int main(int, char**) {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
+        ImGui::PushFont(app_fonts.main);
+
         // Calculate layout dimensions
         float main_area_width = io.DisplaySize.x - SIDEBAR_WIDTH;
         float main_area_height = io.DisplaySize.y - FOOTER_HEIGHT;
@@ -1357,6 +1374,8 @@ int main(int, char**) {
             }
             ImGui::EndPopup();
         }
+
+        ImGui::PopFont();
 
         // Rendering
         ImGui::Render();
