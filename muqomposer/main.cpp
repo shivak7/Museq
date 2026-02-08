@@ -810,9 +810,11 @@ int main(int, char**) {
         if (autocomplete_open) {
             if (ImGui::IsKeyPressed(ImGuiKey_DownArrow)) {
                 autocomplete_selected = (autocomplete_selected + 1) % autocomplete_items.size();
+                ImGui::GetIO().ClearInputKeys(); 
             }
             if (ImGui::IsKeyPressed(ImGuiKey_UpArrow)) {
                 autocomplete_selected = (autocomplete_selected - 1 + (int)autocomplete_items.size()) % autocomplete_items.size();
+                ImGui::GetIO().ClearInputKeys(); 
             }
             if (ImGui::IsKeyPressed(ImGuiKey_Enter) || ImGui::IsKeyPressed(ImGuiKey_Tab)) {
                 std::string completion = autocomplete_items[autocomplete_selected].substr(autocomplete_prefix.length());
