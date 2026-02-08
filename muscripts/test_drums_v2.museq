@@ -1,0 +1,16 @@
+import "musynths/drums.museq"
+
+sequence DrumBeat {
+    1.0 DrumKick_v2
+    1.5 DrumSnare_v2
+    2.0 DrumKick_v2
+    2.5 DrumSnare_v2
+    3.0 DrumKick_v2
+    3.25 DrumHat_v2
+    3.5 DrumKick_v2
+    3.75 DrumHat_v2
+}
+
+parallel {
+    DrumBeat
+}

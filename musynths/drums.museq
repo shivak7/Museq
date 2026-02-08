@@ -1,17 +1,43 @@
+// Museq Drum Synth Library
+// Optimized for Sound Fixes 2
+
 instrument SynthKick {
     waveform sine
-    envelope 0.01 0.1 0.0 0.05
-    gain 1.2
+    envelope 0.01 0.2 0.0 0.1
+    lfo pitch sawtooth 5 20.0
+    gain 1.5
 }
 
 instrument SynthSnare {
     waveform square
-    envelope 0.01 0.05 0.0 0.05
+    envelope 0.01 0.1 0.0 0.05
+    lfo pitch sawtooth 50 5.0
     filter highpass 1000 1.0
 }
 
 instrument SynthHat {
     waveform sawtooth
-    envelope 0.005 0.03 0.0 0.01
-    filter highpass 5000 0.5
+    envelope 0.005 0.05 0.0 0.01
+    filter highpass 8000 0.5
+}
+
+// Aliases for v2 names used in tests
+instrument DrumKick_v2 {
+    waveform sine
+    envelope 0.01 0.2 0.0 0.1
+    lfo pitch sawtooth 5 20.0
+    gain 1.5
+}
+
+instrument DrumSnare_v2 {
+    waveform square
+    envelope 0.01 0.1 0.0 0.05
+    lfo pitch sawtooth 50 5.0
+    filter highpass 1000 1.0
+}
+
+instrument DrumHat_v2 {
+    waveform sawtooth
+    envelope 0.005 0.05 0.0 0.01
+    filter highpass 8000 0.5
 }
