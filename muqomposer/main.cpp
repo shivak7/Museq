@@ -45,54 +45,26 @@ void load_fonts(AppFonts& fonts, float ui_size, float editor_size, bool update_t
     ImGuiIO& io = ImGui::GetIO();
     
     io.Fonts->Clear();
+    io.FontGlobalScale = 1.0f;
     
-    // We use FontGlobalScale for UI scaling as it is more reliable
-    // and keep the internal font size at default (13.0f) or load TTF at base size.
-    float base_ui_size = 15.0f;
-    io.FontGlobalScale = ui_size / base_ui_size;
-    
-    printf("Loading fonts... UI Scale: %.2f (Base: %.1f), Editor: %.1f\n", io.FontGlobalScale, base_ui_size, editor_size);
+    printf("Loading fonts... UI: %.1f, Editor: %.1f\n", ui_size, editor_size);
 
     // 1. UI Font
-    const char* ui_font_paths[] = {
-        "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
-    };
-    
-    fonts.main = nullptr;
-    for (const char* path : ui_font_paths) {
-        fonts.main = io.Fonts->AddFontFromFileTTF(path, base_ui_size);
-        if (fonts.main) {
-            printf("Success loading UI font: %s\n", path);
-            break;
-        }
-    }
+    fonts.main = io.Fonts->AddFontFromFileTTF("FreeSans.ttf", ui_size);
     if (!fonts.main) {
         printf("Fallback: Using default font for UI.\n");
         fonts.main = io.Fonts->AddFontDefault();
+    } else {
+        printf("Success loading local FreeSans.ttf\n");
     }
 
     // 2. Editor Font
-    // Editor font should be loaded at the exact size requested, adjusted for GlobalScale
-    float target_editor_size = editor_size / io.FontGlobalScale;
-    
-    const char* mono_paths[] = {
-        "/usr/share/fonts/truetype/freefont/FreeMono.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf"
-    };
-    
-    fonts.editor = nullptr;
-    for (const char* path : mono_paths) {
-        fonts.editor = io.Fonts->AddFontFromFileTTF(path, target_editor_size);
-        if (fonts.editor) {
-            printf("Success loading Editor font: %s\n", path);
-            break;
-        }
-    }
-    
+    fonts.editor = io.Fonts->AddFontFromFileTTF("FreeMono.ttf", editor_size);
     if (!fonts.editor) {
         printf("Fallback: Using main font for editor.\n");
         fonts.editor = fonts.main;
+    } else {
+        printf("Success loading local FreeMono.ttf\n");
     }
 
     if (update_texture) {
