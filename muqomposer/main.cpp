@@ -44,48 +44,46 @@ struct AppFonts {
 void load_fonts(AppFonts& fonts, float ui_size, float editor_size, bool update_texture = true) {
     ImGuiIO& io = ImGui::GetIO();
     
-    // Reset scaling if we are loading proper fonts
-    io.FontGlobalScale = 1.0f;
     io.Fonts->Clear();
     
-    printf("Loading fonts... UI: %.1f, Editor: %.1f\n", ui_size, editor_size);
+    // We use FontGlobalScale for UI scaling as it is more reliable
+    // and keep the internal font size at default (13.0f) or load TTF at base size.
+    float base_ui_size = 15.0f;
+    io.FontGlobalScale = ui_size / base_ui_size;
+    
+    printf("Loading fonts... UI Scale: %.2f (Base: %.1f), Editor: %.1f\n", io.FontGlobalScale, base_ui_size, editor_size);
 
     // 1. UI Font
     const char* ui_font_paths[] = {
         "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
-        "/usr/share/fonts/TTF/DejaVuSans.ttf"
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
     };
     
     fonts.main = nullptr;
     for (const char* path : ui_font_paths) {
-        fonts.main = io.Fonts->AddFontFromFileTTF(path, ui_size);
+        fonts.main = io.Fonts->AddFontFromFileTTF(path, base_ui_size);
         if (fonts.main) {
             printf("Success loading UI font: %s\n", path);
             break;
         }
     }
-    
     if (!fonts.main) {
-        printf("Fallback: Using default font for UI + Scaling.\n");
+        printf("Fallback: Using default font for UI.\n");
         fonts.main = io.Fonts->AddFontDefault();
-        io.FontGlobalScale = ui_size / 13.0f; // Scale default font (13px)
     }
 
     // 2. Editor Font
+    // Editor font should be loaded at the exact size requested, adjusted for GlobalScale
+    float target_editor_size = editor_size / io.FontGlobalScale;
+    
     const char* mono_paths[] = {
         "/usr/share/fonts/truetype/freefont/FreeMono.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",
-        "/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf",
-        "/usr/share/fonts/TTF/DejaVuSansMono.ttf"
+        "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf"
     };
     
     fonts.editor = nullptr;
     for (const char* path : mono_paths) {
-        // If we used GlobalScale, we must adjust the requested size so it doesn't double-scale
-        float target_size = editor_size / io.FontGlobalScale;
-        fonts.editor = io.Fonts->AddFontFromFileTTF(path, target_size);
+        fonts.editor = io.Fonts->AddFontFromFileTTF(path, target_editor_size);
         if (fonts.editor) {
             printf("Success loading Editor font: %s\n", path);
             break;
