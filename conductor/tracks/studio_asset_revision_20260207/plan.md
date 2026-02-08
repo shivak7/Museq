@@ -9,14 +9,14 @@ This plan outlines the steps to refactor the `AssetManager` and `muqomposer` UI 
 - [x] Task: Implement `AssetManager::get_synth_tree` and `AssetManager::get_filtered_synths` to provide the UI with structured synth data. [4ab1c2d]
 - [x] Task: Conductor - User Manual Verification 'AssetManager Enhancements' (Protocol in workflow.md)
 
-## Phase 2: UI Refactoring (muqomposer/main.cpp)
+## Phase 2: UI Refactoring (muqomposer/main.cpp) [checkpoint: 2ffba5b]
 - [x] Task: Remove hardcoded `synth_templates` and related mock logic from `main.cpp`. [68ac9c2]
 - [x] Task: Refactor the "Synths" `CollapsingHeader` to use `asset_manager.get_synth_tree`. [68ac9c2]
 - [x] Task: Update the "Synths" interaction logic:
     - Support clicking/selecting an extracted instrument name.
     - Implement code insertion: For now, we will extract the full definition block from the file and prepend it to the editor (to maintain current behavior but with real data). [68ac9c2]
 - [x] Task: Ensure the "Samples" tab accurately reflects the results of the unified recursive scan. [68ac9c2]
-- [ ] Task: Conductor - User Manual Verification 'UI Refactoring' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'UI Refactoring' (Protocol in workflow.md)
 
 ## Phase 3: Robustness and Polish
 - [ ] Task: Ensure the "Add Folder" popup correctly calls `refresh_assets` and that all three categories (SF2, Samples, Synths) are populated.
