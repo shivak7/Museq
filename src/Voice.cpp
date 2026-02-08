@@ -14,6 +14,7 @@
 #endif
 
 #include "tsf.h"
+#include <iostream>
 
 void BiquadState::update(FilterType type, float cutoff, float q, float sample_rate) {
     if (type == FilterType::NONE) return;
@@ -74,6 +75,9 @@ Voice::Voice(const Instrument& inst, double start_samples, float sample_rate)
     // Add release time to total duration to allow for tail
     total_ms += instrument.synth.envelope.release * 1000.0f;
     total_duration_samples = (total_ms / 1000.0) * sample_rate;
+    
+    std::cerr << "Voice: Created. Notes: " << instrument.sequence.notes.size() 
+              << ", Duration: " << total_ms << " ms (" << total_duration_samples << " samples)" << std::endl;
     
     if (total_duration_samples <= 0) is_finished = true;
 
