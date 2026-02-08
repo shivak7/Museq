@@ -3158,11 +3158,11 @@ const TextEditor::LanguageDefinition& TextEditor::LanguageDefinition::Lua()
 	return langDef;
 }
 
-ImVec2 TextEditor::GetCursorScreenPos() const
+ImVec2 TextEditor::GetCursorScreenPos(ImVec2 basePos) const
 {
 	auto pos = GetActualCursorCoordinates();
 	float cx = TextDistanceToLineStart(pos);
-	ImVec2 lineStartScreenPos = ImGui::GetCursorScreenPos();
+	ImVec2 lineStartScreenPos = (basePos.x == -1 && basePos.y == -1) ? ImGui::GetCursorScreenPos() : basePos;
 	
 	float scrollX = ImGui::GetScrollX();
 	float scrollY = ImGui::GetScrollY();

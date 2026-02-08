@@ -912,12 +912,13 @@ int main(int, char**) {
             play_logic();
         }
 
-        // --- New Advanced Editor ---
+        ImVec2 editor_pos = ImGui::GetCursorScreenPos();
         ImGui::PushFont(editor_font);
         editor.Render("Editor");
         ImGui::PopFont();
 
         // Autocomplete Logic
+        static bool autocomplete_just_opened = false;
         if (editor.IsTextChanged() || editor.IsCursorPositionChanged()) {
             auto pos = editor.GetCursorPosition();
             std::string line = editor.GetCurrentLineText();
@@ -947,6 +948,7 @@ int main(int, char**) {
                     }
                     
                     if (!autocomplete_items.empty()) {
+                        if (!autocomplete_open) autocomplete_just_opened = true;
                         autocomplete_open = true;
                         autocomplete_selected = 0;
                     } else {
@@ -961,25 +963,31 @@ int main(int, char**) {
         }
 
         if (autocomplete_open) {
-            // Position popup at text cursor
-            ImVec2 cursor_pos = editor.GetCursorScreenPos();
-            ImGui::SetNextWindowPos(ImVec2(cursor_pos.x, cursor_pos.y + ImGui::GetTextLineHeightWithSpacing()));
+            // Calculate screen position for autocomplete window
+            auto pos = editor.GetCursorPosition();
             
-            ImGui::OpenPopup("##autocomplete");
+            // For now, let's just use the captured editor_pos + internal calculation
+            ImVec2 cursor_screen_pos = editor.GetCursorScreenPos(editor_pos); 
             
-            if (ImGui::BeginPopup("##autocomplete", ImGuiWindowFlags_NoFocusOnAppearing)) {
+            ImGui::SetNextWindowPos(ImVec2(cursor_screen_pos.x, cursor_screen_pos.y + ImGui::GetTextLineHeightWithSpacing()));
+            ImGui::SetNextWindowSizeConstraints(ImVec2(150, 0), ImVec2(400, 300));
+            
+            if (ImGui::Begin("##autocomplete", &autocomplete_open, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_Tooltip)) {
                 for (int i = 0; i < (int)autocomplete_items.size(); i++) {
                     bool is_selected = (i == autocomplete_selected);
                     if (ImGui::Selectable(autocomplete_items[i].c_str(), is_selected)) {
-                        // Insert completion
                         std::string completion = autocomplete_items[i].substr(autocomplete_prefix.length());
                         editor.InsertText(completion);
                         autocomplete_open = false;
                     }
-                    if (is_selected) ImGui::SetItemDefaultFocus();
+                    if (is_selected && autocomplete_just_opened) {
+                        ImGui::SetScrollHereY();
+                        autocomplete_just_opened = false;
+                    }
                 }
-                
-                // Handle keyboard navigation
+
+                // Intercept keys even when popup doesn't have focus
+                // (This works because we are in the same frame as the editor)
                 if (ImGui::IsKeyPressed(ImGuiKey_DownArrow)) {
                     autocomplete_selected = (autocomplete_selected + 1) % autocomplete_items.size();
                 }
@@ -995,11 +1003,12 @@ int main(int, char**) {
                     autocomplete_open = false;
                 }
                 
-                if (ImGui::IsMouseClicked(0) && !ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow)) {
-                    autocomplete_open = false;
+                if (ImGui::IsMouseClicked(0) && !ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup | ImGuiHoveredFlags_ChildWindows)) {
+                    // Check if we clicked outside
+                    if (!ImGui::IsWindowHovered()) autocomplete_open = false;
                 }
 
-                ImGui::EndPopup();
+                ImGui::End();
             }
         }
         
