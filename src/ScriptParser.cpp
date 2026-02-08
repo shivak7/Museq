@@ -703,6 +703,30 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
             auto inst_elem = std::make_shared<InstrumentElement>(inst);
             inst_elem->source_line = inst_line;
             current_parent->children.push_back(inst_elem);
+        } else if (m_functions.count(keyword)) {
+            // Implicit function call
+            const auto& func = m_functions[keyword];
+            std::map<std::string, std::string> next_map;
+            
+            // Try to parse arguments if provided in parentheses
+            std::string remainder;
+            std::getline(ss, remainder);
+            size_t open_p = remainder.find('(');
+            size_t close_p = remainder.find(')');
+            if (open_p != std::string::npos && close_p != std::string::npos) {
+                std::string args_s = remainder.substr(open_p + 1, close_p - open_p - 1);
+                std::stringstream ass(args_s);
+                std::string arg;
+                size_t arg_i = 0;
+                while (std::getline(ass, arg, ',') && arg_i < func.parameters.size()) {
+                    arg.erase(std::remove_if(arg.begin(), arg.end(), ::isspace), arg.end());
+                    next_map[func.parameters[arg_i++]] = arg;
+                }
+            }
+            
+            std::stringstream body;
+            for (const auto& l : func.body_lines) body << l << "\n";
+            process_script_stream(body, next_map, current_parent, depth + 1);
         } else if (keyword == "}") {
             if (in_sequence_block) {
                 in_sequence_block = false;
@@ -720,7 +744,7 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
                 current_parent->children.push_back(inst_elem);
                 in_instrument_block = false;
             } else {
-                return;
+                if (depth > 0) return;
             }
         } else {
             report_error("Unknown keyword or instrument: " + keyword);

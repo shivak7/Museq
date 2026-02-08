@@ -954,6 +954,23 @@ void TextEditor::Render()
 				}
 			}
 
+			// Draw playback markers
+			auto playbackIt = mPlaybackMarkers.find(lineNo + 1);
+			if (playbackIt != mPlaybackMarkers.end())
+			{
+				auto end = ImVec2(lineStartScreenPos.x + contentSize.x + 2.0f * scrollX, lineStartScreenPos.y + mCharAdvance.y);
+				drawList->AddRectFilled(start, end, mPalette[(int)PaletteIndex::PlaybackMarker]);
+
+				if (ImGui::IsMouseHoveringRect(lineStartScreenPos, end))
+				{
+					ImGui::BeginTooltip();
+					ImGui::Text("Playback:");
+					ImGui::Separator();
+					ImGui::Text("%s", playbackIt->second.c_str());
+					ImGui::EndTooltip();
+				}
+			}
+
 			// Draw line number (right aligned)
 			snprintf(buf, 16, "%d  ", lineNo + 1);
 

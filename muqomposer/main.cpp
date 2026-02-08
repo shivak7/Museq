@@ -518,6 +518,7 @@ int main(int, char**) {
     dracula_palette[(int)TextEditor::PaletteIndex::Number] = 0xffbd93f9;            // Purple (Same as synth params, or we can use another)
     dracula_palette[(int)TextEditor::PaletteIndex::Comment] = 0xff6272a4;           // Blue/Gray
     dracula_palette[(int)TextEditor::PaletteIndex::Background] = 0xff000000;        // Black Background
+    dracula_palette[(int)TextEditor::PaletteIndex::PlaybackMarker] = 0x808be9fd;    // Semi-transparent Cyan
     editor.SetPalette(dracula_palette);
 
     editor.SetText("// Write your Museq script here\n\ninstrument Piano {\n    waveform sine\n}\n\nsequential {\n    Piano { notes C4, E4, G4 }\n}");
@@ -896,9 +897,8 @@ int main(int, char**) {
 
         // Update Status and Visualization Markers
         TextEditor::ErrorMarkers markers;
+        TextEditor::PlaybackMarkers playback_markers;
         for (const auto& err : last_parsed_song.errors) {
-            // Note: Since we only assign last_parsed_song from parse_string("string_buffer")
-            // all errors here should be relevant, but filtering is good for future.
             markers[err.first] = err.second;
         }
 
@@ -916,13 +916,14 @@ int main(int, char**) {
             if (!is_playing_preview) {
                 int active_line = find_active_line(last_parsed_song.root, pos, 0);
                 if (active_line > 0) {
-                    markers[active_line] = "Playback";
+                    playback_markers[active_line] = "Active";
                 }
             }
         } else if (strncmp(status_text, "Preview Error:", 14) != 0) {
             snprintf(status_text, sizeof(status_text), "Status: Ready");
         }
         editor.SetErrorMarkers(markers);
+        editor.SetPlaybackMarkers(playback_markers);
 
         // Start the Dear ImGui frame
         if (rebuild_fonts) {
