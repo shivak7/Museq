@@ -76,9 +76,6 @@ Voice::Voice(const Instrument& inst, double start_samples, float sample_rate)
     total_ms += instrument.synth.envelope.release * 1000.0f;
     total_duration_samples = (total_ms / 1000.0) * sample_rate;
     
-    std::cerr << "Voice: Created. Notes: " << instrument.sequence.notes.size() 
-              << ", Duration: " << total_ms << " ms (" << total_duration_samples << " samples)" << std::endl;
-    
     if (total_duration_samples <= 0) is_finished = true;
 
     for (const auto& fx : instrument.effects) {

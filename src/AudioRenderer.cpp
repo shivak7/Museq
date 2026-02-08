@@ -26,13 +26,8 @@ void AudioRenderer::load(const Song& song, float sample_rate) {
     m_scheduled_voices.clear();
     m_active_voices.clear();
 
-    if (!song.root) {
-        std::cerr << "AudioRenderer: Song root is null!" << std::endl;
-        return;
-    }
+    if (!song.root) return;
 
-    std::cerr << "AudioRenderer: Loading song." << std::endl;
-    
     std::vector<Effect> empty_effects;
     flatten_song(song.root, 0.0, empty_effects);
     
@@ -44,9 +39,6 @@ void AudioRenderer::load(const Song& song, float sample_rate) {
     }
     
     m_total_samples = static_cast<long>((max_end_ms / 1000.0f) * m_sample_rate);
-    
-    std::cerr << "AudioRenderer: Flattened song. Scheduled voices: " << m_scheduled_voices.size() 
-              << ", Total Duration: " << max_end_ms << " ms (" << m_total_samples << " samples)" << std::endl;
 
     // 2. Preload Soundfonts
     auto preloader = [&](auto self, std::shared_ptr<SongElement> element) -> void {

@@ -408,8 +408,6 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
         std::string keyword;
         if (!(ss >> keyword)) continue;
         
-        std::cerr << "ScriptParser: Keyword '" << keyword << "' at line " << m_current_line << std::endl;
-
         if (keyword == "{") continue;
         if (keyword == "}") {
             if (depth > 0) return;
@@ -628,7 +626,6 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
             else if (type_str == "locrian") type = ScaleType::LOCRIAN;
             m_current_scale = Scale(type, root);
         } else if (m_templates.count(keyword)) {
-            std::cerr << "ScriptParser: Found instrument '" << keyword << "'" << std::endl;
             Instrument inst = m_templates[keyword];
             int inst_brace_count = 0;
             int current_octave = m_default_octave;
@@ -642,11 +639,9 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
                 std::string lkw;
                 while (lss >> lkw) {
                     if (lkw == "{" || lkw == "}") continue;
-                    std::cerr << "ScriptParser:   inst usage kw: '" << lkw << "'" << std::endl;
                     if (lkw == "note") {
                         std::string n, d_s, v_s, p_s;
                         if (lss >> n) {
-                            std::cerr << "ScriptParser:     found note: '" << n << "'" << std::endl;
                             if (lss >> d_s && lss >> v_s) {
                                 if (d_s.find('.') != std::string::npos || v_s.find('.') != std::string::npos) {
                                     report_error("Floating point value in 'note' duration/velocity. Skipping.");
@@ -655,12 +650,15 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
                                         int d = std::stoi(d_s);
                                         int v = std::stoi(v_s);
                                         float p = inst.pan;
-                                        if (lss >> p_s) p = std::stof(p_s);
+                                        if (lss >> p_s) {
+                                            if (p_s != "}" && p_s != "{" && (isdigit(p_s[0]) || p_s[0] == '-' || p_s[0] == '.')) {
+                                                p = std::stof(p_s);
+                                            }
+                                        }
                                         Note new_note(NoteParser::parse(n, m_current_scale, current_octave), d, v, p);
                                         inst.sequence.add_note(new_note);
-                                        std::cerr << "ScriptParser:       Added note " << n << " (" << d << "ms)" << std::endl;
                                     } catch(...) {
-                                        std::cerr << "ScriptParser:       Failed to parse note params for " << n << std::endl;
+                                        report_error("Failed to parse note params for " + n);
                                     }
                                 }
                             } else {
@@ -704,7 +702,6 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
             }
             auto inst_elem = std::make_shared<InstrumentElement>(inst);
             inst_elem->source_line = inst_line;
-            std::cerr << "ScriptParser: Created InstrumentElement for '" << keyword << "' with " << inst.sequence.notes.size() << " notes" << std::endl;
             current_parent->children.push_back(inst_elem);
         } else if (keyword == "}") {
             if (in_sequence_block) {
