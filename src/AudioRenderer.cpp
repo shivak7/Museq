@@ -26,12 +26,21 @@ void AudioRenderer::load(const Song& song, float sample_rate) {
     m_scheduled_voices.clear();
     m_active_voices.clear();
 
-    if (!song.root) return;
+    if (!song.root) {
+        std::cerr << "AudioRenderer: Song root is null!" << std::endl;
+        return;
+    }
 
     // 1. Calculate Total Duration and Flatten Tree
-    m_total_samples = static_cast<long>((song.root->get_duration_ms() / 1000.0f) * m_sample_rate);
+    double duration_ms = song.root->get_duration_ms();
+    m_total_samples = static_cast<long>((duration_ms / 1000.0f) * m_sample_rate);
     std::vector<Effect> empty_effects;
+    
+    std::cerr << "AudioRenderer: Loading song. Duration: " << duration_ms << " ms (" << m_total_samples << " samples)" << std::endl;
+    
     flatten_song(song.root, 0.0, empty_effects);
+    
+    std::cerr << "AudioRenderer: Flattened song. Scheduled voices: " << m_scheduled_voices.size() << std::endl;
 
     // 2. Preload Soundfonts
     auto preloader = [&](auto self, std::shared_ptr<SongElement> element) -> void {

@@ -638,8 +638,8 @@ int main(int, char**) {
                             ImGui::PushID((node.full_path + inst).c_str());
                             if (ImGui::Button("[>]", ImVec2(35, 0))) {
                                 std::string code = it->instrument_definitions.at(inst);
-                                // Construct multi-line preview script with explicit BPM
-                                std::string preview_script = "tempo 120\n" + code + "\n\nsequential {\n    " + inst + " { note C4 1000 100 }\n}\n";
+                                // Simpler script: definition + direct usage
+                                std::string preview_script = "tempo 120\n" + code + "\n" + inst + " { note C4 1000 100 }\n";
                                 
                                 Song preview_song = ScriptParser::parse_string(preview_script);
                                 if (!preview_song.errors.empty()) {
