@@ -834,36 +834,45 @@ int main(int, char**) {
         ImGui::PopFont();
 
         // Autocomplete Detection
-        if (editor.IsTextChanged() || editor.IsCursorPositionChanged()) {
+        bool text_changed = editor.IsTextChanged();
+        bool cursor_moved = editor.IsCursorPositionChanged();
+
+        if (text_changed || (cursor_moved && autocomplete_open)) {
             auto pos = editor.GetCursorPosition();
             std::string line = editor.GetCurrentLineText();
             int col = pos.mColumn;
             int start = col - 1;
+            
+            // Find current word boundary
             while (start >= 0 && (isalnum(line[start]) || line[start] == '_')) start--;
             start++;
             
             if (col > start) {
                 std::string prefix = line.substr(start, col - start);
-                if (prefix.length() >= 1) {
+                
+                // Only trigger or update if we have a prefix and either text changed or it was already open
+                if (prefix.length() >= 1 && (text_changed || autocomplete_open)) {
                     autocomplete_prefix = prefix;
                     autocomplete_items.clear();
-                    std::vector<std::string> all_suggestions;
-                    for (auto& k : primary_keywords) all_suggestions.push_back(k);
-                    for (auto& e : effects_keywords) all_suggestions.push_back(e);
-                    for (auto& s : synth_keywords) all_suggestions.push_back(s);
-                    for (auto& i : active_instrument_names) all_suggestions.push_back(i);
+                    
+                    std::set<std::string> unique_suggestions;
+                    for (const auto& k : primary_keywords) unique_suggestions.insert(k);
+                    for (const auto& e : effects_keywords) unique_suggestions.insert(e);
+                    for (const auto& s : synth_keywords) unique_suggestions.insert(s);
+                    for (const auto& i : active_instrument_names) unique_suggestions.insert(i);
 
-                    for (const auto& s : all_suggestions) {
+                    for (const auto& s : unique_suggestions) {
                         if (s.find(autocomplete_prefix) == 0 && s != autocomplete_prefix) {
                             autocomplete_items.push_back(s);
                         }
                     }
                     
-                    if (!autocomplete_items.empty()) {
+                    if (autocomplete_items.empty()) {
+                        autocomplete_open = false;
+                    } else if (text_changed) {
+                        // Only open from scratch if text was actually typed
                         autocomplete_open = true;
                         if (autocomplete_selected >= (int)autocomplete_items.size()) autocomplete_selected = 0;
-                    } else {
-                        autocomplete_open = false;
                     }
                 } else {
                     autocomplete_open = false;
