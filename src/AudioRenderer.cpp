@@ -31,16 +31,22 @@ void AudioRenderer::load(const Song& song, float sample_rate) {
         return;
     }
 
-    // 1. Calculate Total Duration and Flatten Tree
-    double duration_ms = song.root->get_duration_ms();
-    m_total_samples = static_cast<long>((duration_ms / 1000.0f) * m_sample_rate);
+    std::cerr << "AudioRenderer: Loading song." << std::endl;
+    
     std::vector<Effect> empty_effects;
-    
-    std::cerr << "AudioRenderer: Loading song. Duration: " << duration_ms << " ms (" << m_total_samples << " samples)" << std::endl;
-    
     flatten_song(song.root, 0.0, empty_effects);
     
-    std::cerr << "AudioRenderer: Flattened song. Scheduled voices: " << m_scheduled_voices.size() << std::endl;
+    // Calculate actual total samples from scheduled voices
+    double max_end_ms = 0;
+    for (const auto& v : m_scheduled_voices) {
+        double end_ms = (double)v->start_time_samples / m_sample_rate * 1000.0 + (double)v->total_duration_samples / m_sample_rate * 1000.0;
+        if (end_ms > max_end_ms) max_end_ms = end_ms;
+    }
+    
+    m_total_samples = static_cast<long>((max_end_ms / 1000.0f) * m_sample_rate);
+    
+    std::cerr << "AudioRenderer: Flattened song. Scheduled voices: " << m_scheduled_voices.size() 
+              << ", Total Duration: " << max_end_ms << " ms (" << m_total_samples << " samples)" << std::endl;
 
     // 2. Preload Soundfonts
     auto preloader = [&](auto self, std::shared_ptr<SongElement> element) -> void {
