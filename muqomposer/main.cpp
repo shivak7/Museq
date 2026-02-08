@@ -948,9 +948,12 @@ int main(int, char**) {
                     }
                     
                     if (!autocomplete_items.empty()) {
-                        if (!autocomplete_open) autocomplete_just_opened = true;
-                        autocomplete_open = true;
-                        autocomplete_selected = 0;
+                        if (!autocomplete_open) {
+                            autocomplete_just_opened = true;
+                            autocomplete_open = true;
+                            // Capture prefix when opening to ensure consistency
+                            autocomplete_selected = 0;
+                        }
                     } else {
                         autocomplete_open = false;
                     }
@@ -963,16 +966,15 @@ int main(int, char**) {
         }
 
         if (autocomplete_open) {
-            // Calculate screen position for autocomplete window
-            auto pos = editor.GetCursorPosition();
-            
-            // For now, let's just use the captured editor_pos + internal calculation
+            // Position popup at text cursor
             ImVec2 cursor_screen_pos = editor.GetCursorScreenPos(editor_pos); 
-            
             ImGui::SetNextWindowPos(ImVec2(cursor_screen_pos.x, cursor_screen_pos.y + ImGui::GetTextLineHeightWithSpacing()));
-            ImGui::SetNextWindowSizeConstraints(ImVec2(150, 0), ImVec2(400, 300));
             
-            if (ImGui::Begin("##autocomplete", &autocomplete_open, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_Tooltip)) {
+            if (!ImGui::IsPopupOpen("##autocomplete_popup")) {
+                ImGui::OpenPopup("##autocomplete_popup");
+            }
+
+            if (ImGui::BeginPopup("##autocomplete_popup", ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_AlwaysAutoResize)) {
                 for (int i = 0; i < (int)autocomplete_items.size(); i++) {
                     bool is_selected = (i == autocomplete_selected);
                     if (ImGui::Selectable(autocomplete_items[i].c_str(), is_selected)) {
@@ -986,8 +988,7 @@ int main(int, char**) {
                     }
                 }
 
-                // Intercept keys even when popup doesn't have focus
-                // (This works because we are in the same frame as the editor)
+                // Handle keyboard navigation in the popup
                 if (ImGui::IsKeyPressed(ImGuiKey_DownArrow)) {
                     autocomplete_selected = (autocomplete_selected + 1) % autocomplete_items.size();
                 }
@@ -998,17 +999,17 @@ int main(int, char**) {
                     std::string completion = autocomplete_items[autocomplete_selected].substr(autocomplete_prefix.length());
                     editor.InsertText(completion);
                     autocomplete_open = false;
+                    ImGui::CloseCurrentPopup();
                 }
                 if (ImGui::IsKeyPressed(ImGuiKey_Escape)) {
                     autocomplete_open = false;
-                }
-                
-                if (ImGui::IsMouseClicked(0) && !ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup | ImGuiHoveredFlags_ChildWindows)) {
-                    // Check if we clicked outside
-                    if (!ImGui::IsWindowHovered()) autocomplete_open = false;
+                    ImGui::CloseCurrentPopup();
                 }
 
-                ImGui::End();
+                ImGui::EndPopup();
+            } else {
+                // If BeginPopup fails but autocomplete_open is true, it means it was closed by clicking outside
+                autocomplete_open = false;
             }
         }
         
