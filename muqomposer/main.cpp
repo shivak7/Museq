@@ -36,6 +36,55 @@
 
 namespace fs = std::filesystem;
 
+struct AppFonts {
+    ImFont* main = nullptr;
+    ImFont* editor = nullptr;
+};
+
+void load_fonts(AppFonts& fonts, float ui_size, float editor_size) {
+    ImGuiIO& io = ImGui::GetIO();
+    io.Fonts->Clear();
+
+    // 1. UI Font
+    fonts.main = io.Fonts->AddFontDefault();
+    // Default font doesn't support arbitrary sizes easily via AddFontDefault
+    // but we can use global scale or load a specific TTF for UI if we want.
+    // For now, let's keep UI font as default and use FontGlobalScale for it?
+    // Actually, it's better to load a TTF for UI too if we want scaling.
+    
+    const char* ui_font_paths[] = {
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+        "/usr/share/fonts/truetype/freefont/FreeSans.ttf"
+    };
+    
+    for (const char* path : ui_font_paths) {
+        if (fs::exists(path)) {
+            fonts.main = io.Fonts->AddFontFromFileTTF(path, ui_size);
+            if (fonts.main) break;
+        }
+    }
+
+    // 2. Editor Font
+    const char* mono_paths[] = {
+        "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf",
+        "/usr/share/fonts/truetype/freefont/FreeMono.ttf"
+    };
+    for (const char* path : mono_paths) {
+        if (fs::exists(path)) {
+            fonts.editor = io.Fonts->AddFontFromFileTTF(path, editor_size);
+            if (fonts.editor) break;
+        }
+    }
+    
+    if (!fonts.editor) fonts.editor = fonts.main;
+
+    io.Fonts->Build();
+    ImGui_ImplOpenGL3_DestroyDeviceObjects();
+    ImGui_ImplOpenGL3_CreateDeviceObjects();
+}
+
 static void glfw_error_callback(int error, const char* description) {
     fprintf(stderr, "Glfw Error %d: %s\n", error, description);
 }
@@ -173,25 +222,8 @@ int main(int, char**) {
     ImGui::StyleColorsDark();
 
     // Load Fonts
-    ImFont* main_font = io.Fonts->AddFontDefault();
-    
-    // Try to load a monospaced font for the editor
-    ImFont* editor_font = nullptr;
-    const char* mono_paths[] = {
-        "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",
-        "/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf",
-        "/usr/share/fonts/truetype/freefont/FreeMono.ttf"
-    };
-    for (const char* path : mono_paths) {
-        if (fs::exists(path)) {
-            editor_font = io.Fonts->AddFontFromFileTTF(path, 18.0f);
-            if (editor_font) break;
-        }
-    }
-    if (!editor_font) {
-        // Fallback: use default font scaled up
-        editor_font = main_font; 
-    }
+    AppFonts app_fonts;
+    load_fonts(app_fonts, settings.ui_font_size, settings.editor_font_size);
 
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOpenGL(window, true);
@@ -460,6 +492,8 @@ int main(int, char**) {
     bool show_save_popup = false;
     bool show_load_popup = false;
     bool show_export_popup = false;
+    bool show_settings_popup = false;
+    bool rebuild_fonts = false;
     char file_path_buffer[256] = "song.museq";
     char export_path_buffer[256] = "song.wav";
     int export_format = 0; // 0: WAV, 1: MP3, 2: OGG
@@ -514,6 +548,7 @@ int main(int, char**) {
         show_load_popup = false;
         show_export_popup = false;
         show_folder_picker = false;
+        show_settings_popup = false;
     };
 
     // Helper for Asset Tree Rendering
@@ -802,6 +837,11 @@ int main(int, char**) {
         editor.SetErrorMarkers(markers);
 
         // Start the Dear ImGui frame
+        if (rebuild_fonts) {
+            load_fonts(app_fonts, settings.ui_font_size, settings.editor_font_size);
+            rebuild_fonts = false;
+        }
+
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
@@ -937,7 +977,7 @@ int main(int, char**) {
         }
 
         ImVec2 editor_pos = ImGui::GetCursorScreenPos();
-        ImGui::PushFont(editor_font);
+        ImGui::PushFont(app_fonts.editor);
         editor.Render("Editor");
         ImGui::PopFont();
 
@@ -1158,6 +1198,10 @@ int main(int, char**) {
         if (ImGui::Button("Export", ImVec2(80, 0))) {
             show_export_popup = true;
         }
+        ImGui::SameLine();
+        if (ImGui::Button("Settings", ImVec2(80, 0))) {
+            show_settings_popup = true;
+        }
         ImGui::End();
 
         // --- Save Popup ---
@@ -1263,6 +1307,46 @@ int main(int, char**) {
             ImGui::SameLine();
             if (ImGui::Button("Cancel", ImVec2(120, 0))) {
                 show_export_popup = false;
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::EndPopup();
+        }
+
+        // --- Settings Popup ---
+        if (show_settings_popup) {
+            ImGui::OpenPopup("Settings");
+        }
+
+        if (ImGui::BeginPopupModal("Settings", &show_settings_popup, ImGuiWindowFlags_AlwaysAutoResize)) {
+            ImGui::Text("Appearance");
+            ImGui::Separator();
+
+            ImGui::SliderFloat("UI Font Size", &settings.ui_font_size, 10.0f, 30.0f, "%.0f");
+            if (ImGui::IsItemActive()) {
+                if (ImGui::IsKeyPressed(ImGuiKey_LeftArrow)) settings.ui_font_size -= 1.0f;
+                if (ImGui::IsKeyPressed(ImGuiKey_RightArrow)) settings.ui_font_size += 1.0f;
+                settings.ui_font_size = std::clamp(settings.ui_font_size, 10.0f, 30.0f);
+            }
+
+            ImGui::SliderFloat("Editor Font Size", &settings.editor_font_size, 10.0f, 40.0f, "%.0f");
+            if (ImGui::IsItemActive()) {
+                if (ImGui::IsKeyPressed(ImGuiKey_LeftArrow)) settings.editor_font_size -= 1.0f;
+                if (ImGui::IsKeyPressed(ImGuiKey_RightArrow)) settings.editor_font_size += 1.0f;
+                settings.editor_font_size = std::clamp(settings.editor_font_size, 10.0f, 40.0f);
+            }
+
+            ImGui::Separator();
+            if (ImGui::Button("Apply", ImVec2(120, 0))) {
+                settings.save();
+                rebuild_fonts = true;
+                show_settings_popup = false;
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+                // Reload to discard changes
+                settings = Settings::load();
+                show_settings_popup = false;
                 ImGui::CloseCurrentPopup();
             }
             ImGui::EndPopup();
