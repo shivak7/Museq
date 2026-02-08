@@ -44,13 +44,11 @@ struct AppFonts {
 void load_fonts(AppFonts& fonts, float ui_size, float editor_size) {
     ImGuiIO& io = ImGui::GetIO();
     io.Fonts->Clear();
+    
+    printf("Loading fonts... UI: %.1f, Editor: %.1f\n", ui_size, editor_size);
 
     // 1. UI Font
     fonts.main = io.Fonts->AddFontDefault();
-    // Default font doesn't support arbitrary sizes easily via AddFontDefault
-    // but we can use global scale or load a specific TTF for UI if we want.
-    // For now, let's keep UI font as default and use FontGlobalScale for it?
-    // Actually, it's better to load a TTF for UI too if we want scaling.
     
     const char* ui_font_paths[] = {
         "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
@@ -60,12 +58,17 @@ void load_fonts(AppFonts& fonts, float ui_size, float editor_size) {
     
     for (const char* path : ui_font_paths) {
         if (fs::exists(path)) {
+            printf("Trying UI font: %s\n", path);
             fonts.main = io.Fonts->AddFontFromFileTTF(path, ui_size);
-            if (fonts.main) break;
+            if (fonts.main) {
+                printf("Success loading UI font: %s\n", path);
+                break;
+            }
         }
     }
 
     // 2. Editor Font
+    fonts.editor = nullptr;
     const char* mono_paths[] = {
         "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",
         "/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf",
@@ -73,16 +76,24 @@ void load_fonts(AppFonts& fonts, float ui_size, float editor_size) {
     };
     for (const char* path : mono_paths) {
         if (fs::exists(path)) {
+            printf("Trying Editor font: %s\n", path);
             fonts.editor = io.Fonts->AddFontFromFileTTF(path, editor_size);
-            if (fonts.editor) break;
+            if (fonts.editor) {
+                printf("Success loading Editor font: %s\n", path);
+                break;
+            }
         }
     }
     
-    if (!fonts.editor) fonts.editor = fonts.main;
+    if (!fonts.editor) {
+        printf("Fallback: Using main font for editor.\n");
+        fonts.editor = fonts.main;
+    }
 
     io.Fonts->Build();
     ImGui_ImplOpenGL3_DestroyDeviceObjects();
     ImGui_ImplOpenGL3_CreateDeviceObjects();
+    printf("Fonts built and texture updated.\n");
 }
 
 static void glfw_error_callback(int error, const char* description) {
