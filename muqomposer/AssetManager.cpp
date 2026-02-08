@@ -243,6 +243,8 @@ void AssetManager::process_museq(const fs::path& path) {
     info.filename = path.filename().string();
 
     std::ifstream in(path);
+    if (!in.is_open()) return;
+
     std::string line;
     std::string current_instrument_name;
     std::string current_block;
@@ -262,18 +264,21 @@ void AssetManager::process_museq(const fs::path& path) {
                 if (!name.empty()) {
                     current_instrument_name = name;
                     inside_instrument = true;
-                    brace_count = 1;
-                    current_block = line + "\n";
+                    brace_count = 0;
+                    current_block = "";
                     info.instruments.push_back(name);
+                    // Process this line for braces
                 }
             }
-        } else {
+        }
+        
+        if (inside_instrument) {
             current_block += line + "\n";
             for (char c : line) {
                 if (c == '{') brace_count++;
                 else if (c == '}') brace_count--;
             }
-            if (brace_count <= 0) {
+            if (brace_count <= 0 && !current_block.empty()) {
                 info.instrument_definitions[current_instrument_name] = current_block;
                 inside_instrument = false;
             }

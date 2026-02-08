@@ -539,6 +539,14 @@ int main(int, char**) {
                 if (it != synths.end()) {
                     if (ImGui::TreeNode(node.name.c_str())) {
                         for (const auto& inst : it->instruments) {
+                            if (strlen(asset_search_buffer) > 0) {
+                                std::string i_lower = inst;
+                                std::transform(i_lower.begin(), i_lower.end(), i_lower.begin(), ::tolower);
+                                std::string f_lower = asset_search_buffer;
+                                std::transform(f_lower.begin(), f_lower.end(), f_lower.begin(), ::tolower);
+                                if (i_lower.find(f_lower) == std::string::npos) continue;
+                            }
+
                             ImGui::PushID((node.full_path + inst).c_str());
                             if (ImGui::Button("[>]", ImVec2(35, 0))) {
                                 Song preview_song;
