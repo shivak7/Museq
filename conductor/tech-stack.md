@@ -22,5 +22,6 @@
 
 ## Data & Utilities
 - **Serialization:** [nlohmann/json](https://github.com/nlohmann/json) for dumping song structures and configuration.
+- **Settings:** Local `settings.json` for persistent user preferences.
 - **Script Parsing:** Custom hand-written parser for the Museq scripting language.
 - **Filesystem:** `std::filesystem` (C++17) for asset discovery and file dialogs.
