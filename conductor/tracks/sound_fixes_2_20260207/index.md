@@ -1,4 +1,4 @@
-# Track studio_ui_refinement_20260207 Context
+# Track sound_fixes_2_20260207 Context
 
 - [Specification](./spec.md)
 - [Implementation Plan](./plan.md)
