@@ -1,0 +1,12 @@
+import "musynths/sfx.museq"
+
+sequence SfxSequence {
+    1.0 SfxRiser_v2
+    5.0 SfxLaser_v2
+    7.0 SfxLaser_v2
+    9.0 SfxImpact_v2
+}
+
+parallel {
+    SfxSequence
+}

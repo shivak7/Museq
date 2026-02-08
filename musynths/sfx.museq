@@ -1,3 +1,6 @@
+// Museq SFX Synth Library
+// Optimized for Sound Fixes 2
+
 instrument Riser {
     waveform sawtooth
     envelope 4.0 0.0 1.0 0.5
@@ -9,4 +12,25 @@ instrument Laser {
     waveform square
     envelope 0.01 0.2 0.0 0.01
     lfo pitch sawtooth 20 24.0
+}
+
+// Improved SFX for v2
+instrument SfxRiser_v2 {
+    waveform sawtooth
+    envelope 4.0 0.0 1.0 1.0
+    lfo pitch sawtooth 0.25 48.0
+    filter lowpass 1000 2.0
+}
+
+instrument SfxLaser_v2 {
+    waveform square
+    envelope 0.01 0.1 0.0 0.01
+    lfo pitch sawtooth 40 12.0
+}
+
+instrument SfxImpact_v2 {
+    waveform square
+    envelope 0.01 0.5 0.0 0.2
+    lfo pitch sawtooth 100 5.0
+    filter lowpass 400 3.0
 }
