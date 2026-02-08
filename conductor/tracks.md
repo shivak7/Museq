@@ -8,5 +8,5 @@ This file tracks all major tracks for the project. Each track has its own detail
 *Link: [./conductor/tracks/studio_enhancements_20260207/](./conductor/tracks/studio_enhancements_20260207/)*
 ---
 
-- [~] **Track: Sound fixes 2 - Differentiating musynths files**
+- [x] **Track: Sound fixes 2 - Differentiating musynths files**
 *Link: [./tracks/sound_fixes_2_20260207/](./tracks/sound_fixes_2_20260207/)*
