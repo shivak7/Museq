@@ -169,6 +169,27 @@ int main(int, char**) {
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     ImGui::StyleColorsDark();
 
+    // Load Fonts
+    ImFont* main_font = io.Fonts->AddFontDefault();
+    
+    // Try to load a monospaced font for the editor
+    ImFont* editor_font = nullptr;
+    const char* mono_paths[] = {
+        "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf",
+        "/usr/share/fonts/truetype/freefont/FreeMono.ttf"
+    };
+    for (const char* path : mono_paths) {
+        if (fs::exists(path)) {
+            editor_font = io.Fonts->AddFontFromFileTTF(path, 18.0f);
+            if (editor_font) break;
+        }
+    }
+    if (!editor_font) {
+        // Fallback: use default font scaled up
+        editor_font = main_font; 
+    }
+
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
@@ -285,8 +306,56 @@ int main(int, char**) {
 
     // Museq State
     TextEditor editor;
-    editor.SetLanguageDefinition(TextEditor::LanguageDefinition::CPlusPlus());
-    editor.SetPalette(TextEditor::GetDarkPalette());
+    
+    // Define Museq Language
+    TextEditor::LanguageDefinition museq_lang;
+    museq_lang.mName = "Museq";
+    
+    // Keywords
+    const char* const keywords[] = {
+        "instrument", "function", "var", "import", "scale", "call", "parallel", "sequential", "repeat", "loop", "tempo", "bpm", "velocity", "octave", "offset", "phase", "note", "notes", "sequence"
+    };
+    for (auto& k : keywords) {
+        TextEditor::Identifier id;
+        museq_lang.mKeywords.insert(k);
+    }
+
+    // Types / Sub-keywords
+    const char* const types[] = {
+        "waveform", "envelope", "filter", "lfo", "sample", "soundfont", "bank", "preset", "portamento", "pan", "gain", "effect",
+        "sine", "square", "triangle", "sawtooth", "noise",
+        "lowpass", "highpass", "bandpass", "notch", "peak", "lshelf", "hshelf",
+        "pitch", "amplitude", "cutoff",
+        "delay", "distortion", "bitcrush", "fadein", "fadeout", "tremolo", "reverb",
+        "major", "minor", "dorian", "phrygian", "lydian", "mixolydian", "locrian",
+        "start", "stop"
+    };
+    for (auto& t : types) {
+        TextEditor::Identifier id;
+        museq_lang.mIdentifiers.insert({t, id});
+    }
+
+    museq_lang.mTokenRegexStrings.push_back(std::make_pair<std::string, TextEditor::PaletteIndex>("[a-zA-Z_][a-zA-Z0-9_]*", TextEditor::PaletteIndex::Identifier));
+    museq_lang.mTokenRegexStrings.push_back(std::make_pair<std::string, TextEditor::PaletteIndex>("[0-9]+", TextEditor::PaletteIndex::Number));
+
+    museq_lang.mCommentStart = "/*";
+    museq_lang.mCommentEnd = "*/";
+    museq_lang.mSingleLineComment = "//";
+    museq_lang.mCaseSensitive = true;
+    museq_lang.mAutoIndentation = true;
+
+    editor.SetLanguageDefinition(museq_lang);
+    
+    // Custom High-Contrast Palette (Dracula-inspired)
+    TextEditor::Palette dracula_palette = TextEditor::GetDarkPalette();
+    dracula_palette[(int)TextEditor::PaletteIndex::Keyword] = 0xff79c6ff;     // Pink/Orange
+    dracula_palette[(int)TextEditor::PaletteIndex::Identifier] = 0xff50fa7b;  // Green
+    dracula_palette[(int)TextEditor::PaletteIndex::String] = 0xfff1fa8c;      // Yellow
+    dracula_palette[(int)TextEditor::PaletteIndex::Number] = 0xffbd93f9;      // Purple
+    dracula_palette[(int)TextEditor::PaletteIndex::Comment] = 0xff6272a4;     // Blue/Gray
+    dracula_palette[(int)TextEditor::PaletteIndex::Background] = 0xff282a36;  // Background
+    editor.SetPalette(dracula_palette);
+
     editor.SetText("// Write your Museq script here\n\ninstrument Piano {\n    waveform sine\n}\n\nsequential {\n    Piano { notes C4, E4, G4 }\n}");
     
     // Helper for Play logic
@@ -362,6 +431,10 @@ int main(int, char**) {
         active_instrument_names.clear();
         std::stringstream ss(editor.GetText());
         std::string line;
+        
+        auto current_lang = editor.GetLanguageDefinition();
+        bool changed = false;
+
         while (std::getline(ss, line)) {
             if (line.find("instrument ") != std::string::npos) {
                 size_t pos = line.find("instrument ") + 11;
@@ -374,9 +447,17 @@ int main(int, char**) {
                         size_t last = name.find_last_not_of(" \t\r\n");
                         name = name.substr(first, (last - first + 1));
                         active_instrument_names.push_back(name);
+                        
+                        if (current_lang.mIdentifiers.find(name) == current_lang.mIdentifiers.end()) {
+                            current_lang.mIdentifiers.insert({name, TextEditor::Identifier()});
+                            changed = true;
+                        }
                     }
                 }
             }
+        }
+        if (changed) {
+            editor.SetLanguageDefinition(current_lang);
         }
     };
 
@@ -784,7 +865,9 @@ int main(int, char**) {
         }
 
         // --- New Advanced Editor ---
+        ImGui::PushFont(editor_font);
         editor.Render("Editor");
+        ImGui::PopFont();
         
         if (ImGui::BeginDragDropTarget()) {
             if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ASSET_CODE")) {
