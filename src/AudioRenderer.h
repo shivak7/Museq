@@ -22,6 +22,9 @@ public:
     void render_block(float* output, int frame_count);
     bool is_finished() const;
     double get_current_time_ms() const { return (double)m_current_sample / m_sample_rate * 1000.0; }
+    double get_total_duration_ms() const { return (double)m_total_samples / m_sample_rate * 1000.0; }
+    size_t get_active_voice_count() const { std::lock_guard<std::mutex> lock(m_mutex); return m_active_voices.size(); }
+    size_t get_scheduled_voice_count() const { std::lock_guard<std::mutex> lock(m_mutex); return m_scheduled_voices.size(); }
 
     // Helper to query soundfont
     static void print_soundfont_presets(const std::string& path);

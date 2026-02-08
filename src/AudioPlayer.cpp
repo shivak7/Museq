@@ -93,6 +93,18 @@ double AudioPlayer::get_playback_position_ms() const {
     return m_renderer.get_current_time_ms();
 }
 
+double AudioPlayer::get_total_duration_ms() const {
+    return m_renderer.get_total_duration_ms();
+}
+
+size_t AudioPlayer::get_active_voice_count() const {
+    return m_renderer.get_active_voice_count();
+}
+
+size_t AudioPlayer::get_scheduled_voice_count() const {
+    return m_renderer.get_scheduled_voice_count();
+}
+
 void AudioPlayer::get_visualization_data(float* out_buffer, int count) {
     if (count > VIS_BUFFER_SIZE) count = VIS_BUFFER_SIZE;
     

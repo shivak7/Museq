@@ -777,7 +777,11 @@ int main(int, char**) {
             snprintf(status_text, sizeof(status_text), "Status: Audio Init Failed");
         } else if (player.is_playing()) {
             double pos = player.get_playback_position_ms();
-            snprintf(status_text, sizeof(status_text), "Status: Playing (%.1f ms) %s", pos, is_playing_preview ? "[PREVIEW]" : "");
+            double total = player.get_total_duration_ms();
+            size_t active = player.get_active_voice_count();
+            size_t scheduled = player.get_scheduled_voice_count();
+            
+            snprintf(status_text, sizeof(status_text), "Status: Playing (%.1f/%.1f ms) V:%zu/%zu %s", pos, total, active, scheduled, is_playing_preview ? "[PREVIEW]" : "");
             
             // Highlight active line (only if not a preview)
             if (!is_playing_preview) {

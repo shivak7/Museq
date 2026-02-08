@@ -25,6 +25,9 @@ public:
     // Check if currently playing
     bool is_playing() const;
     double get_playback_position_ms() const;
+    double get_total_duration_ms() const;
+    size_t get_active_voice_count() const;
+    size_t get_scheduled_voice_count() const;
 
     // Visualization
     static const int VIS_BUFFER_SIZE = 1024;
