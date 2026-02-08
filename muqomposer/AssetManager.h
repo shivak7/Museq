@@ -40,6 +40,7 @@ struct SynthFileInfo {
     std::string path;
     std::string filename;
     std::vector<std::string> instruments;
+    std::map<std::string, std::string> instrument_definitions;
 };
 
 class AssetManager {

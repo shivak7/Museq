@@ -244,16 +244,38 @@ void AssetManager::process_museq(const fs::path& path) {
 
     std::ifstream in(path);
     std::string line;
+    std::string current_instrument_name;
+    std::string current_block;
+    bool inside_instrument = false;
+    int brace_count = 0;
+
     while (std::getline(in, line)) {
-        size_t inst_pos = line.find("instrument ");
-        size_t brace_pos = line.find("{");
-        if (inst_pos != std::string::npos && brace_pos != std::string::npos && brace_pos > inst_pos) {
-            std::string name = line.substr(inst_pos + 11, brace_pos - (inst_pos + 11));
-            // Trim whitespace
-            name.erase(0, name.find_first_not_of(" \t"));
-            name.erase(name.find_last_not_of(" \t") + 1);
-            if (!name.empty()) {
-                info.instruments.push_back(name);
+        if (!inside_instrument) {
+            size_t inst_pos = line.find("instrument ");
+            size_t brace_pos = line.find("{");
+            if (inst_pos != std::string::npos && brace_pos != std::string::npos && brace_pos > inst_pos) {
+                std::string name = line.substr(inst_pos + 11, brace_pos - (inst_pos + 11));
+                // Trim whitespace
+                name.erase(0, name.find_first_not_of(" \t"));
+                name.erase(name.find_last_not_of(" \t") + 1);
+                
+                if (!name.empty()) {
+                    current_instrument_name = name;
+                    inside_instrument = true;
+                    brace_count = 1;
+                    current_block = line + "\n";
+                    info.instruments.push_back(name);
+                }
+            }
+        } else {
+            current_block += line + "\n";
+            for (char c : line) {
+                if (c == '{') brace_count++;
+                else if (c == '}') brace_count--;
+            }
+            if (brace_count <= 0) {
+                info.instrument_definitions[current_instrument_name] = current_block;
+                inside_instrument = false;
             }
         }
     }

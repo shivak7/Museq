@@ -412,9 +412,6 @@ int main(int, char**) {
     const float SIDEBAR_WIDTH = 250.0f;
     const float FOOTER_HEIGHT = 40.0f;
     
-    // Mock Synths
-    std::vector<std::string> synth_templates = {"SawLead", "SoftPad", "AcidBass", "Pluck"};
-
     // Folder Picker State
     bool show_folder_picker = false;
     
@@ -532,6 +529,51 @@ int main(int, char**) {
                     ImGui::SetDragDropPayload("ASSET_CODE", buf, strlen(buf) + 1);
                     ImGui::Text("Add %s", node.name.c_str());
                     ImGui::EndDragDropSource();
+                }
+            } else if (node.type == AssetType::MUSEQ) {
+                const auto& synths = asset_manager.get_synths();
+                auto it = std::find_if(synths.begin(), synths.end(), [&](const SynthFileInfo& i){ 
+                    return fs::path(i.path) == fs::path(node.full_path); 
+                });
+                
+                if (it != synths.end()) {
+                    if (ImGui::TreeNode(node.name.c_str())) {
+                        for (const auto& inst : it->instruments) {
+                            ImGui::PushID((node.full_path + inst).c_str());
+                            if (ImGui::Button("[>]", ImVec2(35, 0))) {
+                                Song preview_song;
+                                Instrument preview_inst(inst, Waveform::SAWTOOTH); 
+                                preview_inst.sequence.add_note(Note(60, 1000, 100));
+                                preview_song.root->children.push_back(std::make_shared<InstrumentElement>(preview_inst));
+                                player.play(preview_song, true);
+                            }
+                            ImGui::PopID();
+                            ImGui::SameLine();
+
+                            if (ImGui::Selectable(inst.c_str())) {
+                                std::string sanitized_name = inst;
+                                std::replace(sanitized_name.begin(), sanitized_name.end(), ' ', '_');
+                                
+                                std::string unique_name = AssetManager::get_unique_instrument_name(sanitized_name, active_instrument_names);
+                                active_instrument_names.push_back(unique_name);
+
+                                std::string code = it->instrument_definitions.at(inst);
+                                size_t pos = code.find("instrument " + inst);
+                                if (pos != std::string::npos) {
+                                    code.replace(pos + 11, inst.length(), unique_name);
+                                }
+                                prepend_to_buffer(script_buffer, IM_ARRAYSIZE(script_buffer), (code + "\n").c_str());
+                            }
+                            
+                            if (ImGui::BeginDragDropSource()) {
+                                std::string code = it->instrument_definitions.at(inst);
+                                ImGui::SetDragDropPayload("ASSET_CODE", code.c_str(), code.length() + 1);
+                                ImGui::Text("Add %s", inst.c_str());
+                                ImGui::EndDragDropSource();
+                            }
+                        }
+                        ImGui::TreePop();
+                    }
                 }
             }
         }
@@ -702,37 +744,9 @@ int main(int, char**) {
         }
 
         if (ImGui::CollapsingHeader("Synths")) {
-            for (const auto& synth : synth_templates) {
-                std::string s_lower = synth;
-                std::transform(s_lower.begin(), s_lower.end(), s_lower.begin(), ::tolower);
-                std::string filter_lower = asset_search_buffer;
-                std::transform(filter_lower.begin(), filter_lower.end(), filter_lower.begin(), ::tolower);
-
-                if (filter_lower.empty() || s_lower.find(filter_lower) != std::string::npos) {
-                    ImGui::PushID(synth.c_str());
-                    if (ImGui::Button("[>]", ImVec2(35, 0))) {
-                        // Preview Synth
-                        Song preview_song;
-                        Instrument preview_inst(synth, Waveform::SAWTOOTH); // Default for template
-                        preview_inst.sequence.add_note(Note(60, 1000, 100));
-                        preview_song.root->children.push_back(std::make_shared<InstrumentElement>(preview_inst));
-                        player.play(preview_song, true);
-                    }
-                    ImGui::PopID();
-                    ImGui::SameLine();
-
-                    if (ImGui::Selectable(synth.c_str())) {
-                        std::string sanitized_name = synth;
-                        std::replace(sanitized_name.begin(), sanitized_name.end(), ' ', '_');
-                        
-                        std::string unique_name = AssetManager::get_unique_instrument_name(sanitized_name, active_instrument_names);
-                        active_instrument_names.push_back(unique_name);
-
-                        char buf[512];
-                        snprintf(buf, sizeof(buf), "instrument %s {\n    waveform sawtooth\n    envelope 0.1 0.2 0.5 0.3\n}\n\n", unique_name.c_str());
-                        prepend_to_buffer(script_buffer, IM_ARRAYSIZE(script_buffer), buf);
-                    }
-                }
+            AssetNode synth_tree = asset_manager.get_synth_tree(asset_search_buffer);
+            for (const auto& child : synth_tree.children) {
+                render_asset_tree_node(child);
             }
         }
         ImGui::End();
