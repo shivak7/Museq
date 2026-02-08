@@ -2,10 +2,10 @@
 
 This plan outlines the steps to differentiate the `.museq` files in the `musynths/` directory, providing distinct instrument templates for drums, leads, pads, and sound effects.
 
-## Phase 1: Research and Template Design
+## Phase 1: Research and Template Design [checkpoint: 05a19dd]
 - [x] Task: Analyze current synth engine capabilities (Waveforms, ADSR, LFO, Filters) by reading `src/Waveform.h`, `src/AdsrEnvelope.h`, and `src/Instrument.h`.
 - [x] Task: Design 2-3 specific instrument configurations for each category (Drums, Leads, Pads, SFX).
-- [ ] Task: Conductor - User Manual Verification 'Research and Template Design' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Research and Template Design' (Protocol in workflow.md)
 
 ## Phase 2: Implementation - Drum Synths
 - [ ] Task: Write a test script `testing/test_synth_drums.cpp` or a `.museq` test file that attempts to play drum-like sounds from the library.
