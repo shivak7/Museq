@@ -21,16 +21,16 @@
 - [x] Task: Integrate Audio Writers [422d4d6]
 - [x] Task: Conductor - User Manual Verification 'Phase 4: Export' 422d4d6
 
-## Phase 5: Feedback Fixes and Reverb
-- [~] Task: Fix Editor Issues (Alignment & Auto-Indent)
+## Phase 5: Feedback Fixes and Reverb [checkpoint: 1b5252b]
+- [x] Task: Fix Editor Issues (Alignment & Auto-Indent) [808260b, 1b5252b]
     - [x] Perfect line number alignment using dummy padding
     - [x] Implement callback-based auto-indent
-- [~] Task: Implement Reverb and Sequence Effects
-    - [ ] Create Reverb effect processor
+- [x] Task: Implement Reverb and Sequence Effects [1b5252b]
+    - [x] Create Reverb effect processor
     - [x] Update ScriptParser to handle sequence-level effects
-    - [ ] Update AudioRenderer to apply effects to composite elements
-- [~] Task: Polish UI and Stability
-    - [ ] Allow arrow keys to control active sliders
+    - [x] Update AudioRenderer to apply effects to composite elements
+- [x] Task: Polish UI and Stability [1b5252b]
+    - [x] Allow arrow keys to control active sliders
     - [x] Prevent popup conflicts (close others when opening new one)
     - [x] Implement Ctrl+P toggle and Escape to close popups
-- [ ] Task: Conductor - User Manual Verification 'Phase 5: Feedback'
+- [x] Task: Conductor - User Manual Verification 'Phase 5: Feedback' [1b5252b]

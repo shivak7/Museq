@@ -1237,8 +1237,18 @@ int main(int, char**) {
 
             if (export_format == 1) { // MP3
                 ImGui::SliderInt("Bitrate (kbps)", &export_bitrate, 64, 320);
+                if (ImGui::IsItemActive()) {
+                    if (ImGui::IsKeyPressed(ImGuiKey_LeftArrow)) export_bitrate -= 32;
+                    if (ImGui::IsKeyPressed(ImGuiKey_RightArrow)) export_bitrate += 32;
+                    export_bitrate = std::clamp(export_bitrate, 64, 320);
+                }
             } else if (export_format == 2) { // OGG
                 ImGui::SliderFloat("Quality (0.0-1.0)", &export_quality, 0.0f, 1.0f);
+                if (ImGui::IsItemActive()) {
+                    if (ImGui::IsKeyPressed(ImGuiKey_LeftArrow)) export_quality -= 0.1f;
+                    if (ImGui::IsKeyPressed(ImGuiKey_RightArrow)) export_quality += 0.1f;
+                    export_quality = std::clamp(export_quality, 0.0f, 1.0f);
+                }
             }
 
             if (ImGui::Button("Export", ImVec2(120, 0))) {
