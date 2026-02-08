@@ -19,6 +19,6 @@ Museq is a cross-platform, text-based music sequencer and synthesizer designed f
 
 ## Development Goals
 - **Musical Intelligence:** Enhancing the scripting language with scale-aware and chord-aware functions to simplify complex music theory logic.
-- **Interactive Studio:** Improving Muqomposer with real-time parameter tweaking, live-coding capabilities, and advanced visualizers.
+- **Interactive Studio:** Improving Muqomposer with an advanced code editor featuring syntax highlighting, autocomplete, real-time error reporting, and playback tracking.
 - **Engine Expansion:** Developing a more sophisticated synthesis engine with additional oscillator types and a comprehensive modulation matrix.
 - **Transparent AI Integration:** Creating hooks for AI-guided design that output readable Museq scripts, ensuring the user always retains full control and understanding of the generated music.
