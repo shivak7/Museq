@@ -41,6 +41,17 @@ struct AppFonts {
     ImFont* editor = nullptr;
 };
 
+struct EditorTab {
+    TextEditor editor;
+    Song last_parsed_song;
+    fs::path file_path;
+    std::string title = "Untitled";
+    bool is_dirty = false;
+    double last_parse_time = 0;
+    int last_cursor_line = -1;
+    double last_text_change_time = 0;
+};
+
 void load_fonts(AppFonts& fonts, float ui_size, float editor_size, bool update_texture = true) {
 
     ImGuiIO& io = ImGui::GetIO();
@@ -485,7 +496,8 @@ int main(int, char**) {
     };
 
     // Museq State
-    TextEditor editor;
+    std::vector<EditorTab> tabs;
+    int active_tab_index = 0;
     bool is_playing_preview = false;
     
     // Define Museq Language
@@ -532,8 +544,6 @@ int main(int, char**) {
     museq_lang.mCaseSensitive = true;
     museq_lang.mAutoIndentation = true;
 
-    editor.SetLanguageDefinition(museq_lang);
-    
     // Custom High-Contrast Palette (Dracula-inspired)
     TextEditor::Palette dracula_palette = TextEditor::GetDarkPalette();
     dracula_palette[(int)TextEditor::PaletteIndex::Keyword] = 0xffff79c6;           // Pink (Primary)
@@ -545,15 +555,34 @@ int main(int, char**) {
     dracula_palette[(int)TextEditor::PaletteIndex::Comment] = 0xff6272a4;           // Blue/Gray
     dracula_palette[(int)TextEditor::PaletteIndex::Background] = 0xff000000;        // Black Background
     dracula_palette[(int)TextEditor::PaletteIndex::PlaybackMarker] = 0xff8be9fd;    // Solid Cyan
-    editor.SetPalette(dracula_palette);
 
-    editor.SetText("// Write your Museq script here\n\ninstrument Piano {\n    waveform sine\n}\n\nsequential {\n    Piano { notes C4, E4, G4 }\n}");
+    auto create_tab = [&](const std::string& title = "Untitled", const std::string& path = "", const std::string& content = "") {
+        EditorTab tab;
+        tab.title = title;
+        tab.file_path = path;
+        tab.editor.SetLanguageDefinition(museq_lang);
+        tab.editor.SetPalette(dracula_palette);
+        if (!content.empty()) {
+            tab.editor.SetText(content);
+        }
+        tabs.push_back(std::move(tab));
+        active_tab_index = (int)tabs.size() - 1;
+    };
+
+    // Initial Tab
+    create_tab("Untitled", "", "// Write your Museq script here\n\ninstrument Piano {\n    waveform sine\n}\n\nsequential {\n    Piano { notes C4, E4, G4 }\n}");
     
+    // Helper for active tab access
+    auto current_tab = [&]() -> EditorTab& {
+        return tabs[active_tab_index];
+    };
+
     // Helper for Play logic
     auto play_logic = [&]() {
-        if (player_initialized) {
-            last_parsed_song = ScriptParser::parse_string(editor.GetText());
-            player.play(last_parsed_song);
+        if (player_initialized && !tabs.empty()) {
+            auto& tab = current_tab();
+            tab.last_parsed_song = ScriptParser::parse_string(tab.editor.GetText());
+            player.play(tab.last_parsed_song);
             is_playing_preview = false;
         }
     };
@@ -586,18 +615,20 @@ int main(int, char**) {
 
     // Helper for Export logic
     auto export_logic = [&](const std::string& path, int format, float quality, int bitrate) {
-        last_parsed_song = ScriptParser::parse_string(editor.GetText());
+        if (tabs.empty()) return;
+        auto& tab = current_tab();
+        tab.last_parsed_song = ScriptParser::parse_string(tab.editor.GetText());
         AudioRenderer renderer;
         
         if (format == 0) {
             WavWriter writer;
-            writer.write(renderer, last_parsed_song, path, 44100.0f);
+            writer.write(renderer, tab.last_parsed_song, path, 44100.0f);
         } else if (format == 1) {
             Mp3Writer writer;
-            writer.write(renderer, last_parsed_song, path, 44100.0f, bitrate);
+            writer.write(renderer, tab.last_parsed_song, path, 44100.0f, bitrate);
         } else if (format == 2) {
             OggWriter writer;
-            writer.write(renderer, last_parsed_song, path, 44100.0f, quality);
+            writer.write(renderer, tab.last_parsed_song, path, 44100.0f, quality);
         }
         
         snprintf(status_text, sizeof(status_text), "Status: Exported to %s", fs::path(path).filename().string().c_str());
@@ -624,7 +655,8 @@ int main(int, char**) {
 
     auto update_active_instruments = [&]() {
         active_instrument_names.clear();
-        std::string text = editor.GetText();
+        if (tabs.empty()) return;
+        std::string text = current_tab().editor.GetText();
         std::stringstream ss(text);
         std::string line;
         
@@ -713,18 +745,21 @@ int main(int, char**) {
                             ImGui::SameLine();
 
                             if (ImGui::Selectable(p.name.c_str())) {
-                                // Smart Insertion Check
-                                if (!AssetManager::check_asset_exists_in_script(editor.GetText(), "soundfont", it->path, p.bank, p.preset)) {
-                                    std::string sanitized_name = p.name;
-                                    std::replace(sanitized_name.begin(), sanitized_name.end(), ' ', '_');
-                                    
-                                    std::string unique_name = AssetManager::get_unique_instrument_name(sanitized_name, active_instrument_names);
-                                    active_instrument_names.push_back(unique_name); // Optimistic update
+                                if (!tabs.empty()) {
+                                    auto& tab = current_tab();
+                                    // Smart Insertion Check
+                                    if (!AssetManager::check_asset_exists_in_script(tab.editor.GetText(), "soundfont", it->path, p.bank, p.preset)) {
+                                        std::string sanitized_name = p.name;
+                                        std::replace(sanitized_name.begin(), sanitized_name.end(), ' ', '_');
+                                        
+                                        std::string unique_name = AssetManager::get_unique_instrument_name(sanitized_name, active_instrument_names);
+                                        active_instrument_names.push_back(unique_name); // Optimistic update
 
-                                    char buf[512];
-                                    snprintf(buf, sizeof(buf), "instrument %s {\n    soundfont \"%s\"\n    bank %d\n    preset %d\n}\n", 
-                                        unique_name.c_str(), it->path.c_str(), p.bank, p.preset);
-                                    prepend_to_editor(editor, buf);
+                                        char buf[512];
+                                        snprintf(buf, sizeof(buf), "instrument %s {\n    soundfont \"%s\"\n    bank %d\n    preset %d\n}\n", 
+                                            unique_name.c_str(), it->path.c_str(), p.bank, p.preset);
+                                        prepend_to_editor(tab.editor, buf);
+                                    }
                                 }
                             }
                             
@@ -746,17 +781,20 @@ int main(int, char**) {
                 }
             } else if (node.type == AssetType::SAMPLE) {
                 if (ImGui::Selectable(node.name.c_str())) {
-                    // Smart Insertion Check
-                    if (!AssetManager::check_asset_exists_in_script(editor.GetText(), "sample", node.full_path)) {
-                        std::string clean_name = node.name.substr(0, node.name.find_last_of("."));
-                        std::replace(clean_name.begin(), clean_name.end(), ' ', '_');
-                        
-                        std::string unique_name = AssetManager::get_unique_instrument_name(clean_name, active_instrument_names);
-                        active_instrument_names.push_back(unique_name); // Optimistic update
+                    if (!tabs.empty()) {
+                        auto& tab = current_tab();
+                        // Smart Insertion Check
+                        if (!AssetManager::check_asset_exists_in_script(tab.editor.GetText(), "sample", node.full_path)) {
+                            std::string clean_name = node.name.substr(0, node.name.find_last_of("."));
+                            std::replace(clean_name.begin(), clean_name.end(), ' ', '_');
+                            
+                            std::string unique_name = AssetManager::get_unique_instrument_name(clean_name, active_instrument_names);
+                            active_instrument_names.push_back(unique_name); // Optimistic update
 
-                        char buf[512];
-                        snprintf(buf, sizeof(buf), "instrument %s {\n    sample \"%s\"\n}\n", unique_name.c_str(), node.full_path.c_str());
-                        prepend_to_editor(editor, buf);
+                            char buf[512];
+                            snprintf(buf, sizeof(buf), "instrument %s {\n    sample \"%s\"\n}\n", unique_name.c_str(), node.full_path.c_str());
+                            prepend_to_editor(tab.editor, buf);
+                        }
                     }
                 }
                 
@@ -807,18 +845,21 @@ int main(int, char**) {
                             ImGui::SameLine();
 
                             if (ImGui::Selectable(inst.c_str())) {
-                                std::string sanitized_name = inst;
-                                std::replace(sanitized_name.begin(), sanitized_name.end(), ' ', '_');
-                                
-                                std::string unique_name = AssetManager::get_unique_instrument_name(sanitized_name, active_instrument_names);
-                                active_instrument_names.push_back(unique_name);
+                                if (!tabs.empty()) {
+                                    auto& tab = current_tab();
+                                    std::string sanitized_name = inst;
+                                    std::replace(sanitized_name.begin(), sanitized_name.end(), ' ', '_');
+                                    
+                                    std::string unique_name = AssetManager::get_unique_instrument_name(sanitized_name, active_instrument_names);
+                                    active_instrument_names.push_back(unique_name);
 
-                                std::string code = it->instrument_definitions.at(inst);
-                                size_t pos = code.find("instrument " + inst);
-                                if (pos != std::string::npos) {
-                                    code.replace(pos + 11, inst.length(), unique_name);
+                                    std::string code = it->instrument_definitions.at(inst);
+                                    size_t pos = code.find("instrument " + inst);
+                                    if (pos != std::string::npos) {
+                                        code.replace(pos + 11, inst.length(), unique_name);
+                                    }
+                                    prepend_to_editor(tab.editor, code.c_str());
                                 }
-                                prepend_to_editor(editor, code.c_str());
                             }
                             
                             if (ImGui::BeginDragDropSource()) {
@@ -898,23 +939,26 @@ int main(int, char**) {
         if (ImGui::IsKeyPressed(ImGuiKey_Escape)) close_all_popups();
 
         // Reactive Parsing (Debounced and Line-change based)
-        static double last_parse_time = 0;
-        static int last_cursor_line = -1;
-        int current_cursor_line = editor.GetCursorPosition().mLine;
-        
-        static double last_text_change_time = 0;
-        if (editor.IsTextChanged()) last_text_change_time = ImGui::GetTime();
+        if (!tabs.empty()) {
+            auto& tab = current_tab();
+            int current_cursor_line = tab.editor.GetCursorPosition().mLine;
+            
+            if (tab.editor.IsTextChanged()) {
+                tab.last_text_change_time = ImGui::GetTime();
+                tab.is_dirty = true;
+            }
 
-        bool should_parse = false;
-        if (ImGui::GetTime() - last_parse_time > 5.0) should_parse = true; // Periodic check (slower)
-        if (current_cursor_line != last_cursor_line) should_parse = true; // Moved to another line
-        if (ImGui::GetTime() - last_text_change_time > 1.0 && last_text_change_time > last_parse_time) should_parse = true; // Stopped typing
-        
-        if (should_parse) {
-            last_parsed_song = ScriptParser::parse_string(editor.GetText());
-            update_active_instruments();
-            last_parse_time = ImGui::GetTime();
-            last_cursor_line = current_cursor_line;
+            bool should_parse = false;
+            if (ImGui::GetTime() - tab.last_parse_time > 5.0) should_parse = true; // Periodic check (slower)
+            if (current_cursor_line != tab.last_cursor_line) should_parse = true; // Moved to another line
+            if (ImGui::GetTime() - tab.last_text_change_time > 1.0 && tab.last_text_change_time > tab.last_parse_time) should_parse = true; // Stopped typing
+            
+            if (should_parse) {
+                tab.last_parsed_song = ScriptParser::parse_string(tab.editor.GetText());
+                update_active_instruments();
+                tab.last_parse_time = ImGui::GetTime();
+                tab.last_cursor_line = current_cursor_line;
+            }
         }
 
         if (is_playing_preview && !player.is_playing()) {
@@ -924,32 +968,36 @@ int main(int, char**) {
         // Update Status and Visualization Markers
         TextEditor::ErrorMarkers markers;
         TextEditor::PlaybackMarkers playback_markers;
-        for (const auto& err : last_parsed_song.errors) {
-            markers[err.first] = err.second;
-        }
-
-        if (!player_initialized) {
-            snprintf(status_text, sizeof(status_text), "Status: Audio Init Failed");
-        } else if (player.is_playing()) {
-            double pos = player.get_playback_position_ms();
-            double total = player.get_total_duration_ms();
-            size_t active = player.get_active_voice_count();
-            size_t scheduled = player.get_scheduled_voice_count();
-            
-            snprintf(status_text, sizeof(status_text), "Status: Playing (%.1f/%.1f ms) V:%zu/%zu %s", pos, total, active, scheduled, is_playing_preview ? "[PREVIEW]" : "");
-            
-            // Highlight active line (only if not a preview)
-            if (!is_playing_preview) {
-                int active_line = find_active_line(last_parsed_song.root, pos, 0);
-                if (active_line > 0) {
-                    playback_markers[active_line] = "Active";
-                }
+        
+        if (!tabs.empty()) {
+            auto& tab = current_tab();
+            for (const auto& err : tab.last_parsed_song.errors) {
+                markers[err.first] = err.second;
             }
-        } else if (strncmp(status_text, "Preview Error:", 14) != 0) {
-            snprintf(status_text, sizeof(status_text), "Status: Ready");
+
+            if (!player_initialized) {
+                snprintf(status_text, sizeof(status_text), "Status: Audio Init Failed");
+            } else if (player.is_playing()) {
+                double pos = player.get_playback_position_ms();
+                double total = player.get_total_duration_ms();
+                size_t active = player.get_active_voice_count();
+                size_t scheduled = player.get_scheduled_voice_count();
+                
+                snprintf(status_text, sizeof(status_text), "Status: Playing (%.1f/%.1f ms) V:%zu/%zu %s", pos, total, active, scheduled, is_playing_preview ? "[PREVIEW]" : "");
+                
+                // Highlight active line (only if not a preview)
+                if (!is_playing_preview) {
+                    int active_line = find_active_line(tab.last_parsed_song.root, pos, 0);
+                    if (active_line > 0) {
+                        playback_markers[active_line] = "Active";
+                    }
+                }
+            } else if (strncmp(status_text, "Preview Error:", 14) != 0) {
+                snprintf(status_text, sizeof(status_text), "Status: Ready");
+            }
+            tab.editor.SetErrorMarkers(markers);
+            tab.editor.SetPlaybackMarkers(playback_markers);
         }
-        editor.SetErrorMarkers(markers);
-        editor.SetPlaybackMarkers(playback_markers);
 
         // Start the Dear ImGui frame
         if (rebuild_fonts) {
@@ -1000,22 +1048,25 @@ int main(int, char**) {
                 ImGui::SameLine();
 
                 if (ImGui::Selectable(filename.c_str())) {
-                    char buf[512];
-                    std::string ext = fs::path(f_path).extension().string();
-                    std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
-                    if (ext == ".sf2") {
-                        snprintf(buf, sizeof(buf), "instrument %s {\n    soundfont \"%s\"\n    bank 0\n    preset 0\n}\n", filename.c_str(), f_path.c_str());
-                    } else {
-                        snprintf(buf, sizeof(buf), "instrument %s {\n    sample \"%s\"\n}\n", filename.c_str(), f_path.c_str());
+                    if (!tabs.empty()) {
+                        auto& tab = current_tab();
+                        char buf[512];
+                        std::string ext = fs::path(f_path).extension().string();
+                        std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+                        if (ext == ".sf2") {
+                            snprintf(buf, sizeof(buf), "instrument %s {\n    soundfont \"%s\"\n    bank 0\n    preset 0\n}\n", filename.c_str(), f_path.c_str());
+                        } else {
+                            snprintf(buf, sizeof(buf), "instrument %s {\n    sample \"%s\"\n}\n", filename.c_str(), f_path.c_str());
+                        }
+                        prepend_to_editor(tab.editor, buf);
                     }
-                    prepend_to_editor(editor, buf);
                 }
             }
         }
 
         if (ImGui::Button("Add New Synth", ImVec2(-FLT_MIN, 0))) { 
             const char* new_synth = "instrument NewSynth {\n    waveform sawtooth\n    envelope 0.01 0.1 0.8 0.2\n    filter lowpass 2000 1.0\n}\n";
-            prepend_to_editor(editor, new_synth);
+            if (!tabs.empty()) prepend_to_editor(current_tab().editor, new_synth);
         }
         
         // Add Folder Button
@@ -1063,171 +1114,197 @@ int main(int, char**) {
         ImGui::SetNextWindowSize(ImVec2(main_area_width, editor_height));
         ImGui::Begin("Code Interface", NULL, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar);
         
-        ImGui::TextDisabled("Code Interface");
-        ImGui::SameLine();
-        float avail_w_editor = ImGui::GetContentRegionAvail().x;
-        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + avail_w_editor - 110);
-        if (ImGui::Button("Render & Play")) {
-            play_logic();
+        // --- 2.1 Tab Bar ---
+        if (ImGui::BeginTabBar("EditorTabs", ImGuiTabBarFlags_AutoSelectNewTabs | ImGuiTabBarFlags_Reorderable)) {
+            for (int i = 0; i < (int)tabs.size(); ++i) {
+                std::string label = tabs[i].title + (tabs[i].is_dirty ? "*" : "") + "###tab" + std::to_string(i);
+                bool open = true;
+                if (ImGui::BeginTabItem(label.c_str(), &open)) {
+                    active_tab_index = i;
+                    ImGui::EndTabItem();
+                }
+                if (!open) {
+                    // TODO: Implement tab closing logic in Phase 2
+                    tabs.erase(tabs.begin() + i);
+                    if (active_tab_index >= (int)tabs.size()) active_tab_index = std::max(0, (int)tabs.size() - 1);
+                    break;
+                }
+            }
+            ImGui::EndTabBar();
         }
 
-        // Intercept keys for autocomplete BEFORE rendering editor
-        if (autocomplete_open) {
-            if (ImGui::IsKeyPressed(ImGuiKey_DownArrow)) {
-                autocomplete_selected = (autocomplete_selected + 1) % autocomplete_items.size();
-                ImGui::GetIO().ClearInputKeys(); 
-            }
-            if (ImGui::IsKeyPressed(ImGuiKey_UpArrow)) {
-                autocomplete_selected = (autocomplete_selected - 1 + (int)autocomplete_items.size()) % autocomplete_items.size();
-                ImGui::GetIO().ClearInputKeys(); 
-            }
-            if (ImGui::IsKeyPressed(ImGuiKey_Enter) || ImGui::IsKeyPressed(ImGuiKey_Tab)) {
-                std::string completion = autocomplete_items[autocomplete_selected].substr(autocomplete_prefix.length());
-                editor.InsertText(completion);
-                autocomplete_open = false;
-                // Prevent these keys from reaching the editor
-                ImGui::GetIO().ClearInputKeys(); 
-            }
-            if (ImGui::IsKeyPressed(ImGuiKey_Escape)) {
-                autocomplete_open = false;
-            }
-        }
+        if (tabs.empty()) {
+            ImGui::Text("No files open. Click 'Add New Synth' or load a file.");
+            ImGui::End();
+        } else {
+            auto& tab = current_tab();
 
-        ImVec2 editor_pos = ImGui::GetCursorScreenPos();
-        ImGui::PushFont(app_fonts.editor);
-        editor.Render("Editor");
-        ImGui::PopFont();
+            ImGui::TextDisabled("Code Interface");
+            ImGui::SameLine();
+            float avail_w_editor = ImGui::GetContentRegionAvail().x;
+            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + avail_w_editor - 110);
+            if (ImGui::Button("Render & Play")) {
+                play_logic();
+            }
 
-        // Autocomplete Detection
-        bool text_changed = editor.IsTextChanged();
-        bool cursor_moved = editor.IsCursorPositionChanged();
+            // Intercept keys for autocomplete BEFORE rendering editor
+            if (autocomplete_open) {
+                if (ImGui::IsKeyPressed(ImGuiKey_DownArrow)) {
+                    autocomplete_selected = (autocomplete_selected + 1) % autocomplete_items.size();
+                    ImGui::GetIO().ClearInputKeys(); 
+                }
+                if (ImGui::IsKeyPressed(ImGuiKey_UpArrow)) {
+                    autocomplete_selected = (autocomplete_selected - 1 + (int)autocomplete_items.size()) % autocomplete_items.size();
+                    ImGui::GetIO().ClearInputKeys(); 
+                }
+                if (ImGui::IsKeyPressed(ImGuiKey_Enter) || ImGui::IsKeyPressed(ImGuiKey_Tab)) {
+                    std::string completion = autocomplete_items[autocomplete_selected].substr(autocomplete_prefix.length());
+                    tab.editor.InsertText(completion);
+                    autocomplete_open = false;
+                    // Prevent these keys from reaching the editor
+                    ImGui::GetIO().ClearInputKeys(); 
+                }
+                if (ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+                    autocomplete_open = false;
+                }
+            }
 
-        if (text_changed || (cursor_moved && autocomplete_open)) {
-            auto pos = editor.GetCursorPosition();
-            std::string line = editor.GetCurrentLineText();
-            int col = pos.mColumn;
-            int start = col - 1;
-            
-            // Find current word boundary
-            while (start >= 0 && (isalnum(line[start]) || line[start] == '_')) start--;
-            start++;
-            
-            if (col > start) {
-                std::string prefix = line.substr(start, col - start);
+            ImVec2 editor_pos = ImGui::GetCursorScreenPos();
+            ImGui::PushFont(app_fonts.editor);
+            tab.editor.Render("Editor");
+            ImGui::PopFont();
+
+            // Autocomplete Detection
+            bool text_changed = tab.editor.IsTextChanged();
+            bool cursor_moved = tab.editor.IsCursorPositionChanged();
+
+            if (text_changed || (cursor_moved && autocomplete_open)) {
+                auto pos = tab.editor.GetCursorPosition();
+                std::string line = tab.editor.GetCurrentLineText();
+                int col = pos.mColumn;
+                int start = col - 1;
                 
-                // Only trigger or update if we have a prefix and either text changed or it was already open
-                if (prefix.length() >= 1 && (text_changed || autocomplete_open)) {
-                    autocomplete_prefix = prefix;
-                    autocomplete_items.clear();
+                // Find current word boundary
+                while (start >= 0 && (isalnum(line[start]) || line[start] == '_')) start--;
+                start++;
+                
+                if (col > start) {
+                    std::string prefix = line.substr(start, col - start);
                     
-                    std::set<std::string> unique_suggestions;
-                    for (const auto& k : primary_keywords) unique_suggestions.insert(k);
-                    for (const auto& e : effects_keywords) unique_suggestions.insert(e);
-                    for (const auto& s : synth_keywords) unique_suggestions.insert(s);
-                    for (const auto& i : active_instrument_names) unique_suggestions.insert(i);
+                    // Only trigger or update if we have a prefix and either text changed or it was already open
+                    if (prefix.length() >= 1 && (text_changed || autocomplete_open)) {
+                        autocomplete_prefix = prefix;
+                        autocomplete_items.clear();
+                        
+                        std::set<std::string> unique_suggestions;
+                        for (const auto& k : primary_keywords) unique_suggestions.insert(k);
+                        for (const auto& e : effects_keywords) unique_suggestions.insert(e);
+                        for (const auto& s : synth_keywords) unique_suggestions.insert(s);
+                        for (const auto& i : active_instrument_names) unique_suggestions.insert(i);
 
-                    for (const auto& s : unique_suggestions) {
-                        if (s.find(autocomplete_prefix) == 0 && s != autocomplete_prefix) {
-                            autocomplete_items.push_back(s);
+                        for (const auto& s : unique_suggestions) {
+                            if (s.find(autocomplete_prefix) == 0 && s != autocomplete_prefix) {
+                                autocomplete_items.push_back(s);
+                            }
                         }
-                    }
-                    
-                    if (autocomplete_items.empty()) {
+                        
+                        if (autocomplete_items.empty()) {
+                            autocomplete_open = false;
+                        } else if (text_changed) {
+                            // Only open from scratch if text was actually typed
+                            autocomplete_open = true;
+                            if (autocomplete_selected >= (int)autocomplete_items.size()) autocomplete_selected = 0;
+                        }
+                    } else {
                         autocomplete_open = false;
-                    } else if (text_changed) {
-                        // Only open from scratch if text was actually typed
-                        autocomplete_open = true;
-                        if (autocomplete_selected >= (int)autocomplete_items.size()) autocomplete_selected = 0;
                     }
                 } else {
                     autocomplete_open = false;
                 }
-            } else {
-                autocomplete_open = false;
             }
-        }
 
-        if (autocomplete_open) {
-            ImVec2 cursor_screen_pos = editor.GetCursorScreenPos(editor_pos); 
-            ImGui::SetNextWindowPos(ImVec2(cursor_screen_pos.x, cursor_screen_pos.y + ImGui::GetTextLineHeightWithSpacing()));
-            
-            // Show as a simple overlay window instead of a popup to avoid focus fighting
-            ImGui::SetNextWindowSizeConstraints(ImVec2(150, 0), ImVec2(400, 300));
-            if (ImGui::Begin("##autocomplete_window", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_Tooltip)) {
-                for (int i = 0; i < (int)autocomplete_items.size(); i++) {
-                    bool is_selected = (i == autocomplete_selected);
-                    if (ImGui::Selectable(autocomplete_items[i].c_str(), is_selected)) {
-                        std::string completion = autocomplete_items[i].substr(autocomplete_prefix.length());
-                        editor.InsertText(completion);
-                        autocomplete_open = false;
-                    }
-                    if (is_selected) ImGui::SetScrollHereY();
-                }
-                ImGui::End();
-            }
-        }
-        
-        if (ImGui::BeginDragDropTarget()) {
-            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ASSET_CODE")) {
-                const char* code = (const char*)payload->Data;
+            if (autocomplete_open) {
+                ImVec2 cursor_screen_pos = tab.editor.GetCursorScreenPos(editor_pos); 
+                ImGui::SetNextWindowPos(ImVec2(cursor_screen_pos.x, cursor_screen_pos.y + ImGui::GetTextLineHeightWithSpacing()));
                 
-                // Parse dropped code to check existence
-                std::string code_str = code;
-                std::string type, path;
-                int bank = -1, preset = -1;
-                bool should_add = true;
-
-                if (code_str.find("soundfont \"") != std::string::npos) {
-                    type = "soundfont";
-                    size_t s = code_str.find("soundfont \"") + 11;
-                    size_t e = code_str.find("\"", s);
-                    if (s != std::string::npos && e != std::string::npos) path = code_str.substr(s, e-s);
-                    
-                    if (code_str.find("bank ") != std::string::npos) {
-                        std::stringstream ss(code_str.substr(code_str.find("bank ")));
-                        std::string tmp; ss >> tmp >> bank;
+                // Show as a simple overlay window instead of a popup to avoid focus fighting
+                ImGui::SetNextWindowSizeConstraints(ImVec2(150, 0), ImVec2(400, 300));
+                if (ImGui::Begin("##autocomplete_window", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_Tooltip)) {
+                    for (int i = 0; i < (int)autocomplete_items.size(); i++) {
+                        bool is_selected = (i == autocomplete_selected);
+                        if (ImGui::Selectable(autocomplete_items[i].c_str(), is_selected)) {
+                            std::string completion = autocomplete_items[i].substr(autocomplete_prefix.length());
+                            tab.editor.InsertText(completion);
+                            autocomplete_open = false;
+                        }
+                        if (is_selected) ImGui::SetScrollHereY();
                     }
-                    if (code_str.find("preset ") != std::string::npos) {
-                        std::stringstream ss(code_str.substr(code_str.find("preset ")));
-                        std::string tmp; ss >> tmp >> preset;
-                    }
-                } else if (code_str.find("sample \"") != std::string::npos) {
-                    type = "sample";
-                    size_t s = code_str.find("sample \"") + 8;
-                    size_t e = code_str.find("\"", s);
-                    if (s != std::string::npos && e != std::string::npos) path = code_str.substr(s, e-s);
+                    ImGui::End();
                 }
-
-                if (!type.empty()) {
-                    if (AssetManager::check_asset_exists_in_script(editor.GetText(), type, path, bank, preset)) {
-                        should_add = false;
-                    }
-                }
-
-                if (should_add) {
-                    std::string final_code = code;
+            }
+            
+            if (ImGui::BeginDragDropTarget()) {
+                if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ASSET_CODE")) {
+                    const char* code = (const char*)payload->Data;
                     
-                    // Extract name and handle conflict
-                    size_t instr_pos = final_code.find("instrument ");
-                    if (instr_pos != std::string::npos) {
-                        size_t name_start = instr_pos + 11;
-                        size_t name_end = final_code.find(" {", name_start);
-                        if (name_end != std::string::npos) {
-                            std::string base_name = final_code.substr(name_start, name_end - name_start);
-                            std::string unique_name = AssetManager::get_unique_instrument_name(base_name, active_instrument_names);
-                            
-                            if (unique_name != base_name) {
-                                final_code.replace(name_start, name_end - name_start, unique_name);
-                            }
-                            active_instrument_names.push_back(unique_name);
+                    // Parse dropped code to check existence
+                    std::string code_str = code;
+                    std::string type, path;
+                    int bank = -1, preset = -1;
+                    bool should_add = true;
+
+                    if (code_str.find("soundfont \"") != std::string::npos) {
+                        type = "soundfont";
+                        size_t s = code_str.find("soundfont \"") + 11;
+                        size_t e = code_str.find("\"", s);
+                        if (s != std::string::npos && e != std::string::npos) path = code_str.substr(s, e-s);
+                        
+                        if (code_str.find("bank ") != std::string::npos) {
+                            std::stringstream ss(code_str.substr(code_str.find("bank ")));
+                            std::string tmp; ss >> tmp >> bank;
+                        }
+                        if (code_str.find("preset ") != std::string::npos) {
+                            std::stringstream ss(code_str.substr(code_str.find("preset ")));
+                            std::string tmp; ss >> tmp >> preset;
+                        }
+                    } else if (code_str.find("sample \"") != std::string::npos) {
+                        type = "sample";
+                        size_t s = code_str.find("sample \"") + 8;
+                        size_t e = code_str.find("\"", s);
+                        if (s != std::string::npos && e != std::string::npos) path = code_str.substr(s, e-s);
+                    }
+
+                    if (!type.empty()) {
+                        if (AssetManager::check_asset_exists_in_script(tab.editor.GetText(), type, path, bank, preset)) {
+                            should_add = false;
                         }
                     }
 
-                    std::string current_text = editor.GetText();
-                    editor.SetText(final_code + "\n" + current_text);
+                    if (should_add) {
+                        std::string final_code = code;
+                        
+                        // Extract name and handle conflict
+                        size_t instr_pos = final_code.find("instrument ");
+                        if (instr_pos != std::string::npos) {
+                            size_t name_start = instr_pos + 11;
+                            size_t name_end = final_code.find(" {", name_start);
+                            if (name_end != std::string::npos) {
+                                std::string base_name = final_code.substr(name_start, name_end - name_start);
+                                std::string unique_name = AssetManager::get_unique_instrument_name(base_name, active_instrument_names);
+                                
+                                if (unique_name != base_name) {
+                                    final_code.replace(name_start, name_end - name_start, unique_name);
+                                }
+                                active_instrument_names.push_back(unique_name);
+                            }
+                        }
+
+                        std::string current_text = tab.editor.GetText();
+                        tab.editor.SetText(final_code + "\n" + current_text);
+                    }
                 }
+                ImGui::EndDragDropTarget();
             }
-            ImGui::EndDragDropTarget();
         }
         ImGui::End();
 
@@ -1280,6 +1357,10 @@ int main(int, char**) {
             player.stop();
         }
         ImGui::SameLine();
+        if (!tabs.empty() && current_tab().is_dirty) {
+            ImGui::TextColored(ImVec4(1, 0.5f, 0, 1), "[Modified]");
+            ImGui::SameLine();
+        }
         ImGui::TextDisabled("|");
         ImGui::SameLine();
 
@@ -1333,10 +1414,16 @@ int main(int, char**) {
             ImGui::InputText("##filename", file_path_buffer, IM_ARRAYSIZE(file_path_buffer));
             
             if (ImGui::Button("Save", ImVec2(120, 0))) {
-                fs::path full_path = current_dir / file_path_buffer;
-                save_script_to_file(full_path.string().c_str(), editor.GetText().c_str());
-                show_save_popup = false;
-                ImGui::CloseCurrentPopup();
+                if (!tabs.empty()) {
+                    auto& tab = current_tab();
+                    fs::path full_path = current_dir / file_path_buffer;
+                    save_script_to_file(full_path.string().c_str(), tab.editor.GetText().c_str());
+                    tab.file_path = full_path;
+                    tab.title = full_path.filename().string();
+                    tab.is_dirty = false;
+                    show_save_popup = false;
+                    ImGui::CloseCurrentPopup();
+                }
             }
             ImGui::SameLine();
             if (ImGui::Button("Cancel", ImVec2(120, 0))) {
@@ -1363,7 +1450,21 @@ int main(int, char**) {
                 std::ifstream in(full_path);
                 if (in.is_open()) {
                     std::string content((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
-                    editor.SetText(content);
+                    
+                    // Smart Reuse logic
+                    bool found = false;
+                    for (int i = 0; i < (int)tabs.size(); ++i) {
+                        if (tabs[i].file_path == full_path) {
+                            active_tab_index = i;
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) {
+                        create_tab(full_path.filename().string(), full_path.string(), content);
+                        current_tab().is_dirty = false;
+                    }
+
                     show_load_popup = false;
                     ImGui::CloseCurrentPopup();
                 } else {
