@@ -8,8 +8,8 @@ This plan outlines the steps to differentiate the `.museq` files in the `musynth
 - [x] Task: Conductor - User Manual Verification 'Research and Template Design' (Protocol in workflow.md)
 
 ## Phase 2: Implementation - Drum Synths
-- [ ] Task: Write a test script `testing/test_synth_drums.cpp` or a `.museq` test file that attempts to play drum-like sounds from the library.
-- [ ] Task: Implement `musynths/drums.museq` with templates for:
+- [x] Task: Write a test script `testing/test_synth_drums.cpp` or a `.museq` test file that attempts to play drum-like sounds from the library. [fe3fec0]
+- [x] Task: Implement `musynths/drums.museq` with templates for:
     - Kick (Pitch envelope, sine/triangle)
     - Snare/Hi-hat (Noise source, short decay)
 - [ ] Task: Conductor - User Manual Verification 'Implementation - Drum Synths' (Protocol in workflow.md)
