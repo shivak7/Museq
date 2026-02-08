@@ -21,7 +21,7 @@
 - [x] Task: Integrate Audio Writers [422d4d6]
 - [x] Task: Conductor - User Manual Verification 'Phase 4: Export' 422d4d6
 
-## Phase 5: Feedback Fixes and Reverb [checkpoint: 1b5252b]
+## Phase 5: Feedback Fixes and Reverb [checkpoint: a7bc15b]
 - [x] Task: Fix Editor Issues (Alignment & Auto-Indent) [808260b, 1b5252b]
     - [x] Perfect line number alignment using dummy padding
     - [x] Implement callback-based auto-indent
