@@ -2,12 +2,12 @@
 
 This plan outlines the steps to refactor the `AssetManager` and `muqomposer` UI to support dynamic synth template discovery and unified asset scanning.
 
-## Phase 1: AssetManager Enhancements
+## Phase 1: AssetManager Enhancements [checkpoint: fcebee4]
 - [x] Task: Update `AssetManager.h` to include a new `SynthFileInfo` struct (storing path, filename, and a list of extracted instrument names) and a `m_synths` member. [4ab1c2d]
 - [x] Task: Implement `.museq` parsing in `AssetManager::process_museq` to extract `instrument <Name> { ... }` blocks using regex or simple string scanning. [4ab1c2d]
 - [x] Task: Update `AssetManager::scan_directory` to call `process_museq` for `.museq` files. [4ab1c2d]
 - [x] Task: Implement `AssetManager::get_synth_tree` and `AssetManager::get_filtered_synths` to provide the UI with structured synth data. [4ab1c2d]
-- [ ] Task: Conductor - User Manual Verification 'AssetManager Enhancements' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'AssetManager Enhancements' (Protocol in workflow.md)
 
 ## Phase 2: UI Refactoring (muqomposer/main.cpp)
 - [ ] Task: Remove hardcoded `synth_templates` and related mock logic from `main.cpp`.
