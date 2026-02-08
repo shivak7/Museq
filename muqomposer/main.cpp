@@ -816,28 +816,33 @@ int main(int, char**) {
         // Synchronize scrolling
         static float shared_scroll_y = 0.0f;
 
+        float line_height = ImGui::GetTextLineHeight();
+        float frame_padding_y = ImGui::GetStyle().FramePadding.y;
+        
+        int line_count = 1;
+        for (int i = 0; script_buffer[i]; i++) if (script_buffer[i] == '\n') line_count++;
+        
+        float total_content_height = line_count * line_height + frame_padding_y * 2.0f;
+
         // Line Numbers column
         ImGui::BeginChild("LineNumbers", ImVec2(line_number_width, 0), false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
         ImGui::SetScrollY(shared_scroll_y);
-        
-        float line_height = ImGui::GetTextLineHeight();
-        float frame_padding_y = ImGui::GetStyle().FramePadding.y;
-
-        int line_count = 1;
-        for (int i = 0; script_buffer[i]; i++) if (script_buffer[i] == '\n') line_count++;
         
         for (int i = 1; i <= line_count; i++) {
             ImGui::SetCursorPosY(frame_padding_y + (i - 1) * line_height);
             ImGui::TextDisabled("%4d", i);
         }
+        // Ensure child height matches content for proper scrolling bounds
+        ImGui::Dummy(ImVec2(0, total_content_height)); 
         ImGui::EndChild();
 
         ImGui::SameLine();
 
         // Editor column
-        ImGui::BeginChild("EditorColumn", ImVec2(editor_width, 0));
+        ImGui::BeginChild("EditorColumn", ImVec2(editor_width, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
         ImGui::SetScrollY(shared_scroll_y);
-        ImGui::InputTextMultiline("##editor", script_buffer, IM_ARRAYSIZE(script_buffer), ImVec2(-FLT_MIN, -FLT_MIN), ImGuiInputTextFlags_AllowTabInput | ImGuiInputTextFlags_CallbackAlways, editor_callback);
+        // Set height to total_content_height to disable internal vertical scroll and use child window scroll
+        ImGui::InputTextMultiline("##editor", script_buffer, IM_ARRAYSIZE(script_buffer), ImVec2(-FLT_MIN, total_content_height), ImGuiInputTextFlags_AllowTabInput | ImGuiInputTextFlags_CallbackAlways, editor_callback);
         shared_scroll_y = ImGui::GetScrollY();
         ImGui::EndChild();
         
