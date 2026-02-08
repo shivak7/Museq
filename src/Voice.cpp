@@ -59,10 +59,14 @@ float BiquadState::process(float in) {
 Voice::Voice(const Instrument& inst, double start_samples, float sample_rate) 
     : instrument(inst), start_time_samples(start_samples) {
     
-    double total_ms = 0;
-    for (const auto& note : instrument.sequence.notes) {
-        total_ms += note.duration;
+    soundfont_instance = nullptr;
+    
+    if (instrument.sequence.notes.empty()) {
+        total_duration_samples = 0;
+        return;
     }
+
+    double total_ms = 0;
     // Add release time to total duration to allow for tail
     total_ms += instrument.synth.envelope.release * 1000.0f;
     total_duration_samples = (total_ms / 1000.0) * sample_rate;
@@ -93,7 +97,7 @@ Voice::~Voice() {
 }
 
 void Voice::render(float* buffer, int frame_count, float sample_rate, std::map<std::string, tsf*>& soundfonts) {
-    if (is_finished) return;
+    if (is_finished || instrument.sequence.notes.empty()) return;
 
     const auto& notes = instrument.sequence.notes;
     std::vector<float> local_buffer(frame_count * 2, 0.0f);

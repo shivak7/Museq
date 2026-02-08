@@ -264,10 +264,9 @@ void AssetManager::process_museq(const fs::path& path) {
                 if (!name.empty()) {
                     current_instrument_name = name;
                     inside_instrument = true;
-                    brace_count = 0;
+                    brace_count = 0; 
                     current_block = "";
                     info.instruments.push_back(name);
-                    // Process this line for braces
                 }
             }
         }
@@ -278,7 +277,7 @@ void AssetManager::process_museq(const fs::path& path) {
                 if (c == '{') brace_count++;
                 else if (c == '}') brace_count--;
             }
-            if (brace_count <= 0 && !current_block.empty()) {
+            if (brace_count <= 0 && !current_block.empty() && current_block.find('}') != std::string::npos) {
                 info.instrument_definitions[current_instrument_name] = current_block;
                 inside_instrument = false;
             }

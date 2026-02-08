@@ -639,10 +639,14 @@ int main(int, char**) {
                             if (ImGui::Button("[>]", ImVec2(35, 0))) {
                                 std::string code = it->instrument_definitions.at(inst);
                                 // Append a trigger for preview using standard instrument block syntax
+                                // Note: 'code' already contains 'instrument Name { ... }'
                                 code += "\n" + inst + " { note C4 1000 100 }\n";
+                                
                                 Song preview_song = ScriptParser::parse_string(code);
-                                player.play(preview_song, true);
-                                is_playing_preview = true;
+                                if (preview_song.root) {
+                                    player.play(preview_song, true);
+                                    is_playing_preview = true;
+                                }
                             }
                             ImGui::PopID();
                             ImGui::SameLine();
