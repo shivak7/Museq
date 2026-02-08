@@ -20,10 +20,13 @@ AudioRenderer::~AudioRenderer() {
 }
 
 void AudioRenderer::load(const Song& song, float sample_rate) {
+    std::lock_guard<std::mutex> lock(m_mutex);
     m_sample_rate = sample_rate;
     m_current_sample = 0;
     m_scheduled_voices.clear();
     m_active_voices.clear();
+
+    if (!song.root) return;
 
     // 1. Calculate Total Duration and Flatten Tree
     m_total_samples = static_cast<long>((song.root->get_duration_ms() / 1000.0f) * m_sample_rate);
@@ -32,6 +35,7 @@ void AudioRenderer::load(const Song& song, float sample_rate) {
 
     // 2. Preload Soundfonts
     auto preloader = [&](auto self, std::shared_ptr<SongElement> element) -> void {
+        if (!element) return;
         if (auto inst_elem = std::dynamic_pointer_cast<InstrumentElement>(element)) {
             const auto& instrument = inst_elem->instrument;
             if (instrument.type == InstrumentType::SOUNDFONT && !instrument.soundfont_path.empty()) {
@@ -51,6 +55,7 @@ void AudioRenderer::load(const Song& song, float sample_rate) {
 }
 
 void AudioRenderer::flatten_song(std::shared_ptr<SongElement> element, double current_time_ms, const std::vector<Effect>& parent_effects) {
+    if (!element) return;
     double start_time = current_time_ms + element->start_offset_ms;
 
     // Combine parent effects with local effects
@@ -72,7 +77,7 @@ void AudioRenderer::flatten_song(std::shared_ptr<SongElement> element, double cu
             double local_time = start_time;
             for (auto child : comp_elem->children) {
                 flatten_song(child, local_time, combined_effects);
-                local_time += child->start_offset_ms + child->get_duration_ms();
+                local_time += (child ? (child->start_offset_ms + child->get_duration_ms()) : 0);
             }
         } else if (comp_elem->type == CompositeType::PARALLEL) {
             for (auto child : comp_elem->children) {
@@ -81,11 +86,13 @@ void AudioRenderer::flatten_song(std::shared_ptr<SongElement> element, double cu
         } else if (comp_elem->type == CompositeType::AUTO_LOOP) {
             if (!comp_elem->children.empty()) {
                 auto leader = comp_elem->children[0];
+                if (!leader) return;
                 double leader_dur = leader->get_duration_ms();
                 flatten_song(leader, start_time, combined_effects);
                 
                 for (size_t i = 1; i < comp_elem->children.size(); ++i) {
                     auto follower = comp_elem->children[i];
+                    if (!follower) continue;
                     double follower_dur = follower->get_duration_ms();
                     if (follower_dur <= 0) continue;
                     
@@ -101,6 +108,7 @@ void AudioRenderer::flatten_song(std::shared_ptr<SongElement> element, double cu
 }
 
 void AudioRenderer::render_block(float* output, int frame_count) {
+    std::lock_guard<std::mutex> lock(m_mutex);
     std::memset(output, 0, frame_count * 2 * sizeof(float));
 
     // 1. Activate new voices
@@ -127,6 +135,7 @@ void AudioRenderer::render_block(float* output, int frame_count) {
 }
 
 bool AudioRenderer::is_finished() const {
+    std::lock_guard<std::mutex> lock(m_mutex);
     return m_current_sample >= m_total_samples && m_active_voices.empty();
 }
 
