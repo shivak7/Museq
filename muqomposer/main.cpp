@@ -24,6 +24,7 @@
 #include "Mp3Writer.h"
 #include "OggWriter.h"
 #include "TextEditor.h"
+#include "Settings.h"
 #include <fstream>
 #include <filesystem>
 #include <functional>
@@ -129,6 +130,8 @@ void prepend_to_editor(TextEditor& editor, const char* code) {
 }
 
 int main(int, char**) {
+    Settings settings = Settings::load();
+    
     glfwSetErrorCallback(glfw_error_callback);
     if (!glfwInit()) return 1;
 
