@@ -9,7 +9,7 @@
 - [x] Task: Update `ScriptParser::process_script_stream` and instrument block parsing to validate `note` keyword parameters. [55acbb9]
 - [x] Task: Implement warning messages and sequence skipping logic. [55acbb9]
 
-## Phase 3: Verification
+## Phase 3: Verification [checkpoint: f8aeb1e]
 - [x] Task: Run the new unit test and verify it passes (handles invalid inputs gracefully). [55acbb9]
 - [x] Task: Verify no regression in existing tests. [55acbb9]
-- [ ] Task: Conductor - User Manual Verification 'Notes Float Bug Fix' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Notes Float Bug Fix' (Protocol in workflow.md)

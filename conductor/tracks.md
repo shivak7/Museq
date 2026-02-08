@@ -6,3 +6,7 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 - [~] **Track: Enhance Studio Functionality and UI: Build flags for tests, Global Asset Search, Smart Code Insertion, Line Numbers, Auto-indent, Export Dialog, and Shortcuts.**
 *Link: [./conductor/tracks/studio_enhancements_20260207/](./conductor/tracks/studio_enhancements_20260207/)*
+---
+
+- [x] **Track: Notes Float Bug Fix - Handling floating point values in notes keyword gracefully.**
+*Link: [./tracks/notes_float_fix_20260207/](./notes_float_fix_20260207/)*
