@@ -81,9 +81,8 @@ void load_fonts(AppFonts& fonts, float ui_size, float editor_size, bool update_t
         fonts.editor = fonts.main;
     }
 
-    io.Fonts->Build();
-    
     if (update_texture) {
+        io.Fonts->Build();
         ImGui_ImplOpenGL3_DestroyDeviceObjects();
         ImGui_ImplOpenGL3_CreateDeviceObjects();
         printf("Fonts built and texture updated.\n");
