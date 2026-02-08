@@ -15,8 +15,8 @@ This plan outlines the steps to differentiate the `.museq` files in the `musynth
 - [ ] Task: Conductor - User Manual Verification 'Implementation - Drum Synths' (Protocol in workflow.md)
 
 ## Phase 3: Implementation - Lead Synths
-- [ ] Task: Write a test script or `.museq` file for verifying lead synth sounds.
-- [ ] Task: Implement `musynths/leads.museq` with templates for:
+- [x] Task: Write a test script or `.museq` file for verifying lead synth sounds. [79fcfe9]
+- [x] Task: Implement `musynths/leads.museq` with templates for:
     - Classic Saw Lead (Sawtooth, vibrato)
     - Square/Pulse Lead (Square, PWM-like LFO)
 - [ ] Task: Conductor - User Manual Verification 'Implementation - Lead Synths' (Protocol in workflow.md)
