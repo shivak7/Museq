@@ -12,7 +12,8 @@ enum class AssetType {
     NONE,
     SF2,
     SAMPLE,
-    DIRECTORY
+    DIRECTORY,
+    MUSEQ
 };
 
 struct AssetNode {
@@ -35,6 +36,12 @@ struct SF2Info {
     std::vector<SF2Preset> presets;
 };
 
+struct SynthFileInfo {
+    std::string path;
+    std::string filename;
+    std::vector<std::string> instruments;
+};
+
 class AssetManager {
 public:
     AssetManager();
@@ -55,10 +62,12 @@ public:
     const std::vector<SF2Info>& get_soundfonts() const;
     std::vector<SF2Info> get_filtered_soundfonts(const std::string& filter) const;
     const std::vector<std::string>& get_samples() const;
+    const std::vector<SynthFileInfo>& get_synths() const;
 
     // Tree Views
     AssetNode get_soundfont_tree(const std::string& filter = "") const;
     AssetNode get_sample_tree(const std::string& filter = "") const;
+    AssetNode get_synth_tree(const std::string& filter = "") const;
 
     // Favorites
     void toggle_favorite(const std::string& path);
@@ -71,10 +80,12 @@ private:
     std::vector<std::string> m_watched_folders;
     std::vector<SF2Info> m_soundfonts;
     std::vector<std::string> m_samples;
+    std::vector<SynthFileInfo> m_synths;
     std::vector<std::string> m_favorites;
 
     void scan_directory(const fs::path& path);
     void process_sf2(const fs::path& path);
+    void process_museq(const fs::path& path);
     
     // Helper to build tree from flat list
     AssetNode build_tree_from_paths(const std::vector<std::string>& paths, AssetType leaf_type, const std::string& filter) const;

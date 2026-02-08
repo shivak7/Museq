@@ -192,4 +192,7 @@ if(BUILD_TESTS)
 
     add_executable(test_splash_scaling testing/test_splash_scaling.cpp)
     target_link_libraries(test_splash_scaling PRIVATE museq_engine)
+
+    add_executable(test_asset_synths testing/test_asset_synths.cpp muqomposer/AssetManager.cpp)
+    target_link_libraries(test_asset_synths PRIVATE museq_engine)
 endif()

@@ -13,6 +13,12 @@ AssetManager::AssetManager() {
     if (fs::exists("sounds")) {
         add_watched_folder(fs::absolute("sounds").string());
     }
+    if (fs::exists("../musynths")) {
+        add_watched_folder(fs::absolute("../musynths").string());
+    }
+    if (fs::exists("musynths")) {
+        add_watched_folder(fs::absolute("musynths").string());
+    }
     load_favorites();
 }
 
@@ -183,6 +189,7 @@ const std::vector<std::string>& AssetManager::get_watched_folders() const {
 void AssetManager::refresh_assets() {
     m_soundfonts.clear();
     m_samples.clear();
+    m_synths.clear();
 
     for (const auto& folder : m_watched_folders) {
         scan_directory(folder);
@@ -200,6 +207,8 @@ void AssetManager::scan_directory(const fs::path& path) {
                     process_sf2(entry.path());
                 } else if (ext == ".wav" || ext == ".mp3" || ext == ".ogg") {
                     m_samples.push_back(fs::absolute(entry.path()).string());
+                } else if (ext == ".museq") {
+                    process_museq(entry.path());
                 }
             }
         }
@@ -228,8 +237,37 @@ void AssetManager::process_sf2(const fs::path& path) {
     }
 }
 
+void AssetManager::process_museq(const fs::path& path) {
+    SynthFileInfo info;
+    info.path = fs::absolute(path).string();
+    info.filename = path.filename().string();
+
+    std::ifstream in(path);
+    std::string line;
+    while (std::getline(in, line)) {
+        size_t inst_pos = line.find("instrument ");
+        size_t brace_pos = line.find("{");
+        if (inst_pos != std::string::npos && brace_pos != std::string::npos && brace_pos > inst_pos) {
+            std::string name = line.substr(inst_pos + 11, brace_pos - (inst_pos + 11));
+            // Trim whitespace
+            name.erase(0, name.find_first_not_of(" \t"));
+            name.erase(name.find_last_not_of(" \t") + 1);
+            if (!name.empty()) {
+                info.instruments.push_back(name);
+            }
+        }
+    }
+    if (!info.instruments.empty()) {
+        m_synths.push_back(info);
+    }
+}
+
 const std::vector<SF2Info>& AssetManager::get_soundfonts() const {
     return m_soundfonts;
+}
+
+const std::vector<SynthFileInfo>& AssetManager::get_synths() const {
+    return m_synths;
 }
 
 std::vector<SF2Info> AssetManager::get_filtered_soundfonts(const std::string& filter) const {
@@ -303,6 +341,38 @@ AssetNode AssetManager::get_soundfont_tree(const std::string& filter) const {
         if (match) matching_paths.push_back(sf.path);
     }
     return build_tree_from_paths(matching_paths, AssetType::SF2, "");
+}
+
+AssetNode AssetManager::get_synth_tree(const std::string& filter) const {
+    if (filter.empty()) {
+        std::vector<std::string> paths;
+        for (const auto& s : m_synths) paths.push_back(s.path);
+        return build_tree_from_paths(paths, AssetType::MUSEQ, "");
+    }
+
+    std::string filter_lower = filter;
+    std::transform(filter_lower.begin(), filter_lower.end(), filter_lower.begin(), ::tolower);
+
+    std::vector<std::string> matching_paths;
+    for (const auto& s : m_synths) {
+        bool match = false;
+        std::string filename_lower = s.filename;
+        std::transform(filename_lower.begin(), filename_lower.end(), filename_lower.begin(), ::tolower);
+        if (filename_lower.find(filter_lower) != std::string::npos) {
+            match = true;
+        } else {
+            for (const auto& i : s.instruments) {
+                std::string i_lower = i;
+                std::transform(i_lower.begin(), i_lower.end(), i_lower.begin(), ::tolower);
+                if (i_lower.find(filter_lower) != std::string::npos) {
+                    match = true;
+                    break;
+                }
+            }
+        }
+        if (match) matching_paths.push_back(s.path);
+    }
+    return build_tree_from_paths(matching_paths, AssetType::MUSEQ, "");
 }
 
 AssetNode AssetManager::build_tree_from_paths(const std::vector<std::string>& paths, AssetType leaf_type, const std::string& filter) const {
