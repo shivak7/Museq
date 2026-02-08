@@ -50,6 +50,7 @@ This document outlines planned features, experimental ideas, and architectural i
 *   **Live Script Editor:** A dedicated editor with syntax highlighting, auto-completion, and real-time playback.
 *   **Visual Mixer:** Drag-and-drop interface for adjusting `gain`, `pan`, and `effects` visually.
 *   **Waveform/Spectrum Visualizer:** Real-time visual feedback of the synthesized output.
+*   **[BUGFIX] Playback Highlighting:** Fix highlighting to accurately track lines within `repeat`, `parallel`, and function call blocks.
 
 ## 🤖 AI & Intelligent Interfaces
 *   **Natural Language to Script:**
