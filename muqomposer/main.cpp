@@ -467,7 +467,8 @@ int main(int, char**) {
 
     auto update_active_instruments = [&]() {
         active_instrument_names.clear();
-        std::stringstream ss(editor.GetText());
+        std::string text = editor.GetText();
+        std::stringstream ss(text);
         std::string line;
         
         while (std::getline(ss, line)) {
@@ -731,9 +732,10 @@ int main(int, char**) {
         if (io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_Space)) player.stop();
         if (ImGui::IsKeyPressed(ImGuiKey_Escape)) close_all_popups();
 
-        // Slow updates
+        // Reactive Parsing
         static double last_parse_time = 0;
-        if (ImGui::GetTime() - last_parse_time > 2.0) {
+        if (ImGui::GetTime() - last_parse_time > 2.0 || (editor.IsTextChanged() && ImGui::GetTime() - last_parse_time > 0.5)) {
+            last_parsed_song = ScriptParser::parse_string(editor.GetText());
             update_active_instruments();
             last_parse_time = ImGui::GetTime();
         }
