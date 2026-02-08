@@ -1,3 +1,6 @@
+// Museq Lead Synth Library
+// Optimized for Sound Fixes 2
+
 instrument ClassicLead {
     waveform sawtooth
     envelope 0.05 0.1 0.7 0.2
@@ -9,4 +12,19 @@ instrument SoftLead {
     waveform sine
     envelope 0.1 0.2 0.5 0.3
     effect delay 250 0.4
+}
+
+// Improved Leads for v2
+instrument LeadSaw_v2 {
+    waveform sawtooth
+    envelope 0.01 0.2 0.6 0.2
+    lfo pitch sine 6 0.3
+    filter lowpass 3000 1.2
+}
+
+instrument LeadPulse_v2 {
+    waveform square
+    envelope 0.02 0.1 0.5 0.1
+    lfo amplitude sine 4 0.2
+    filter lowpass 1500 2.0
 }
