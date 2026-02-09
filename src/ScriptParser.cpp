@@ -19,6 +19,18 @@ void ScriptParser::report_error(const std::string& message) {
     std::cerr << "[" << m_filename << "] Line " << m_current_line << ": " << message << std::endl;
 }
 
+int ScriptParser::calculate_denominator_duration(int denominator) {
+    // Valid denominators: 1, 2, 3, 4, 6, 8, 12, 16, 24, 32
+    static const std::set<int> valid = {1, 2, 3, 4, 6, 8, 12, 16, 24, 32};
+    if (valid.find(denominator) == valid.end()) {
+        return m_default_duration; // Fallback to current default
+    }
+    
+    // Formula: Duration(ms) = (4.0 / Denominator) * (60000.0 / BPM)
+    double beat_duration = 60000.0 / std::max(1, s_global_bpm);
+    return static_cast<int>((4.0 / denominator) * beat_duration);
+}
+
 static std::string preprocess_line(const std::string& raw_line) {
     std::string line = raw_line;
     size_t comment_pos = line.find("//");
@@ -850,10 +862,25 @@ void ScriptParser::parse_compact_notes(const std::string& list, Sequence& seq, f
                 bool is_last = (i == chord_components.size() - 1);
 
                 size_t open_p = comp.find('(');
-                std::string note_name = comp.substr(0, open_p);
+                size_t underscore_pos = comp.find('_');
+                std::string note_name = comp.substr(0, std::min(open_p, underscore_pos));
                 int dur = m_default_duration;
                 int vel = m_default_velocity;
                 float p_val = default_pan; 
+
+                if (underscore_pos != std::string::npos && (open_p == std::string::npos || underscore_pos < open_p)) {
+                    std::string denom_str;
+                    if (open_p != std::string::npos) {
+                        denom_str = comp.substr(underscore_pos + 1, open_p - underscore_pos - 1);
+                    } else {
+                        denom_str = comp.substr(underscore_pos + 1);
+                    }
+                    try {
+                        dur = calculate_denominator_duration(std::stoi(denom_str));
+                    } catch(...) {
+                        report_error("Invalid denominator in 'notes' sequence: " + denom_str);
+                    }
+                }
 
                 if (open_p != std::string::npos) {
                     size_t close_p = comp.find(')');
