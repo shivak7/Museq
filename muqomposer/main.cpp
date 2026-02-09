@@ -1073,7 +1073,11 @@ int main(int, char**) {
 
         if (ImGui::Button("Add New Synth", ImVec2(-FLT_MIN, 0))) { 
             const char* new_synth = "instrument NewSynth {\n    waveform sawtooth\n    envelope 0.01 0.1 0.8 0.2\n    filter lowpass 2000 1.0\n}\n";
-            if (!tabs.empty()) prepend_to_editor(current_tab().editor, new_synth);
+            if (tabs.empty()) {
+                create_tab("Untitled", "", new_synth);
+            } else {
+                prepend_to_editor(current_tab().editor, new_synth);
+            }
         }
         
         // Add Folder Button
