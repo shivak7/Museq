@@ -640,6 +640,8 @@ int main(int, char**) {
     bool show_export_popup = false;
     bool show_settings_popup = false;
     bool rebuild_fonts = false;
+    bool show_unsaved_popup = false;
+    int tab_to_close = -1;
     char file_path_buffer[256] = "song.museq";
     char export_path_buffer[256] = "song.wav";
     int export_format = 0; // 0: WAV, 1: MP3, 2: OGG
@@ -696,6 +698,8 @@ int main(int, char**) {
         show_export_popup = false;
         show_folder_picker = false;
         show_settings_popup = false;
+        show_unsaved_popup = false;
+        tab_to_close = -1;
     };
 
     // Helper for Asset Tree Rendering
@@ -919,6 +923,9 @@ int main(int, char**) {
         glfwPollEvents();
 
         // Keyboard Shortcuts
+        if (io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_N)) {
+            create_tab("Untitled", "", "// New script\n");
+        }
         if (io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_P)) {
             if (player.is_playing()) player.stop();
             else play_logic();
@@ -1117,20 +1124,65 @@ int main(int, char**) {
         // --- 2.1 Tab Bar ---
         if (ImGui::BeginTabBar("EditorTabs", ImGuiTabBarFlags_AutoSelectNewTabs | ImGuiTabBarFlags_Reorderable)) {
             for (int i = 0; i < (int)tabs.size(); ++i) {
-                std::string label = tabs[i].title + (tabs[i].is_dirty ? "*" : "") + "###tab" + std::to_string(i);
+                std::string label = tabs[i].title + (tabs[i].is_dirty ? " *" : "") + "###tab" + std::to_string(i);
                 bool open = true;
                 if (ImGui::BeginTabItem(label.c_str(), &open)) {
                     active_tab_index = i;
                     ImGui::EndTabItem();
                 }
                 if (!open) {
-                    // TODO: Implement tab closing logic in Phase 2
-                    tabs.erase(tabs.begin() + i);
-                    if (active_tab_index >= (int)tabs.size()) active_tab_index = std::max(0, (int)tabs.size() - 1);
+                    if (tabs[i].is_dirty) {
+                        tab_to_close = i;
+                        show_unsaved_popup = true;
+                    } else {
+                        tabs.erase(tabs.begin() + i);
+                        if (active_tab_index >= (int)tabs.size()) active_tab_index = std::max(0, (int)tabs.size() - 1);
+                    }
                     break;
                 }
             }
             ImGui::EndTabBar();
+        }
+
+        // --- Unsaved Changes Popup ---
+        if (show_unsaved_popup) {
+            ImGui::OpenPopup("Unsaved Changes?");
+        }
+
+        if (ImGui::BeginPopupModal("Unsaved Changes?", &show_unsaved_popup, ImGuiWindowFlags_AlwaysAutoResize)) {
+            ImGui::Text("File: %s", tabs[tab_to_close].title.c_str());
+            ImGui::Text("You have unsaved changes. Do you want to save before closing?");
+            ImGui::Separator();
+
+            if (ImGui::Button("Save", ImVec2(120, 0))) {
+                auto& tab = tabs[tab_to_close];
+                if (tab.file_path.empty()) {
+                    // Open Save As dialog (simplified for this task)
+                    show_save_popup = true;
+                } else {
+                    save_script_to_file(tab.file_path.string().c_str(), tab.editor.GetText().c_str());
+                    tabs.erase(tabs.begin() + tab_to_close);
+                    if (active_tab_index >= (int)tabs.size()) active_tab_index = std::max(0, (int)tabs.size() - 1);
+                }
+                show_unsaved_popup = false;
+                tab_to_close = -1;
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Discard", ImVec2(120, 0))) {
+                tabs.erase(tabs.begin() + tab_to_close);
+                if (active_tab_index >= (int)tabs.size()) active_tab_index = std::max(0, (int)tabs.size() - 1);
+                show_unsaved_popup = false;
+                tab_to_close = -1;
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+                show_unsaved_popup = false;
+                tab_to_close = -1;
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::EndPopup();
         }
 
         if (tabs.empty()) {
@@ -1379,12 +1431,16 @@ int main(int, char**) {
         ImGui::SameLine();
 
         // Group Right: Files
-        float right_btns_w = 350.0f;
+        float right_btns_w = 440.0f;
         float avail_w_footer = ImGui::GetContentRegionAvail().x;
         if (avail_w_footer > right_btns_w) {
             ImGui::SetCursorPosX(ImGui::GetCursorPosX() + avail_w_footer - right_btns_w);
         }
 
+        if (ImGui::Button("New", ImVec2(80, 0))) {
+            create_tab("Untitled", "", "// New script\n");
+        }
+        ImGui::SameLine();
         if (ImGui::Button("Load", ImVec2(80, 0))) {
             show_load_popup = true;
         }
