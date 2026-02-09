@@ -16,8 +16,8 @@ This plan outlines the transition from a single-file editor to a robust multi-ta
 - [x] Task: Add "New Tab" functionality (keyboard shortcut or sidebar action) creating an "Untitled" empty script. [66d8915]
 - [x] Conductor - User Manual Verification 'Dirty State & Closing' (Protocol in workflow.md) [240760c]
 
-## Phase 3: Global Integration & Refinement
+## Phase 3: Global Integration & Refinement [checkpoint: c694c13]
 - [x] Task: Update the transport toolbar (Play, Stop, Export) to always operate on the `last_parsed_song` and script content of the *active* tab. [240760c]
-- [x] Task: Ensure real-time syntax error markers and playback highlighting are correctly isolated to each tab's editor instance. [240760c]
+- [x] Task: Ensure real-time syntax error markers and playback highlighting are correctly isolated to each tab's editor instance. [240760c, 47ed671]
 - [x] Task: Refactor the "Save" and "Save As" logic to correctly update the specific metadata of the active tab. [240760c]
-- [x] Conductor - User Manual Verification 'Multi-Tab Playback' (Protocol in workflow.md) [0c6231a]
+- [x] Task: Conductor - User Manual Verification 'Multi-Tab Playback' (Protocol in workflow.md) [0c6231a, 182dd3e]
