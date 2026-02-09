@@ -163,6 +163,9 @@ if(BUILD_TESTS)
     add_executable(test_music_theory testing/test_music_theory.cpp)
     target_link_libraries(test_music_theory PRIVATE museq_engine)
 
+    add_executable(test_duration_notation testing/test_duration_notation.cpp)
+    target_link_libraries(test_duration_notation PRIVATE museq_engine)
+
     add_executable(test_script_scale testing/test_script_scale.cpp)
     target_link_libraries(test_script_scale PRIVATE museq_engine)
 

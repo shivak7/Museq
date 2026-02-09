@@ -6,12 +6,12 @@ This plan outlines the updates to the `ScriptParser` to support the `_Denominato
 - [x] Task: Update `ScriptParser::parse_compact_notes` to detect the `_` delimiter during tokenization. [47ed671]
 - [x] Task: Implement a helper function `calculate_denominator_duration(int denominator)` that uses the current global BPM. [47ed671]
 - [x] Task: Implement validation for the predefined set of denominators (1, 2, 3, 4, 6, 8, 12, 16, 24, 32). [47ed671]
-- [ ] Task: Conductor - User Manual Verification 'Core Duration Logic' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Core Duration Logic' (Protocol in workflow.md) [c781ab0]
 
 ## Phase 2: Notation Integration
-- [ ] Task: Extend the Note/Chord/Rest parsing paths in `ScriptParser.cpp` to handle the `_` suffix across all element types.
-- [ ] Task: Ensure that `36_4` (MIDI pitch) is correctly parsed without conflicting with the underscore.
-- [ ] Task: Add comprehensive unit tests in a new `testing/test_duration_notation.cpp` file covering standard and tuplet values at various tempos.
+- [x] Task: Extend the Note/Chord/Rest parsing paths in `ScriptParser.cpp` to handle the `_` suffix across all element types. [c781ab0, 47ed671]
+- [x] Task: Ensure that `36_4` (MIDI pitch) is correctly parsed without conflicting with the underscore. [47ed671]
+- [x] Task: Add comprehensive unit tests in a new `testing/test_duration_notation.cpp` file covering standard and tuplet values at various tempos. [c781ab0]
 - [ ] Task: Conductor - User Manual Verification 'Notation Integration' (Protocol in workflow.md)
 
 ## Phase 3: Documentation and Cleanup

@@ -216,8 +216,32 @@ void ScriptParser::collect_definitions(std::istream& input_stream, bool instrume
             
             std::string sub_line;
             int brace_count = 0;
-            if (line.find('{') != std::string::npos) brace_count = 1;
-            else {
+            if (line.find('{') != std::string::npos) {
+                brace_count = 1;
+                // Handle single-line block
+                if (line.find('}') != std::string::npos) {
+                    brace_count = 0;
+                    // Process the content between braces
+                    size_t start = line.find('{') + 1;
+                    size_t end = line.find('}', start);
+                    std::string content = line.substr(start, end - start);
+                    std::stringstream css(content);
+                    std::string sub_kw;
+                    while (css >> sub_kw) {
+                        // Very simplified single-line parsing for collect_definitions
+                        if (sub_kw == "waveform") {
+                            std::string w; if (css >> w) {
+                                if (w == "sine") template_inst.synth.waveform = Waveform::SINE;
+                                else if (w == "square") template_inst.synth.waveform = Waveform::SQUARE;
+                                else if (w == "triangle") template_inst.synth.waveform = Waveform::TRIANGLE;
+                                else if (w == "sawtooth") template_inst.synth.waveform = Waveform::SAWTOOTH;
+                            }
+                        } else if (sub_kw == "sample" || sub_kw == "soundfont") {
+                            template_inst.type = (sub_kw == "sample") ? InstrumentType::SAMPLER : InstrumentType::SOUNDFONT;
+                        }
+                    }
+                }
+            } else {
                 while(std::getline(input_stream, sub_line)) {
                     m_current_line++;
                     if (sub_line.find('{') != std::string::npos) {
@@ -316,13 +340,27 @@ void ScriptParser::collect_definitions(std::istream& input_stream, bool instrume
                     in_sequence = true;
                 } else if (sub_kw == "note" && in_sequence) {
                     std::string n, d_s, v_s;
-                    if (sub_ss >> n >> d_s >> v_s) {
-                        if (d_s.find('.') != std::string::npos || v_s.find('.') != std::string::npos) {
-                            report_error("Floating point value in 'note' duration/velocity. Skipping.");
-                        } else {
+                    if (sub_ss >> n) {
+                        int dur = m_default_duration;
+                        size_t underscore_pos = n.find('_');
+                        if (underscore_pos != std::string::npos) {
+                            std::string denom_str = n.substr(underscore_pos + 1);
+                            n = n.substr(0, underscore_pos);
                             try {
-                                template_inst.sequence.add_note(Note(NoteParser::parse(n), std::stoi(d_s), std::stoi(v_s)));
+                                dur = calculate_denominator_duration(std::stoi(denom_str));
                             } catch(...) {}
+                        }
+
+                        if (sub_ss >> d_s >> v_s) {
+                            if (d_s.find('.') != std::string::npos || v_s.find('.') != std::string::npos) {
+                                report_error("Floating point value in 'note' duration/velocity. Skipping.");
+                            } else {
+                                try {
+                                    template_inst.sequence.add_note(Note(NoteParser::parse(n), std::stoi(d_s), std::stoi(v_s)));
+                                } catch(...) {}
+                            }
+                        } else {
+                            template_inst.sequence.add_note(Note(NoteParser::parse(n), dur, m_default_velocity));
                         }
                     }
                 } else if (sub_kw == "notes" && in_sequence) {
@@ -659,6 +697,18 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
                     if (lkw == "note") {
                         std::string n, d_s, v_s, p_s;
                         if (lss >> n) {
+                            int dur = m_default_duration;
+                            size_t underscore_pos = n.find('_');
+                            if (underscore_pos != std::string::npos) {
+                                std::string denom_str = n.substr(underscore_pos + 1);
+                                n = n.substr(0, underscore_pos);
+                                try {
+                                    dur = calculate_denominator_duration(std::stoi(denom_str));
+                                } catch(...) {
+                                    report_error("Invalid denominator suffix: " + denom_str);
+                                }
+                            }
+
                             if (lss >> d_s && lss >> v_s) {
                                 if (d_s.find('.') != std::string::npos || v_s.find('.') != std::string::npos) {
                                     report_error("Floating point value in 'note' duration/velocity. Skipping.");
@@ -679,7 +729,7 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
                                     }
                                 }
                             } else {
-                                Note new_note(NoteParser::parse(n, m_current_scale, current_octave), m_default_duration, m_default_velocity, inst.pan);
+                                Note new_note(NoteParser::parse(n, m_current_scale, current_octave), dur, m_default_velocity, inst.pan);
                                 inst.sequence.add_note(new_note);
                             }
                         }
