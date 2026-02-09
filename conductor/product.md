@@ -16,7 +16,7 @@ Museq is a cross-platform, text-based music sequencer and synthesizer designed f
 - **Hybrid Synthesis Engine:** Supports subtractive synthesis (oscillators, ADSR, filters, LFOs) alongside high-quality sampled instruments (SoundFonts and WAV/MP3/OGG samples).
 - **Studio-Quality Output:** Direct-to-disk rendering for WAV, MP3, and OGG formats with an advanced export workflow, normalization, and high-fidelity stereo processing.
 - **Dual-Interface Workflow:** A feature-compatible ecosystem where the `museq` CLI provides automation and speed, while the `muqomposer` Studio offers real-time visual feedback, asset management, and interactive playback.
-- **Studio Ergonomics:** Global asset search, keyboard shortcuts (Ctrl+P, Ctrl+S, etc.), customizable font sizes, and a multi-tab professional code editor with syntax highlighting and autocomplete.
+- **Studio Ergonomics:** Global asset search, keyboard shortcuts (Ctrl+P, Ctrl+S, etc.), customizable font sizes, theory-friendly duration notation (e.g., `C4_4`), and a multi-tab professional code editor with syntax highlighting and autocomplete.
 
 ## Development Goals
 - **Musical Intelligence:** Enhancing the scripting language with scale-aware and chord-aware functions to simplify complex music theory logic.
