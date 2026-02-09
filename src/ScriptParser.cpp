@@ -4,6 +4,7 @@
 #include <sstream>
 #include <vector>
 #include <algorithm>
+#include <filesystem>
 #include "NoteParser.h"
 #include "SongElement.h"
 #include "Chord.h"
@@ -70,7 +71,7 @@ Song ScriptParser::parse(const std::string& file_path) {
 
     ScriptParser parser;
     parser.m_current_line = 0;
-    parser.collect_definitions(file, false, file_path);
+    parser.collect_definitions(file, file_path);
     file.close();
     file.open(file_path);
     if (!file.is_open()) return Song();
@@ -86,7 +87,7 @@ Song ScriptParser::parse_string(const std::string& script_content) {
     ScriptParser parser;
     parser.m_current_line = 0;
     std::stringstream collect_stream(script_content);
-    parser.collect_definitions(collect_stream, false, "string_buffer");
+    parser.collect_definitions(collect_stream, "string_buffer");
     
     parser.m_current_line = 0;
     std::stringstream process_stream(script_content);
@@ -96,7 +97,7 @@ Song ScriptParser::parse_string(const std::string& script_content) {
     return parser.m_song;
 }
 
-void ScriptParser::collect_definitions(std::istream& input_stream, bool instruments_only, const std::string& filename) {
+void ScriptParser::collect_definitions(std::istream& input_stream, const std::string& filename) {
     std::string line;
     int scope_brace_count = 0;
     m_filename = filename;
@@ -115,38 +116,41 @@ void ScriptParser::collect_definitions(std::istream& input_stream, bool instrume
         if (!(ss >> keyword)) continue;
 
         if (scope_brace_count == 0 && keyword == "import") {
-             std::string path; 
-             if (std::getline(ss, path)) {
+             std::string path_str; 
+             if (std::getline(ss, path_str)) {
                  const std::string trim = {' ', '\t', '\r', '\n', '"'};
-                 size_t first = path.find_first_not_of(trim);
-                 size_t last = path.find_last_not_of(trim);
+                 size_t first = path_str.find_first_not_of(trim);
+                 size_t last = path_str.find_last_not_of(trim);
                  if (first != std::string::npos) {
-                     path = path.substr(first, last - first + 1);
-                     if (m_imported_files.find(path) == m_imported_files.end()) {
-                         m_imported_files.insert(path);
-                         std::ifstream imported_file(path);
+                     path_str = path_str.substr(first, last - first + 1);
+                     
+                     // Resolve path:
+                     std::filesystem::path resolved_path = std::filesystem::path(path_str);
+                     if (!std::filesystem::exists(resolved_path)) {
+                         std::filesystem::path base_path = std::filesystem::path(m_filename).parent_path();
+                         resolved_path = base_path / path_str;
+                     }
+                     
+                     std::string absolute_path = std::filesystem::absolute(resolved_path).string();
+
+                     if (m_imported_files.find(absolute_path) == m_imported_files.end()) {
+                         std::ifstream imported_file(resolved_path);
                          if (imported_file.is_open()) {
                              int saved_line = m_current_line;
-                             m_current_line = 0; // Reset for imported file? Or keep global? Better global.
-                             collect_definitions(imported_file, true, path);
+                             std::string saved_filename = m_filename;
+                             m_current_line = 0;
+                             collect_definitions(imported_file, resolved_path.string());
                              m_current_line = saved_line;
+                             m_filename = saved_filename;
+                             m_imported_files.insert(absolute_path);
                          } else {
-                             report_error("Could not open imported file: " + path);
+                             report_error("Could not open imported file: " + path_str);
                          }
                      }
                  }
              }
         }
         else if (scope_brace_count == 0 && keyword == "function") {
-            if (instruments_only) {
-                int brace_count = 1;
-                while (std::getline(input_stream, line) && brace_count > 0) {
-                    m_current_line++;
-                    if (line.find('{') != std::string::npos) brace_count++;
-                    if (line.find('}') != std::string::npos) brace_count--;
-                }
-                continue;
-            }
             FunctionDefinition func;
             std::string name_and_params;
             std::getline(ss, name_and_params, '{');
@@ -167,24 +171,16 @@ void ScriptParser::collect_definitions(std::istream& input_stream, bool instrume
             }
 
             int brace_count = 1;
-            while (std::getline(input_stream, line) && brace_count > 0) {
+            while (brace_count > 0 && std::getline(input_stream, line)) {
                 m_current_line++;
-                if (line.find('{') != std::string::npos) brace_count++;
-                if (line.find('}') != std::string::npos) brace_count--;
+                std::string processed_line = preprocess_line(line);
+                if (processed_line.find('{') != std::string::npos) brace_count++;
+                if (processed_line.find('}') != std::string::npos) brace_count--;
                 if (brace_count > 0) func.body_lines.push_back(line);
             }
             m_functions[func.name] = func;
         } 
         else if (scope_brace_count == 0 && keyword == "sequence") {
-            if (instruments_only) {
-                int brace_count = 1;
-                while (std::getline(input_stream, line) && brace_count > 0) {
-                    m_current_line++;
-                    if (line.find('{') != std::string::npos) brace_count++;
-                    if (line.find('}') != std::string::npos) brace_count--;
-                }
-                continue;
-            }
             FunctionDefinition func;
             func.is_sequence = true;
             std::string name_and_params;
@@ -206,16 +202,16 @@ void ScriptParser::collect_definitions(std::istream& input_stream, bool instrume
             }
 
             int brace_count = 1;
-            while (std::getline(input_stream, line) && brace_count > 0) {
+            while (brace_count > 0 && std::getline(input_stream, line)) {
                 m_current_line++;
-                if (line.find('{') != std::string::npos) brace_count++;
-                if (line.find('}') != std::string::npos) brace_count--;
+                std::string processed_line = preprocess_line(line);
+                if (processed_line.find('{') != std::string::npos) brace_count++;
+                if (processed_line.find('}') != std::string::npos) brace_count--;
                 if (brace_count > 0) func.body_lines.push_back(line);
             }
             m_functions[func.name] = func;
         }
         else if (scope_brace_count == 0 && keyword == "var") {
-            if (instruments_only) continue;
             std::string name, val;
             if (ss >> name >> val) m_globals[name] = val;
         }
@@ -428,6 +424,7 @@ bool ScriptParser::skipping_definition(const std::string& line, bool& in_functio
     std::stringstream ss(line);
     std::string kw;
     if (ss >> kw) {
+        if (kw == "import") return true;
         if (kw == "function" || kw == "instrument" || kw == "sequence") {
             if (kw == "function" || kw == "sequence") in_function = true;
             else in_instrument = true;
@@ -458,6 +455,10 @@ bool ScriptParser::skipping_definition(const std::string& line, bool& in_functio
 void ScriptParser::process_script_stream(std::istream& input_stream, const std::map<std::string, std::string>& current_param_map, std::shared_ptr<CompositeElement> current_parent, int depth) {
     // Update default duration based on current BPM
     if (m_current_bpm > 0) m_default_duration = 60000 / m_current_bpm;
+    
+    // For top-level call, m_filename is already set by collect_definitions.
+    // For recursive calls (functions), we don't change m_filename as the lines 
+    // are sourced from the original definition file.
 
     std::string line;
     bool in_function_definition = false;
@@ -964,7 +965,7 @@ std::string ScriptParser::substitute_params(const std::string& line, const std::
 }
 
 void ScriptParser::parse_compact_notes(const std::string& list, Sequence& seq, float default_pan, int default_octave) {
-    std::string clean = list;
+    std::string clean = substitute_params(list, {});
     int paren_level = 0;
     for (size_t i = 0; i < clean.length(); ++i) {
         if (clean[i] == '(') paren_level++;
