@@ -7,6 +7,33 @@ Chord::Chord(const std::string& chord_name) {
     init_intervals();
 }
 
+bool Chord::is_chord(const std::string& name) {
+    if (name.empty()) return false;
+    
+    // Find where the note name ends
+    size_t len = 1;
+    if (name.length() > 1 && (name[1] == '#' || name[1] == 'b')) {
+        len = 2;
+    }
+    
+    if (name.length() <= len) return false; // No suffix (e.g. "C", "F#")
+    
+    std::string quality = name.substr(len);
+    
+    static const std::vector<std::string> known_qualities = {
+        "maj", "M", "min", "m", 
+        "7", "dom7", "maj7", "M7", "min7", "m7", 
+        "dim", "aug", "sus4", "sus2", 
+        "maj9", "M9", "min9", "m9", "9", "add9"
+    };
+    
+    for (const auto& q : known_qualities) {
+        if (quality == q) return true;
+    }
+    
+    return false;
+}
+
 void Chord::parse_chord_name(const std::string& name) {
     // Basic parsing: split into root and quality
     // Example: Cmaj -> Root: C, Quality: maj

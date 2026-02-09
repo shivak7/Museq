@@ -265,13 +265,30 @@ instrument Kick {
 }
 ```
 
-### 3. Defining Functions (Templates)
-Functions allow you to reuse musical patterns.
+### 3. Defining Functions & Sequences
+Reusable musical patterns that can be called later in the script.
 
+#### Functions (Hierarchical)
+Standard functions containing instrument blocks or note commands.
 ```museq
 function DrumKit {
     Kick { ... }
     Snare { ... }
+}
+```
+
+#### Sequences (Timed)
+Sequences use timestamps (in beats) to arrange events on a timeline. This is often more intuitive for drum patterns or complex melodies.
+```museq
+sequence DrumBeat {
+    0.0 SynthKick
+    0.5 SynthHat
+    1.0 SynthKick
+    1.5 SynthSnare
+}
+
+parallel {
+    DrumBeat
 }
 ```
 
@@ -309,7 +326,9 @@ instrument Pad {
 ```
 
 #### Relative Note Notation
-When a scale is active, use numbers `1` through `7` to refer to the degrees of that scale. This allows you to change the key of your entire song by modifying a single `scale` line.
+When a scale is active, use numbers `1` through `7` to refer to the degrees of that scale (up to `31` for multiple octaves). This allows you to change the key of your entire song by modifying a single `scale` line.
+
+*Note: If you need to specify an absolute MIDI note number while a scale is active, use the `m` prefix (e.g., `m60` for Middle C).*
 
 #### Built-in Chords
 You can use common chord names directly in your `notes` lists.
@@ -318,6 +337,7 @@ You can use common chord names directly in your `notes` lists.
 **Supported Qualities:**
 - `maj`, `min`, `7`, `maj7`, `min7`, `dim`, `aug`
 - `sus4`, `sus2`, `add9`, `maj9`, `min9`
+- `M`, `m`, `M7`, `m7`, `M9`, `m9`, `dom7`, `9`
 
 ```museq
 instrument Piano {
@@ -328,14 +348,14 @@ instrument Piano {
 ### 6. Sequencing Notes
 
 #### Standard Syntax
-Explicitly define pitch, duration (ms), and velocity (0-127).
+Explicitly define pitch, duration (ms), and velocity (0-127). You can use space-separated parameters or the unified parenthesized notation.
 
 ```museq
 instrument Piano {
     sequence {
-        note C4 500 100
-        note E4 500 100
-        note G4 1000 120
+        note C4 500 100      // Space-separated
+        note E4(500, 100)    // Unified (parentheses)
+        note G4(1000, 120, 0.5) // With Pan
     }
 }
 ```
@@ -348,10 +368,8 @@ Defaults: Duration and Velocity use global defaults if omitted.
 **Repetition:** Use `*N` to repeat a note N times (e.g., `C4*4`).
 **Chords:** Use `+` to play multiple notes simultaneously (e.g., `C4+E4+G4`).
 
-**Musical Durations:** Use `_Denominator` to specify duration based on musical theory (synchronized with `tempo`).
-- **Standard:** `_1` (Whole), `_2` (Half), `_4` (Quarter), `_8` (Eighth), `_16` (Sixteenth), `_32` (Thirty-second).
-- **Tuplets:** `_3` (Half-note triplet), `_6` (Quarter-note triplet), `_12` (Eighth-note triplet).
-- **Examples:** `C4_4`, `Gmaj_2`, `R_8`, `36_16` (MIDI).
+**Musical Durations:** Use `_Denominator` to specify duration based on musical theory (synchronized with `tempo`). Supports any positive integer as a denominator.
+- **Examples:** `C4_4` (Quarter), `Gmaj_3` (Triplet), `R_5` (Quintuplet), `36_16` (MIDI).
 
 ```museq
 tempo 120

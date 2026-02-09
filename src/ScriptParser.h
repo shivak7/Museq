@@ -29,6 +29,7 @@ private:
     
     // Default context for notes
     int m_default_duration = 500; // 120 BPM
+    int m_current_bpm = 120; // Default BPM
     int m_default_velocity = 100;
     int m_default_octave = 4;
     Scale m_current_scale = Scale(ScaleType::MAJOR, "C");
@@ -51,6 +52,7 @@ struct FunctionDefinition {
     std::string name;
     std::vector<std::string> parameters;
     std::vector<std::string> body_lines;
+    bool is_sequence = false;
 };
 
 #endif // SCRIPT_PARSER_H

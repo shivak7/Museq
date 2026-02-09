@@ -20,14 +20,13 @@ void ScriptParser::report_error(const std::string& message) {
 }
 
 int ScriptParser::calculate_denominator_duration(int denominator) {
-    // Valid denominators: 1, 2, 3, 4, 6, 8, 12, 16, 24, 32
-    static const std::set<int> valid = {1, 2, 3, 4, 6, 8, 12, 16, 24, 32};
-    if (valid.find(denominator) == valid.end()) {
+    // Valid denominators: Any positive integer (e.g. 4, 8, 5, 7, etc.)
+    if (denominator <= 0) {
         return m_default_duration; // Fallback to current default
     }
     
     // Formula: Duration(ms) = (4.0 / Denominator) * (60000.0 / BPM)
-    double beat_duration = 60000.0 / std::max(1, s_global_bpm);
+    double beat_duration = 60000.0 / std::max(1, m_current_bpm);
     return static_cast<int>((4.0 / denominator) * beat_duration);
 }
 
@@ -53,6 +52,7 @@ static std::string preprocess_line(const std::string& raw_line) {
 }
 
 ScriptParser::ScriptParser() {
+    m_current_bpm = s_global_bpm;
     // Set default duration based on global BPM
     m_default_duration = 60000 / s_global_bpm;
 
@@ -106,7 +106,7 @@ void ScriptParser::collect_definitions(std::istream& input_stream, bool instrume
         line = preprocess_line(line);
         if (line.find_first_not_of(" 	\r\n") == std::string::npos) continue;
 
-        if (line.find('{') != std::string::npos && line.find("function") == std::string::npos && line.find("instrument") == std::string::npos) scope_brace_count++;
+        if (line.find('{') != std::string::npos && line.find("function") == std::string::npos && line.find("instrument") == std::string::npos && line.find("sequence") == std::string::npos) scope_brace_count++;
         if (line.find('}') != std::string::npos) scope_brace_count--;
         if (scope_brace_count < 0) scope_brace_count = 0;
 
@@ -175,6 +175,45 @@ void ScriptParser::collect_definitions(std::istream& input_stream, bool instrume
             }
             m_functions[func.name] = func;
         } 
+        else if (scope_brace_count == 0 && keyword == "sequence") {
+            if (instruments_only) {
+                int brace_count = 1;
+                while (std::getline(input_stream, line) && brace_count > 0) {
+                    m_current_line++;
+                    if (line.find('{') != std::string::npos) brace_count++;
+                    if (line.find('}') != std::string::npos) brace_count--;
+                }
+                continue;
+            }
+            FunctionDefinition func;
+            func.is_sequence = true;
+            std::string name_and_params;
+            std::getline(ss, name_and_params, '{');
+            
+            size_t open_paren = name_and_params.find('(');
+            size_t close_paren = name_and_params.find(')');
+            func.name = name_and_params.substr(0, open_paren);
+            func.name.erase(std::remove_if(func.name.begin(), func.name.end(), ::isspace), func.name.end());
+
+            if (open_paren != std::string::npos && close_paren != std::string::npos) {
+                std::string params_str = name_and_params.substr(open_paren + 1, close_paren - open_paren - 1);
+                std::stringstream pss(params_str);
+                std::string param;
+                while (std::getline(pss, param, ',')) {
+                    param.erase(std::remove_if(param.begin(), param.end(), ::isspace), param.end());
+                    func.parameters.push_back(param);
+                }
+            }
+
+            int brace_count = 1;
+            while (std::getline(input_stream, line) && brace_count > 0) {
+                m_current_line++;
+                if (line.find('{') != std::string::npos) brace_count++;
+                if (line.find('}') != std::string::npos) brace_count--;
+                if (brace_count > 0) func.body_lines.push_back(line);
+            }
+            m_functions[func.name] = func;
+        }
         else if (scope_brace_count == 0 && keyword == "var") {
             if (instruments_only) continue;
             std::string name, val;
@@ -389,8 +428,8 @@ bool ScriptParser::skipping_definition(const std::string& line, bool& in_functio
     std::stringstream ss(line);
     std::string kw;
     if (ss >> kw) {
-        if (kw == "function" || kw == "instrument") {
-            if (kw == "function") in_function = true;
+        if (kw == "function" || kw == "instrument" || kw == "sequence") {
+            if (kw == "function" || kw == "sequence") in_function = true;
             else in_instrument = true;
             
             if (line.find('{') != std::string::npos) brace_count = 1;
@@ -418,7 +457,7 @@ bool ScriptParser::skipping_definition(const std::string& line, bool& in_functio
 
 void ScriptParser::process_script_stream(std::istream& input_stream, const std::map<std::string, std::string>& current_param_map, std::shared_ptr<CompositeElement> current_parent, int depth) {
     // Update default duration based on current BPM
-    m_default_duration = 60000 / s_global_bpm;
+    if (m_current_bpm > 0) m_default_duration = 60000 / m_current_bpm;
 
     std::string line;
     bool in_function_definition = false;
@@ -461,6 +500,27 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
         if (keyword == "{") continue;
         if (keyword == "}") {
             if (depth > 0) return;
+            continue;
+        }
+
+        if (isdigit(keyword[0])) {
+            float timestamp = 0.0f;
+            try {
+                timestamp = std::stof(keyword);
+            } catch (...) {}
+            
+            int offset_ms = static_cast<int>(timestamp * m_default_duration);
+            
+            std::string remainder;
+            std::getline(ss, remainder);
+            std::stringstream remainder_ss(remainder);
+            
+            size_t initial_size = current_parent->children.size();
+            process_script_stream(remainder_ss, current_param_map, current_parent, depth + 1);
+            
+            for (size_t i = initial_size; i < current_parent->children.size(); ++i) {
+                current_parent->children[i]->start_offset_ms += offset_ms;
+            }
             continue;
         }
 
@@ -560,9 +620,17 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
                 std::stringstream body;
                 for (const auto& l : func.body_lines) body << l << "\n";
                 
+                std::shared_ptr<CompositeElement> target_parent = current_parent;
+                if (func.is_sequence) {
+                    auto seq_elem = std::make_shared<CompositeElement>(CompositeType::PARALLEL);
+                    seq_elem->source_line = call_line;
+                    current_parent->children.push_back(seq_elem);
+                    target_parent = seq_elem;
+                }
+                
                 int saved_line = m_current_line;
                 m_current_line = call_line - 1;
-                process_script_stream(body, next_map, current_parent, depth + 1);
+                process_script_stream(body, next_map, target_parent, depth + 1);
                 m_current_line = saved_line;
             }
         } else if (keyword == "parallel") {
@@ -651,7 +719,10 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
             }
         } else if (keyword == "tempo") {
             float bpm; ss >> bpm;
-            if (bpm > 0) m_default_duration = 60000 / bpm;
+            if (bpm > 0) {
+                m_current_bpm = static_cast<int>(bpm);
+                m_default_duration = 60000 / m_current_bpm;
+            }
         } else if (keyword == "velocity") {
             ss >> m_default_velocity;
         } else if (keyword == "effect") {
@@ -695,43 +766,79 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
                 while (lss >> lkw) {
                     if (lkw == "{" || lkw == "}") continue;
                     if (lkw == "note") {
-                        std::string n, d_s, v_s, p_s;
+                        std::string n;
                         if (lss >> n) {
+                            // Handle parentheses grouping (e.g., C(500, 100))
+                            if (n.find('(') != std::string::npos && n.find(')') == std::string::npos) {
+                                std::string next;
+                                while (lss >> next) {
+                                    n += " " + next;
+                                    if (next.find(')') != std::string::npos) break;
+                                }
+                            }
+
                             int dur = m_default_duration;
+                            int vel = m_default_velocity;
+                            float pan = inst.pan;
+                            bool params_parsed = false;
+
+                            size_t open_p = n.find('(');
+                            if (open_p != std::string::npos) {
+                                size_t close_p = n.find(')');
+                                if (close_p != std::string::npos) {
+                                     std::string p_str = n.substr(open_p + 1, close_p - open_p - 1);
+                                     n = n.substr(0, open_p);
+                                     std::replace(p_str.begin(), p_str.end(), ',', ' ');
+                                     std::stringstream pss(p_str);
+                                     int p1; 
+                                     if (pss >> p1) {
+                                         dur = p1;
+                                         int p2;
+                                         if (pss >> p2) {
+                                             vel = p2;
+                                             float p3;
+                                             if (pss >> p3) pan = p3;
+                                         }
+                                     }
+                                     params_parsed = true;
+                                }
+                            }
+
                             size_t underscore_pos = n.find('_');
                             if (underscore_pos != std::string::npos) {
                                 std::string denom_str = n.substr(underscore_pos + 1);
                                 n = n.substr(0, underscore_pos);
                                 try {
-                                    dur = calculate_denominator_duration(std::stoi(denom_str));
+                                    int d = calculate_denominator_duration(std::stoi(denom_str));
+                                    if (!params_parsed) dur = d;
                                 } catch(...) {
                                     report_error("Invalid denominator suffix: " + denom_str);
                                 }
                             }
 
-                            if (lss >> d_s && lss >> v_s) {
-                                if (d_s.find('.') != std::string::npos || v_s.find('.') != std::string::npos) {
-                                    report_error("Floating point value in 'note' duration/velocity. Skipping.");
-                                } else {
-                                    try {
-                                        int d = std::stoi(d_s);
-                                        int v = std::stoi(v_s);
-                                        float p = inst.pan;
-                                        if (lss >> p_s) {
-                                            if (p_s != "}" && p_s != "{" && (isdigit(p_s[0]) || p_s[0] == '-' || p_s[0] == '.')) {
-                                                p = std::stof(p_s);
+                            if (!params_parsed) {
+                                std::string d_s, v_s, p_s;
+                                if (lss >> d_s && lss >> v_s) {
+                                    if (d_s.find('.') != std::string::npos || v_s.find('.') != std::string::npos) {
+                                        report_error("Floating point value in 'note' duration/velocity. Skipping.");
+                                    } else {
+                                        try {
+                                            dur = std::stoi(d_s);
+                                            vel = std::stoi(v_s);
+                                            if (lss >> p_s) {
+                                                if (p_s != "}" && p_s != "{" && (isdigit(p_s[0]) || p_s[0] == '-' || p_s[0] == '.')) {
+                                                    pan = std::stof(p_s);
+                                                }
                                             }
+                                        } catch(...) {
+                                            report_error("Failed to parse note params for " + n);
                                         }
-                                        Note new_note(NoteParser::parse(n, m_current_scale, current_octave), d, v, p);
-                                        inst.sequence.add_note(new_note);
-                                    } catch(...) {
-                                        report_error("Failed to parse note params for " + n);
                                     }
                                 }
-                            } else {
-                                Note new_note(NoteParser::parse(n, m_current_scale, current_octave), dur, m_default_velocity, inst.pan);
-                                inst.sequence.add_note(new_note);
                             }
+                            
+                            Note new_note(NoteParser::parse(n, m_current_scale, current_octave), dur, vel, pan);
+                            inst.sequence.add_note(new_note);
                         }
                     } else if (lkw == "notes") {
                         std::string note_list; std::getline(lss, note_list);
@@ -795,10 +902,18 @@ void ScriptParser::process_script_stream(std::istream& input_stream, const std::
             std::stringstream body;
             for (const auto& l : func.body_lines) body << l << "\n";
             
+            std::shared_ptr<CompositeElement> target_parent = current_parent;
+            if (func.is_sequence) {
+                auto seq_elem = std::make_shared<CompositeElement>(CompositeType::PARALLEL);
+                seq_elem->source_line = call_line;
+                current_parent->children.push_back(seq_elem);
+                target_parent = seq_elem;
+            }
+            
             // Temporary override current line to the call site for all elements in this function
             int saved_line = m_current_line;
             m_current_line = call_line - 1; // It will be incremented in the next process_script_stream
-            process_script_stream(body, next_map, current_parent, depth + 1);
+            process_script_stream(body, next_map, target_parent, depth + 1);
             m_current_line = saved_line;
         } else if (keyword == "}") {
             if (in_sequence_block) {
@@ -964,16 +1079,7 @@ void ScriptParser::parse_compact_notes(const std::string& list, Sequence& seq, f
                 }
                 
                 // NEW: Try to parse as a chord name (e.g. Cmaj, Dmin7)
-                bool is_chord = false;
-                std::vector<std::string> qualities = {"maj", "min", "7", "maj7", "min7", "dim", "aug", "sus4", "sus2", "add9", "maj9", "min9"};
-                for (const auto& q : qualities) {
-                    if (note_name.find(q) != std::string::npos) {
-                        is_chord = true;
-                        break;
-                    }
-                }
-
-                if (is_chord) {
+                if (Chord::is_chord(note_name)) {
                     Chord chord(note_name);
                     std::vector<int> chord_pitches = chord.get_notes(default_octave);
                     if (!chord_pitches.empty()) {

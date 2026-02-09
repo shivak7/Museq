@@ -8,6 +8,9 @@ class Chord {
 public:
     Chord(const std::string& chord_name);
     
+    // Check if a string looks like a chord (has a known quality suffix)
+    static bool is_chord(const std::string& name);
+    
     // Get MIDI pitches for the chord in a given octave
     std::vector<int> get_notes(int octave) const;
 

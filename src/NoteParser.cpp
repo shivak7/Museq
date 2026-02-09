@@ -19,6 +19,15 @@ int NoteParser::parse(const std::string& note_name, int default_octave) {
         return -1;
     }
 
+    // Explicit MIDI number (e.g. m60, M60)
+    if (upper_name.length() > 1 && upper_name[0] == 'M' && std::isdigit(upper_name[1])) {
+        try {
+            return std::stoi(upper_name.substr(1));
+        } catch (...) {
+            return 0;
+        }
+    }
+
     // Check if it's already a MIDI number
     if (std::all_of(note_name.begin(), note_name.end(), ::isdigit)) {
         try {
