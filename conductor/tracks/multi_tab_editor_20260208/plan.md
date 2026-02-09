@@ -14,10 +14,10 @@ This plan outlines the transition from a single-file editor to a robust multi-ta
 - [x] Task: Implement the close button (`x`) on tabs. [21f22da, 66d8915]
 - [x] Task: Create a "Save Changes?" modal popup that appears when closing a dirty tab, offering Save, Discard, and Cancel. [66d8915]
 - [x] Task: Add "New Tab" functionality (keyboard shortcut or sidebar action) creating an "Untitled" empty script. [66d8915]
-- [ ] Task: Conductor - User Manual Verification 'Dirty State & Closing' (Protocol in workflow.md)
+- [x] Conductor - User Manual Verification 'Dirty State & Closing' (Protocol in workflow.md) [240760c]
 
 ## Phase 3: Global Integration & Refinement
-- [ ] Task: Update the transport toolbar (Play, Stop, Export) to always operate on the `last_parsed_song` and script content of the *active* tab.
-- [ ] Task: Ensure real-time syntax error markers and playback highlighting are correctly isolated to each tab's editor instance.
-- [ ] Task: Refactor the "Save" and "Save As" logic to correctly update the specific metadata of the active tab.
+- [x] Task: Update the transport toolbar (Play, Stop, Export) to always operate on the `last_parsed_song` and script content of the *active* tab. [240760c]
+- [x] Task: Ensure real-time syntax error markers and playback highlighting are correctly isolated to each tab's editor instance. [240760c]
+- [x] Task: Refactor the "Save" and "Save As" logic to correctly update the specific metadata of the active tab. [240760c]
 - [ ] Task: Conductor - User Manual Verification 'Multi-Tab Playback' (Protocol in workflow.md)
