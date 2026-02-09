@@ -1,0 +1,186 @@
+// Cool Electronic House Soundtrack (approx 1 min)
+// Features: Timed Sequences, Unified Note Params, Chord Intelligence, New Durations
+
+tempo 128
+scale C minor
+
+// --- Instruments ---
+
+instrument Kick {
+    waveform sine
+    envelope 0.005 0.15 0.0 0.05
+    lfo pitch sawtooth 8 60.0
+    gain 1.4
+    // Hard clipper
+    effect distortion 2.0
+}
+
+instrument ClosedHat {
+    waveform noise
+    envelope 0.005 0.05 0.0 0.05
+    filter highpass 8000 1.0
+    gain 0.6
+}
+
+instrument OpenHat {
+    waveform noise
+    envelope 0.01 0.2 0.0 0.2
+    filter highpass 6000 1.0
+    gain 0.7
+}
+
+instrument Clap {
+    waveform triangle
+    envelope 0.01 0.15 0.0 0.1
+    filter bandpass 1200 1.0
+    effect reverb 0.3 0.2
+}
+
+instrument DeepBass {
+    waveform sawtooth
+    envelope 0.01 0.3 0.4 0.2
+    // Envelope modulation on filter via LFO hack (low freq, high amp)
+    filter lowpass 400 3.0
+    lfo cutoff sine 0.5 800 
+    gain 0.9
+}
+
+instrument HouseStab {
+    waveform sawtooth
+    envelope 0.01 0.1 0.6 0.2
+    filter lowpass 3000 1.5
+    // Stereo width via delay
+    effect delay 20 0.5
+    effect reverb 0.6 0.6
+    pan 0.3
+}
+
+instrument HouseStabLeft {
+    waveform square
+    envelope 0.01 0.1 0.6 0.2
+    filter lowpass 3000 1.5
+    effect reverb 0.6 0.6
+    pan -0.3
+}
+
+instrument Pad {
+    waveform triangle
+    envelope 1.0 0.5 0.8 1.5
+    filter lowpass 1500 1.0
+    effect reverb 0.9 0.8
+    effect tremolo 4 0.3
+    gain 0.6
+}
+
+// --- Patterns (Using new 'sequence' keyword) ---
+
+// Classic 4-on-the-floor beat (1 bar)
+sequence Beat {
+    0.0 Kick
+    1.0 Kick
+    2.0 Kick
+    3.0 Kick
+    
+    0.5 ClosedHat
+    1.5 ClosedHat
+    2.5 ClosedHat
+    3.5 ClosedHat
+    
+    // Offbeat open hats
+    0.5 OpenHat
+    1.5 OpenHat
+    2.5 OpenHat
+    3.5 OpenHat
+    
+    // Clap on 2 and 4
+    1.0 Clap
+    3.0 Clap
+}
+
+// Minimal beat for intro
+sequence IntroBeat {
+    0.0 Kick
+    1.0 Kick
+    2.0 Kick
+    3.0 Kick
+    0.5 ClosedHat
+    1.5 ClosedHat
+    2.5 ClosedHat
+    3.5 ClosedHat
+}
+
+// Syncopated Bass Line (2 bars)
+// Uses compact notation with new denominators
+sequence BassLine {
+    // Bar 1
+    0.0 DeepBass { notes C2_8, C2_8 } 
+    1.0 DeepBass { notes C2_4 }
+    2.0 DeepBass { notes G1_8, Bb1_8 }
+    3.0 DeepBass { notes C2_4 }
+    
+    // Bar 2
+    4.0 DeepBass { notes C2_8, C2_8 }
+    5.0 DeepBass { notes Eb2_4 }
+    6.0 DeepBass { notes F2_8, G2_8 }
+    7.0 DeepBass { notes C2_4 }
+}
+
+// Chord Stabs (2 bars)
+// Uses new Chord Intelligence (Cm7, Abmaj7)
+sequence Stabs {
+    // Bar 1: C Minor 7
+    0.0 HouseStab { notes Cm7_8 }
+    0.0 HouseStabLeft { notes Cm7_8 }
+    
+    1.5 HouseStab { notes Cm7_8 }
+    1.5 HouseStabLeft { notes Cm7_8 }
+    
+    // Bar 2: Ab Major 7
+    4.0 HouseStab { notes Abmaj7_8 }
+    4.0 HouseStabLeft { notes Abmaj7_8 }
+    
+    5.5 HouseStab { notes Bbmaj_8 } // Passing chord
+    5.5 HouseStabLeft { notes Bbmaj_8 }
+}
+
+// --- Arrangement ---
+
+sequential {
+    // 1. Intro (4 bars)
+    repeat 2 {
+        parallel {
+            repeat 2 { IntroBeat }
+            // Filter sweep on pad
+            Pad { notes C3(3750, 80) } // Long pad
+        }
+    }
+
+    // 2. Build Up (8 bars)
+    repeat 2 {
+        parallel {
+            repeat 2 { Beat }
+            BassLine
+        }
+    }
+
+    // 3. THE DROP (16 bars)
+    repeat 4 {
+        parallel {
+            repeat 2 { Beat }
+            BassLine
+            Stabs
+        }
+    }
+    
+    // 4. Breakdown/Outro (4 bars)
+    repeat 2 {
+        parallel {
+            repeat 2 { IntroBeat }
+            Stabs
+            Pad { notes C3(3750) }
+        }
+    }
+    
+    // Final Hit
+    Kick { note C2(1000) }
+}
