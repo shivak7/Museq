@@ -1187,7 +1187,6 @@ int main(int, char**) {
 
         if (tabs.empty()) {
             ImGui::Text("No files open. Click 'Add New Synth' or load a file.");
-            ImGui::End();
         } else {
             auto& tab = current_tab();
 

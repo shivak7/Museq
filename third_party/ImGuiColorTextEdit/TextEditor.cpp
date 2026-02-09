@@ -2030,6 +2030,7 @@ const TextEditor::Palette & TextEditor::GetDarkPalette()
 			0x80a06020, // Selection
 			0x800020ff, // ErrorMarker
 			0x40f08000, // Breakpoint
+			0xff8be9fd, // Playback marker
 			0xff707000, // Line number
 			0x40000000, // Current line fill
 			0x40808080, // Current line fill (inactive)
@@ -2058,6 +2059,7 @@ const TextEditor::Palette & TextEditor::GetLightPalette()
 			0x80600000, // Selection
 			0xa00010ff, // ErrorMarker
 			0x80f08000, // Breakpoint
+			0xff0000ff, // Playback marker
 			0xff505000, // Line number
 			0x40000000, // Current line fill
 			0x40808080, // Current line fill (inactive)
