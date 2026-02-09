@@ -348,6 +348,19 @@ Defaults: Duration and Velocity use global defaults if omitted.
 **Repetition:** Use `*N` to repeat a note N times (e.g., `C4*4`).
 **Chords:** Use `+` to play multiple notes simultaneously (e.g., `C4+E4+G4`).
 
+**Musical Durations:** Use `_Denominator` to specify duration based on musical theory (synchronized with `tempo`).
+- **Standard:** `_1` (Whole), `_2` (Half), `_4` (Quarter), `_8` (Eighth), `_16` (Sixteenth), `_32` (Thirty-second).
+- **Tuplets:** `_3` (Half-note triplet), `_6` (Quarter-note triplet), `_12` (Eighth-note triplet).
+- **Examples:** `C4_4`, `Gmaj_2`, `R_8`, `36_16` (MIDI).
+
+```museq
+tempo 120
+instrument Piano {
+    // A mix of standard and denominator notation
+    notes C4_4, E4_8, G4_8, Cmaj_2, R_4
+}
+```
+
 ```museq
 tempo 120
 velocity 100

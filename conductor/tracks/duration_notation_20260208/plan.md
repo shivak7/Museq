@@ -12,9 +12,9 @@ This plan outlines the updates to the `ScriptParser` to support the `_Denominato
 - [x] Task: Extend the Note/Chord/Rest parsing paths in `ScriptParser.cpp` to handle the `_` suffix across all element types. [c781ab0, 47ed671]
 - [x] Task: Ensure that `36_4` (MIDI pitch) is correctly parsed without conflicting with the underscore. [47ed671]
 - [x] Task: Add comprehensive unit tests in a new `testing/test_duration_notation.cpp` file covering standard and tuplet values at various tempos. [c781ab0]
-- [ ] Task: Conductor - User Manual Verification 'Notation Integration' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Notation Integration' (Protocol in workflow.md) [78647b1]
 
 ## Phase 3: Documentation and Cleanup
-- [ ] Task: Update the `README.md` "Scripting Language Guide" to include the new `_Denominator` syntax with examples.
-- [ ] Task: Remove any temporary debug logs used during implementation.
+- [x] Task: Update the `README.md` "Scripting Language Guide" to include the new `_Denominator` syntax with examples. [78647b1]
+- [x] Task: Remove any temporary debug logs used during implementation. [78647b1]
 - [ ] Task: Conductor - User Manual Verification 'Final Feature Check' (Protocol in workflow.md)
